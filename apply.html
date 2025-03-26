@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCKA Kosher Certification Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+        }
+        .section {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>KRCKA Kosher Certification Application</h2>
+
+    <form name="kosher-application" netlify>
+        <input type="hidden" name="form-name" value="kosher-application">
+       
+
+        <!-- Section 1: Company Name -->
+        <div class="section active" id="section1">
+            <label for="company">Company Name:</label>
+            <input type="text" id="company" name="company" required>
+            <br><br>
+            <button type="button" onclick="nextSection(2)">Next</button>
+        </div>
+
+        <!-- Section 2: Contact Information -->
+        <div class="section" id="section2">
+            <label for="contact-person">Contact Person:</label>
+            <input type="text" id="contact-person" name="contact-person" required>
+            <br><br>
+            
+            <label for="contact-email">Contact Email:</label>
+            <input type="email" id="contact-email" name="contact-email" required>
+            <br><br>
+            
+            <label for="contact-phone">Contact Phone:</label>
+            <input type="tel" id="contact-phone" name="contact-phone" required>
+            <br><br>
+            
+            <label for="contact-address">Contact Address:</label>
+            <input type="text" id="contact-address" name="contact-address" required>
+            <br><br>
+
+            <button type="button" onclick="prevSection(1)">Back</button>
+            <button type="button" onclick="nextSection(3)">Next</button>
+        </div>
+
+        <!-- Section 3: Establishment Type -->
+        <div class="section" id="section3">
+            <label>What type of establishment?</label><br>
+            <input type="radio" name="establishment-type" value="Factory" required> Factory <br>
+            <input type="radio" name="establishment-type" value="Restaurant"> Restaurant <br>
+            <input type="radio" name="establishment-type" value="Catering"> Catering <br>
+            <input type="radio" name="establishment-type" value="Synagogue"> Synagogue <br>
+            <input type="radio" name="establishment-type" value="3rd party manufacturer"> 3rd party manufacturer <br>
+            <input type="radio" id="other-radio" name="establishment-type" value="Other"> Other
+            <input type="text" id="other-text" name="other-establishment" placeholder="Please specify" style="display:none;">
+            <br><br>
+
+            <button type="button" onclick="prevSection(2)">Back</button>
+            <button type="button" onclick="nextSection(4)">Next</button>
+        </div>
+
+        <!-- Section 4: Food Types -->
+        <div class="section" id="section4">
+            <label for="food-types">Food Types:</label><br>
+            <select id="food-types" name="food-types" multiple required>
+                <option value="Dairy">Dairy</option>
+                <option value="Vegan">Vegan</option>
+                <option value="Meat">Meat</option>
+                <option value="Bread">Bread</option>
+            </select>
+            <br><br>
+
+            <button type="button" onclick="prevSection(3)">Back</button>
+            <button type="button" onclick="nextSection(5)">Next</button>
+        </div>
+
+        <!-- Section 5: KRCKA Services Interest -->
+        <div class="section" id="section5">
+            <label for="krcka-interest">What part of KRCKA services are you interested in?</label><br>
+            <textarea id="krcka-interest" name="krcka-interest" rows="4" required></textarea>
+            <br><br>
+
+            <button type="button" onclick="prevSection(4)">Back</button>
+            <button type="submit">Apply</button>
+        </div>
+    </form>
+
+    <script>
+        function nextSection(section) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById('section' + section).classList.add('active');
+        }
+
+        function prevSection(section) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById('section' + section).classList.add('active');
+        }
+
+        // Show "Other" text input when "Other" radio is selected
+        document.getElementById('other-radio').addEventListener('change', function() {
+            document.getElementById('other-text').style.display = 'block';
+        });
+
+        // Hide "Other" text input when any other option is selected
+        document.querySelectorAll('input[name="establishment-type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value !== 'Other') {
+                    document.getElementById('other-text').style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

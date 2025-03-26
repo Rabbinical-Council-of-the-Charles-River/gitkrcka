@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Establishments</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            margin-top: 20px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Establishments</h1>
+        <div class="table-responsive">
+            <table id="establishments-table" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Establishment Name</th>
+                        <th>Location</th>
+                        <th>Company</th>
+                        <th>Kosher Status</th>
+                        <th>Certificate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Establishments will be displayed here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-firestore.js"></script>
+    <script>
+        // Firebase configuration (replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Function to fetch and display establishments
+        function fetchAndDisplayEstablishments() {
+            const establishmentsTableBody = document.querySelector('#establishments-table tbody');
+            establishmentsTableBody.innerHTML = ''; // Clear existing content
+
+            db.collection('establishments').get()
+                .then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
+                        const establishmentData = doc.data();
+                        const establishmentRow = createEstablishmentRow(establishmentData);
+                        establishmentsTableBody.appendChild(establishmentRow);
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error getting documents: ", error);
+                    establishmentsTableBody.innerHTML = '<tr><td colspan="6" class="text-danger">Error loading establishments.</td></tr>';
+                });
+        }
+
+        // Function to create an establishment row
+        function createEstablishmentRow(data) {
+            const row = document.createElement('tr');
+
+            const nameCell = document.createElement('td');
+            nameCell.textContent = data.name || 'N/A';
+            row.appendChild(nameCell);
+
+            const locationCell = document.createElement('td');
+            locationCell.textContent = data.location || 'N/A';
+            row.appendChild(locationCell);
+
+            const companyCell = document.createElement('td');
+            companyCell.textContent = data.company || 'N/A';
+            row.appendChild(companyCell);
+
+            const kosherStatusCell = document.createElement('td');
+            kosherStatusCell.textContent = data.kosherStatus || 'N/A';
+            row.appendChild(kosherStatusCell);
+
+            const certificateCell = document.createElement('td');
+            if (data.certificate) {
+                const certificateLink = document.createElement('a');
+                certificateLink.href = data.certificate;
+                certificateLink.textContent = 'View Certificate';
+                certificateLink.target = '_blank'; // Open in a new tab
+                certificateCell.appendChild(certificateLink);
+            } else {
+                certificateCell.textContent = 'N/A';
+            }
+            row.appendChild(certificateCell);
+
+            const actionsCell = document.createElement('td');
+            actionsCell.textContent = 'N/A'; // Placeholder for actions (e.g., edit, delete)
+            row.appendChild(actionsCell);
+
+            return row;
+        }
+
+        // Fetch and display establishments on page load
+        fetchAndDisplayEstablishments();
+    </script>
+</body>
+
+</html>
