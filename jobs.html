@@ -1,1 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Board</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="css/vendor/font-awesome.min.css">
+  <link rel="stylesheet" href="css/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="login-section">
+    <div class="container" style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+      <h1>Admin Access Required</h1>
+      <div id="message" class="message"></div>
+      <div id="netlify-login-button" class="netlify-identity-button" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; text-decoration: none; text-align: center; transition: background-color 0.3s ease;">
+        Login with Netlify Identity
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-content" class="hidden">
+    <div class="container-fluid">
+      <div class="jobswidget" style="width: 100%;">
+  <iframe src="https://jobswidget.com/en/jobs/253/6d57d3cdf1"  id="jobswidget"  style="width: 1px;min-width:100%;border:none"></iframe>
+  <script src="https://jobswidget.com/scripts/jobswidget.js" defer></script>
+</div>
+    </div>
+
+
+  <script src="js/vendor/jquery.min.js"></script>
+  <script src="js/vendor/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-firestore.js"></script>
+  <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+      authDomain: "richardrccr-10a9d.firebaseapp.com",
+      projectId: "richardrccr-10a9d",
+      storageBucket: "richardrccr-10a9d.firebasestorage.app",
+      messagingSenderId: "867270362103",
+      appId: "1:867270362103:web:7653459445810350b864f2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const loginSection = document.getElementById('login-section');
+    const adminContent = document.getElementById('admin-content');
+    const netlifyLoginButton = document.getElementById('netlify-login-button');
+    const messageDiv = document.getElementById('message');
+
+    const netlifyIdentity = window.netlifyIdentity;
+    netlifyIdentity.init();
+
+    // Function to display messages
+    function showMessage(type, text) {
+      if (messageDiv) {
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = text;
+        messageDiv.style.display = 'block';
+      }
+    }
+
+    // Function to clear messages
+    function clearMessage() {
+      if (messageDiv) {
+        messageDiv.style.display = 'none';
+        messageDiv.textContent = '';
+        messageDiv.className = 'message';
+      }
+    }
+
+    // Add event listener to the custom button to trigger Netlify Identity
+    if (netlifyLoginButton) {
+      netlifyLoginButton.addEventListener('click', () => {
+        netlifyIdentity.open();
+      });
+    }
+
+    // Listen for login and logout events
+    netlifyIdentity.on('login', user => {
+      console.log('Login event triggered:', user);
+      if (user && user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
+        loginSection.classList.add('hidden');
+        adminContent.classList.remove('hidden');
+      } else {
+        showMessage('error', 'Admin access required.');
+        loginSection.classList.remove('hidden');
+        adminContent.classList.add('hidden');
+      }
+    });
+
+    netlifyIdentity.on('logout', () => {
+      console.log('Logout event triggered');
+      loginSection.classList.remove('hidden');
+      adminContent.classList.add('hidden');
+      clearMessage();
+    });
+
+    // Check if the user is already logged in on page load
+    netlifyIdentity.on('init', user => {
+      if (user) {
+        console.log('User is already logged in:', user);
+        if (user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
+          loginSection.classList.add('hidden');
+          adminContent.classList.remove('hidden');
+        } else {
+          showMessage('error', 'Admin access required.');
+          loginSection.classList.remove('hidden');
+          adminContent.classList.add('hidden');
+        }
+      } else {
+        console.log('No user logged in.');
+        loginSection.classList.remove('hidden');
+        adminContent.classList.add('hidden');
+      }
+    });
+  </script>
+  <script src="js/script.js"></script>
+</body>
+
+</html>
