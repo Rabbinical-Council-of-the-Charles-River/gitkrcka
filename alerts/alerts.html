@@ -17,6 +17,8 @@
         /* Style for login/logout buttons if needed */
         #login-prompt button { margin-right: 0.5rem; }
         .alert-content { white-space: pre-wrap; } /* Preserve line breaks in alert text */
+        /* Ensure hidden takes precedence */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -33,7 +35,7 @@
         <hr>
 
         <!-- "Add Alert" Button/Form Area - Only for Admins -->
-        <div class="mb-3 admin-controls">
+        <div id="add-alert-controls" class="mb-3 admin-controls"> <!-- Added ID for clarity -->
             <button id="add-alert-btn" class="btn btn-success mb-2" data-bs-toggle="modal" data-bs-target="#addAlertModal">Add New Alert</button>
             <!-- Add Alert Modal Triggered by the button above -->
         </div>
@@ -73,7 +75,6 @@
                 <label for="alert-details" class="form-label">Details</label>
                 <textarea class="form-control" id="alert-details" rows="5" required></textarea>
               </div>
-              <!-- Add other fields if needed -->
             </form>
           </div>
           <div class="modal-footer">
@@ -84,7 +85,7 @@
       </div>
     </div>
 
-    <!-- Edit Alert Modal (Similar structure to Add, pre-filled) -->
+    <!-- Edit Alert Modal -->
     <div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -94,7 +95,7 @@
           </div>
           <div class="modal-body">
             <form id="edit-alert-form">
-              <input type="hidden" id="edit-alert-id"> <!-- To store the ID of the alert being edited -->
+              <input type="hidden" id="edit-alert-id">
               <div class="mb-3">
                 <label for="edit-alert-title" class="form-label">Title</label>
                 <input type="text" class="form-control" id="edit-alert-title" required>
@@ -103,7 +104,6 @@
                 <label for="edit-alert-details" class="form-label">Details</label>
                 <textarea class="form-control" id="edit-alert-details" rows="5" required></textarea>
               </div>
-              <!-- Add other fields if needed -->
             </form>
           </div>
           <div class="modal-footer">
@@ -143,16 +143,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-                // --- Firebase Configuration ---
-        // IMPORTANT: Replace with your actual Firebase config
-        // Consider using environment variables or a config file for security
+        // --- Firebase Configuration ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace with your key
-            authDomain: "richardrccr-10a9d.firebaseapp.com",   // Replace
-            projectId: "richardrccr-10a9d",                 // Replace
-            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace
-            messagingSenderId: "867270362103",              // Replace
-            appId: "1:867270362103:web:7653459445810350b864f2" // Replace
+            apiKey: "YOUR_API_KEY", // Replace with your key
+            authDomain: "YOUR_AUTH_DOMAIN",   // Replace
+            projectId: "YOUR_PROJECT_ID",                 // Replace
+            storageBucket: "YOUR_STORAGE_BUCKET", // Replace
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",              // Replace
+            appId: "YOUR_APP_ID" // Replace
         };
 
         // --- Initialize Firebase ---
@@ -160,15 +158,16 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
-        const alertsCollection = db.collection('alerts'); // Assuming your collection is named 'alerts'
+        const alertsCollection = db.collection('alerts');
 
         // --- DOM Elements ---
         const alertsListDiv = document.getElementById('alerts-list');
         const loadingIndicator = document.getElementById('loading-indicator');
         const loginButton = document.getElementById('login-btn');
-        // We select adminControls inside updateAdminUI now
+        const logoutButton = document.getElementById('logout-btn'); // Get logout button too
+        const addAlertControlsDiv = document.getElementById('add-alert-controls'); // Get the container for add button
 
-        // Modals (using Bootstrap 5 instances for programmatic control)
+        // Modals
         const addAlertModalEl = document.getElementById('addAlertModal');
         const addAlertModal = addAlertModalEl ? new bootstrap.Modal(addAlertModalEl) : null;
         const editAlertModalEl = document.getElementById('editAlertModal');
@@ -176,59 +175,60 @@
         const deleteAlertModalEl = document.getElementById('deleteAlertModal');
         const deleteAlertModal = deleteAlertModalEl ? new bootstrap.Modal(deleteAlertModalEl) : null;
 
-
         // --- Alert Rendering ---
-        function createAlertCard(doc) {
+        function createAlertCard(doc, isAdmin) { // Pass isAdmin status
             const data = doc.data();
             const alertId = doc.id;
 
             const card = document.createElement('div');
             card.className = 'card';
-            card.setAttribute('data-id', alertId); // Add data-id for easier selection
+            card.setAttribute('data-id', alertId);
 
             const cardBody = document.createElement('div');
             cardBody.className = 'card-body';
 
+            // Title, Details, Timestamp (same as before)
             const title = document.createElement('h5');
             title.className = 'card-title';
             title.textContent = data.title || 'No Title';
             cardBody.appendChild(title);
 
             const details = document.createElement('p');
-            details.className = 'card-text alert-content'; // Added class for styling
+            details.className = 'card-text alert-content';
             details.textContent = data.details || 'No Details Provided.';
             cardBody.appendChild(details);
 
             const timestamp = document.createElement('small');
             timestamp.className = 'text-muted';
             let dateStr = 'Date not available';
-            if (data.createdAt && data.createdAt.toDate) { // Check if it's a Firestore Timestamp
-                try {
-                    dateStr = data.createdAt.toDate().toLocaleDateString();
-                } catch (e) { console.error("Error formatting date:", e); }
-            } else if (data.createdAt) { // Handle if it's already a string/number
-                 dateStr = new Date(data.createdAt).toLocaleDateString();
+            if (data.createdAt?.toDate) {
+                try { dateStr = data.createdAt.toDate().toLocaleDateString(); } catch (e) { console.error("Date format error", e); }
+            } else if (data.createdAt) {
+                 try { dateStr = new Date(data.createdAt).toLocaleDateString(); } catch (e) { console.error("Date format error", e); }
             }
             timestamp.textContent = `Posted on: ${dateStr}`;
             cardBody.appendChild(timestamp);
 
             // --- Admin Controls within the card ---
-            const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'mt-2 admin-controls'; // Add class to hide/show
+            // Only add these if the user is an admin
+            if (isAdmin) {
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'mt-2'; // No need for admin-controls class here if we only add when admin
 
-            const editButton = document.createElement('button');
-            editButton.className = 'btn btn-sm btn-warning me-2 edit-alert-btn';
-            editButton.textContent = 'Edit';
-            editButton.setAttribute('data-alert-id', alertId);
-            controlsDiv.appendChild(editButton);
+                const editButton = document.createElement('button');
+                editButton.className = 'btn btn-sm btn-warning me-2 edit-alert-btn';
+                editButton.textContent = 'Edit';
+                editButton.setAttribute('data-alert-id', alertId);
+                controlsDiv.appendChild(editButton);
 
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'btn btn-sm btn-danger delete-alert-btn';
-            deleteButton.textContent = 'Delete';
-            deleteButton.setAttribute('data-alert-id', alertId);
-            controlsDiv.appendChild(deleteButton);
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'btn btn-sm btn-danger delete-alert-btn';
+                deleteButton.textContent = 'Delete';
+                deleteButton.setAttribute('data-alert-id', alertId);
+                controlsDiv.appendChild(deleteButton);
 
-            cardBody.appendChild(controlsDiv);
+                cardBody.appendChild(controlsDiv);
+            }
             // --- End Admin Controls ---
 
             card.appendChild(cardBody);
@@ -236,90 +236,87 @@
         }
 
         // --- Alert Fetching and Display Logic ---
-        function displayAlerts() {
-            console.log("Fetching alerts from Firestore...");
-            if (loadingIndicator) loadingIndicator.style.display = 'block'; // Show loading
-            alertsListDiv.innerHTML = ''; // Clear previous alerts (keep loading indicator separate if needed)
+        function displayAlerts(isAdmin) { // Accept isAdmin status
+            console.log("Fetching alerts. isAdmin:", isAdmin);
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
+            alertsListDiv.innerHTML = ''; // Clear previous alerts
 
             alertsCollection
-                .orderBy('createdAt', 'desc') // Order by creation date, newest first
+                .orderBy('createdAt', 'desc')
                 .get()
                 .then((querySnapshot) => {
-                    if (loadingIndicator) loadingIndicator.style.display = 'none'; // Hide loading
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
                     if (querySnapshot.empty) {
                         alertsListDiv.innerHTML = '<p>No alerts found.</p>';
                         return;
                     }
                     querySnapshot.forEach((doc) => {
-                        const alertCard = createAlertCard(doc);
+                        // Pass isAdmin to the card creation function
+                        const alertCard = createAlertCard(doc, isAdmin);
                         alertsListDiv.appendChild(alertCard);
                     });
-                    // Re-apply admin UI state after rendering new cards
-                    const user = netlifyIdentity.currentUser();
-                    console.log("Applying UI state after displaying alerts. User:", user); // DEBUG
-                    updateAdminUI(user && checkUserRole(user));
                 })
                 .catch((error) => {
                     console.error("Error getting alerts: ", error);
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
-                    alertsListDiv.innerHTML = '<p class="text-danger">Error loading alerts. Please try again later.</p>';
+                    alertsListDiv.innerHTML = '<p class="text-danger">Error loading alerts.</p>';
                 });
         }
 
         // --- Netlify Identity Logic ---
+
+        // Function to check roles
+        function checkUserRole(user) {
+            const allowedRoles = ['admin', 'manager'];
+            const userRoles = user?.app_metadata?.roles || [];
+            const hasRequiredRole = userRoles.some(role => allowedRoles.includes(role));
+            console.log("User roles:", userRoles, "Has required role:", hasRequiredRole); // Debug log
+            return hasRequiredRole;
+        }
+
+        // Function to update UI based on login status and role
+        function updateUserInterface(user) {
+            const isAdmin = user && checkUserRole(user);
+            console.log("Updating UI. User present:", !!user, "Is Admin/Manager:", isAdmin); // Debug log
+
+            if (isAdmin) {
+                // Show admin controls, hide login button
+                if (loginButton) loginButton.classList.add('hidden');
+                if (logoutButton) logoutButton.classList.remove('hidden');
+                if (addAlertControlsDiv) addAlertControlsDiv.classList.remove('hidden');
+                // Edit/Delete buttons inside cards are handled during displayAlerts
+            } else {
+                // Hide admin controls, show login button (if not logged in)
+                if (loginButton) loginButton.classList.remove('hidden');
+                if (logoutButton) logoutButton.classList.add('hidden');
+                if (addAlertControlsDiv) addAlertControlsDiv.classList.add('hidden');
+                // Edit/Delete buttons inside cards are handled during displayAlerts
+            }
+
+            // Fetch/refresh alerts, passing the admin status
+            displayAlerts(isAdmin);
+        }
+
+        // Initialize Netlify Identity
         netlifyIdentity.init();
 
-        function updateAdminUI(showAdminControls) {
-            console.log(`updateAdminUI called with showAdminControls = ${showAdminControls}`); // DEBUG
-            // Select ALL admin controls again after potential re-renders
-            const currentAdminControls = document.querySelectorAll('.admin-controls');
-            console.log(`Found ${currentAdminControls.length} elements with class 'admin-controls'`); // DEBUG
-            currentAdminControls.forEach((el, index) => {
-                // Use inline style for simplicity here, could use classes too
-                el.style.display = showAdminControls ? '' : 'none';
-                // console.log(`Element ${index} (${el.tagName}#${el.id || ''}) display set to: ${el.style.display}`); // DEBUG (can be verbose)
-            });
-            // Toggle top-level login/logout button visibility
-             if (loginButton) {
-                 loginButton.style.display = showAdminControls ? 'none' : '';
-                 console.log(`Login button display set to: ${loginButton.style.display}`); // DEBUG
-             } else {
-                 console.log("Login button not found"); // DEBUG
-             }
-        }
-
-        function checkUserRole(user) {
-            const allowedRoles = ['admin', 'manager']; // Roles that can manage alerts
-            const userRoles = user?.app_metadata?.roles || [];
-            const hasRole = userRoles.some(role => allowedRoles.includes(role));
-            console.log("Checking user role. User:", user); // DEBUG
-            console.log("User roles:", userRoles); // DEBUG
-            console.log(`Is admin/manager? ${hasRole}`); // DEBUG
-            return hasRole;
-        }
-
+        // Event Listeners for Netlify Identity
         netlifyIdentity.on('init', user => {
-            console.log("Netlify Identity init event. User:", user); // DEBUG
-            const isAdmin = user && checkUserRole(user);
-            updateAdminUI(isAdmin);
-            displayAlerts(); // Fetch alerts after knowing login state
+            console.log("Netlify Identity: init event");
+            updateUserInterface(user);
         });
 
         netlifyIdentity.on('login', user => {
-            console.log("Netlify Identity login event. User:", user); // DEBUG
-            const isAdmin = checkUserRole(user);
-            updateAdminUI(isAdmin);
-            netlifyIdentity.close();
-            // Optionally re-fetch alerts if needed, but usually just showing controls is enough
-            // displayAlerts();
+            console.log("Netlify Identity: login event");
+            updateUserInterface(user);
+            netlifyIdentity.close(); // Close the modal widget
         });
 
         netlifyIdentity.on('logout', () => {
-            console.log("Netlify Identity logout event."); // DEBUG
-            updateAdminUI(false);
-            // Optionally re-fetch alerts if needed
-            // displayAlerts();
+            console.log("Netlify Identity: logout event");
+            updateUserInterface(null); // Treat as logged out
         });
+
 
         // --- CRUD Operations ---
 
@@ -335,32 +332,40 @@
                     return;
                 }
 
+                saveAlertBtn.disabled = true; // Prevent double clicks
+
                 alertsCollection.add({
                     title: title,
                     details: details,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp() // Use server timestamp
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 })
                 .then(() => {
                     console.log("Alert added successfully");
                     if(addAlertModal) addAlertModal.hide();
-                    document.getElementById('add-alert-form').reset(); // Reset form
-                    displayAlerts(); // Refresh the list
+                    document.getElementById('add-alert-form').reset();
+                    // Re-fetch alerts with current admin status
+                    updateUserInterface(netlifyIdentity.currentUser());
                 })
                 .catch((error) => {
                     console.error("Error adding alert: ", error);
-                    alert('Error adding alert. Please try again.');
+                    alert('Error adding alert. Please check console.');
+                })
+                .finally(() => {
+                     saveAlertBtn.disabled = false; // Re-enable button
                 });
             });
-        } else {
-            console.error("Save Alert button (#save-alert-btn) not found!"); // DEBUG
         }
 
-        // EDIT Alert (Event Delegation on the list)
+        // EDIT/DELETE Alert (Event Delegation)
         alertsListDiv.addEventListener('click', (event) => {
-            if (event.target.classList.contains('edit-alert-btn')) {
-                const alertId = event.target.getAttribute('data-alert-id');
-                console.log("Editing alert:", alertId);
+            const target = event.target;
+            const alertId = target.getAttribute('data-alert-id');
 
+            if (!alertId) return; // Exit if no alert ID found on the clicked element
+
+            // Handle Edit Button Click
+            if (target.classList.contains('edit-alert-btn')) {
+                console.log("Editing alert:", alertId);
                 alertsCollection.doc(alertId).get().then(doc => {
                     if (doc.exists) {
                         const data = doc.data();
@@ -369,18 +374,17 @@
                         document.getElementById('edit-alert-details').value = data.details || '';
                         if(editAlertModal) editAlertModal.show();
                     } else {
-                        console.error("No such document!");
+                        console.error("Document not found for edit:", alertId);
                         alert("Could not find the alert to edit.");
                     }
                 }).catch(error => {
                     console.error("Error getting document for edit:", error);
-                    alert("Error fetching alert details for editing.");
+                    alert("Error fetching alert details. Please check console.");
                 });
             }
 
-            // DELETE Alert (Show Confirmation Modal)
-            if (event.target.classList.contains('delete-alert-btn')) {
-                const alertId = event.target.getAttribute('data-alert-id');
+            // Handle Delete Button Click (Show Confirmation)
+            if (target.classList.contains('delete-alert-btn')) {
                 console.log("Requesting delete for alert:", alertId);
                 document.getElementById('delete-alert-id').value = alertId;
                  if(deleteAlertModal) deleteAlertModal.show();
@@ -400,24 +404,27 @@
                     return;
                 }
 
+                updateAlertBtn.disabled = true; // Prevent double clicks
+
                 alertsCollection.doc(alertId).update({
                     title: title,
                     details: details,
-                    // Optionally update a 'lastUpdatedAt' timestamp here
-                    // lastUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    // lastUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() // Optional
                 })
                 .then(() => {
                     console.log("Alert updated successfully");
                     if(editAlertModal) editAlertModal.hide();
-                    displayAlerts(); // Refresh list
+                    // Re-fetch alerts with current admin status
+                     updateUserInterface(netlifyIdentity.currentUser());
                 })
                 .catch((error) => {
                     console.error("Error updating alert: ", error);
-                    alert('Error updating alert. Please try again.');
+                    alert('Error updating alert. Please check console.');
+                })
+                .finally(() => {
+                    updateAlertBtn.disabled = false; // Re-enable button
                 });
             });
-        } else {
-             console.error("Update Alert button (#update-alert-btn) not found!"); // DEBUG
         }
 
         // CONFIRM Delete
@@ -430,26 +437,24 @@
                     return;
                 }
 
+                confirmDeleteBtn.disabled = true; // Prevent double clicks
+
                 alertsCollection.doc(alertId).delete()
                 .then(() => {
                     console.log("Alert deleted successfully");
                     if(deleteAlertModal) deleteAlertModal.hide();
-                    displayAlerts(); // Refresh list
+                     // Re-fetch alerts with current admin status
+                     updateUserInterface(netlifyIdentity.currentUser());
                 })
                 .catch((error) => {
                     console.error("Error deleting alert: ", error);
-                    alert('Error deleting alert. Please try again.');
+                    alert('Error deleting alert. Please check console.');
+                })
+                .finally(() => {
+                    confirmDeleteBtn.disabled = false; // Re-enable button
                 });
             });
-        } else {
-            console.error("Confirm Delete button (#confirm-delete-btn) not found!"); // DEBUG
         }
-
-        // --- Initial Load ---
-        // displayAlerts() is now called within netlifyIdentity.on('init', ...)
-        // to ensure we know the login state before the first render.
-
-
 
     </script>
 </body>
