@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mashgiach Logs</title>
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Local CSS (Ensure paths are correct relative to this HTML file) -->
+    <link rel="stylesheet" href="../css/vendor/font-awesome.min.css"> <!-- Adjusted path -->
+    <link rel="stylesheet" href="../css/vendor/bootstrap.min.css"> <!-- Adjusted path -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Adjusted path -->
+    <style>
+        .hidden {
+            display: none !important; /* Ensure hidden class overrides Bootstrap */
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: none; /* Hidden by default */
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.success {
+             background-color: #d4edda;
+             color: #155724;
+             border: 1px solid #c3e6cb;
+        }
+        /* Adjust modal z-index if needed, Bootstrap usually handles this */
+    </style>
+</head>
+
+<body>
+    <!-- Login Section - Shown when not logged in or not admin -->
+    <div id="login-section">
+        <div class="container"
+            style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <h1>Admin Access Required</h1>
+            <div id="message" class="message"></div>
+            <div id="netlify-login-button" class="netlify-identity-button"
+                style="display: inline-block; background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; text-decoration: none; text-align: center; transition: background-color 0.3s ease;">
+                Login with Netlify Identity
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Content - Shown only to logged-in admins -->
+    <div id="admin-content" class="hidden">
+        <div class="container-fluid"> <!-- Use container-fluid for full width -->
+            <div class="table-wrapper">
+                <div class="table-title">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h2>KRCKA <b>Mashgiach Logs</b></h2>
+                            <a href="../index.html">Home</a> <!-- Adjusted path to main portal -->
+                        </div>
+                        <div class="col-sm-6 text-right"> <!-- Align buttons to the right -->
+                            <a href="#addLogModal" class="btn btn-success" data-toggle="modal"><i
+                                    class="material-icons">&#xE147;</i> <span>Add New Log</span></a>
+                            <!-- Delete button might be better per-row or for selected items -->
+                            <!-- <a href="#deleteLogModal" class="btn btn-danger" data-toggle="modal"><i
+                                    class="material-icons">&#xE15C;</i> <span>Delete Selected</span></a> -->
+                        </div>
+                    </div>
+                    <!-- Removed empty form-group row -->
+                </div>
+                <div class="table-responsive">
+                    <table id="mashgiach-log-table" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <!-- Removed Checkbox column for simplicity, can be added back if needed -->
+                                <th>Mashgiach</th>
+                                <th>Venue</th>
+                                <th>Time/Date</th>
+                                <th>Description</th>
+                                <th>Time Spent (mins)</th> <!-- Specify units -->
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Log entries will be populated here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                 <!-- Optional: Add pagination controls if needed -->
+                 <!-- <div class="clearfix">
+                    <div class="hint-text">Showing <b>5</b> out of <b>25</b> entries</div>
+                    <ul class="pagination">
+                       ... pagination links ...
+                    </ul>
+                </div> -->
+            </div>
+        </div>
+
+        <!-- Add Log Modal -->
+        <div id="addLogModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="add-log-form">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Add New Log</h4>
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="log-venue">Venue</label> <!-- Use for attribute -->
+                                <input type="text" id="log-venue" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="log-description">Description</label> <!-- Use for attribute -->
+                                <textarea id="log-description" class="form-control" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="log-time-spent">Time Spent (minutes)</label> <!-- Use for attribute -->
+                                <input type="number" id="log-time-spent" class="form-control" required min="1"> <!-- Add min attribute -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-success" value="Add">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Log Modal -->
+        <div id="editLogModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="edit-log-form"> <!-- Added edit-id attribute placeholder -->
+                        <div class="modal-header">
+                            <h4 class="modal-title">Edit Log</h4>
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="edit-log-venue">Venue</label> <!-- Use for attribute -->
+                                <input type="text" id="edit-log-venue" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-log-description">Description</label> <!-- Use for attribute -->
+                                <textarea id="edit-log-description" class="form-control" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-log-time-spent">Time Spent (minutes)</label> <!-- Use for attribute -->
+                                <input type="number" id="edit-log-time-spent" class="form-control" required min="1"> <!-- Add min attribute -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-info" value="Save">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Log Modal -->
+        <div id="deleteLogModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="delete-log-form"> <!-- Added delete-id attribute placeholder -->
+                        <div class="modal-header">
+                            <h4 class="modal-title">Delete Log Entry</h4>
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete this log entry?</p>
+                            <p class="text-warning"><small>This action cannot be undone.</small></p>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-danger" value="Delete">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End Admin Content -->
+
+    <!-- JavaScript Libraries -->
+    <script src="../js/vendor/jquery.min.js"></script> <!-- Adjusted path -->
+    <script src="../js/vendor/bootstrap.min.js"></script> <!-- Adjusted path -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script> <!-- Use a specific version -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script> <!-- Use a specific version -->
+    <!-- Netlify Identity Widget -->
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        // IMPORTANT: Replace with your actual Firebase project config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace
+            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace
+            projectId: "richardrccr-10a9d", // Replace
+            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace
+            messagingSenderId: "867270362103", // Replace
+            appId: "1:867270362103:web:7653459445810350b864f2" // Replace
+        };
+
+        // --- Initialize Firebase ---
+        // Check if Firebase is already initialized to avoid errors
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // --- Firestore Collection Reference ---
+        const mashgiachLogRef = db.collection('mashgiach-logs'); // Corrected collection name
+
+        // --- DOM Element References ---
+        const loginSection = document.getElementById('login-section');
+        const adminContent = document.getElementById('admin-content');
+        const netlifyLoginButton = document.getElementById('netlify-login-button');
+        const messageDiv = document.getElementById('message');
+        const logsTableBody = document.querySelector('#mashgiach-log-table tbody');
+        const addLogForm = document.getElementById('add-log-form');
+        const editLogForm = document.getElementById('edit-log-form');
+        const deleteLogForm = document.getElementById('delete-log-form');
+
+        // --- Netlify Identity Initialization ---
+        const netlifyIdentity = window.netlifyIdentity;
+        if (netlifyIdentity) {
+            netlifyIdentity.init();
+        } else {
+            console.error("Netlify Identity widget not loaded.");
+            showMessage('error', 'Authentication service failed to load.');
+        }
+
+        // --- Helper Functions ---
+        function showMessage(type, text) {
+            if (messageDiv) {
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = text;
+                messageDiv.style.display = 'block';
+            } else {
+                console.warn("Message div not found");
+            }
+        }
+
+        function clearMessage() {
+            if (messageDiv) {
+                messageDiv.style.display = 'none';
+                messageDiv.textContent = '';
+                messageDiv.className = 'message';
+            }
+        }
+
+        function formatFirestoreTimestamp(timestamp) {
+            if (timestamp && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate().toLocaleString(); // Adjust format as needed
+            }
+            return 'N/A';
+        }
+
+        // --- UI Update Logic ---
+        function updateAdminUI(isAdmin) {
+             if (isAdmin) {
+                loginSection.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+                clearMessage();
+                displayMashgiachLogs(); // Load logs only for admins
+            } else {
+                loginSection.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+                // Show appropriate message if logged in but not admin
+                if (netlifyIdentity.currentUser()) {
+                     showMessage('error', 'Admin access required.');
+                } else {
+                     clearMessage(); // Clear message if simply logged out
+                }
+                if (logsTableBody) logsTableBody.innerHTML = ''; // Clear table if not admin
+            }
+        }
+
+        // --- Firestore Operations ---
+
+        // Function to add a new Mashgiach Log
+        async function addMashgiachLogSubmit(event) {
+            event.preventDefault();
+            const user = netlifyIdentity.currentUser();
+            if (!user) {
+                showMessage('error', "You must be logged in to add a log.");
+                return;
+            }
+
+            const venue = document.getElementById('log-venue').value.trim();
+            const description = document.getElementById('log-description').value.trim();
+            // Ensure timeSpent is parsed as a number
+            const timeSpent = parseInt(document.getElementById('log-time-spent').value, 10);
+
+            if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) {
+                 alert("Please fill in all fields correctly. Time spent must be a positive number.");
+                 return;
+            }
+
+            try {
+                const logEntry = {
+                    mashgiachId: user.id,
+                    mashgiachName: user.user_metadata?.full_name || user.email, // Safer access
+                    venue: venue,
+                    dateTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    description: description,
+                    timeSpentMinutes: timeSpent, // Store as number
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    // No updatedAt on creation
+                };
+
+                const docRef = await mashgiachLogRef.add(logEntry);
+                console.log("Mashgiach log written with ID: ", docRef.id);
+
+                $('#addLogModal').modal('hide'); // Close modal using jQuery
+                addLogForm.reset(); // Reset the form
+                displayMashgiachLogs(); // Refresh the table
+                // Optionally show a success message
+
+            } catch (error) {
+                console.error("Error adding Mashgiach log: ", error);
+                showMessage('error', `Failed to add log: ${error.message}`);
+            }
+        }
+
+        // Function to fetch and display Mashgiach Logs
+        async function displayMashgiachLogs() {
+            if (!logsTableBody) {
+                console.error("Log table body not found!");
+                return;
+            }
+            logsTableBody.innerHTML = '<tr><td colspan="6">Loading logs...</td></tr>'; // Show loading state
+
+            try {
+                const querySnapshot = await mashgiachLogRef.orderBy('dateTime', 'desc').get();
+
+                if (querySnapshot.empty) {
+                    logsTableBody.innerHTML = '<tr><td colspan="6">No logs found.</td></tr>';
+                    return;
+                }
+
+                let tableContent = ''; // Build content efficiently
+                querySnapshot.forEach(doc => {
+                    const log = doc.data();
+                    const logId = doc.id;
+
+                    tableContent += `
+                        <tr data-id="${logId}">
+                            <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
+                            <td>${log.venue || 'N/A'}</td>
+                            <td>${formatFirestoreTimestamp(log.dateTime)}</td>
+                            <td>${log.description || ''}</td>
+                            <td>${log.timeSpentMinutes || 'N/A'}</td>
+                            <td>
+                                <a href="#editLogModal" class="edit js-edit-log" data-id="${logId}" data-toggle="modal"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i></a>
+                                <a href="#deleteLogModal" class="delete js-delete-log" data-id="${logId}" data-toggle="modal"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i></a>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                logsTableBody.innerHTML = tableContent; // Update table body at once
+
+                // Re-initialize Bootstrap tooltips after updating content
+                $('[data-toggle="tooltip"]').tooltip();
+
+            } catch (error) {
+                console.error("Error fetching Mashgiach logs: ", error);
+                logsTableBody.innerHTML = `<tr><td colspan="6" class="text-danger">Error loading logs: ${error.message}</td></tr>`;
+            }
+        }
+
+        // Function to handle opening the Edit modal and populating data
+        async function openEditLogModal(logId) {
+            editLogForm.setAttribute('data-edit-id', logId); // Store ID on the form
+             try {
+                const doc = await mashgiachLogRef.doc(logId).get();
+                if (doc.exists) {
+                    const logData = doc.data();
+                    document.getElementById('edit-log-venue').value = logData.venue || '';
+                    document.getElementById('edit-log-description').value = logData.description || '';
+                    document.getElementById('edit-log-time-spent').value = logData.timeSpentMinutes || '';
+                    $('#editLogModal').modal('show'); // Show modal using jQuery
+                } else {
+                    console.error("Log document not found for editing:", logId);
+                    showMessage('error', 'Could not find the log entry to edit.');
+                }
+            } catch (error) {
+                console.error("Error getting document for edit:", error);
+                 showMessage('error', `Error loading log for editing: ${error.message}`);
+            }
+        }
+
+        // Function to handle saving edited log
+        async function editLogSubmit(event) {
+            event.preventDefault();
+            const logId = editLogForm.getAttribute('data-edit-id');
+            if (!logId) {
+                console.error("No edit ID found on the form.");
+                return;
+            }
+
+            const venue = document.getElementById('edit-log-venue').value.trim();
+            const description = document.getElementById('edit-log-description').value.trim();
+            const timeSpent = parseInt(document.getElementById('edit-log-time-spent').value, 10);
+
+             if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) {
+                 alert("Please fill in all fields correctly. Time spent must be a positive number.");
+                 return;
+            }
+
+            try {
+                await mashgiachLogRef.doc(logId).update({
+                    venue: venue,
+                    description: description,
+                    timeSpentMinutes: timeSpent,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                $('#editLogModal').modal('hide');
+                editLogForm.reset();
+                displayMashgiachLogs(); // Refresh the list
+                // Optionally show success message
+
+            } catch (error) {
+                console.error("Error updating document: ", error);
+                showMessage('error', `Error saving changes: ${error.message}`);
+            }
+        }
+
+         // Function to handle opening the Delete modal
+        function openDeleteLogModal(logId) {
+            deleteLogForm.setAttribute('data-delete-id', logId); // Store ID on the form
+            $('#deleteLogModal').modal('show'); // Show modal using jQuery
+        }
+
+
+        // Function to handle deleting a log
+        async function deleteLogSubmit(event) {
+            event.preventDefault();
+            const logId = deleteLogForm.getAttribute('data-delete-id');
+             if (!logId) {
+                console.error("No delete ID found on the form.");
+                return;
+            }
+
+            try {
+                await mashgiachLogRef.doc(logId).delete();
+                console.log("Document successfully deleted!");
+                $('#deleteLogModal').modal('hide');
+                deleteLogForm.removeAttribute('data-delete-id'); // Clean up attribute
+                displayMashgiachLogs(); // Refresh the list
+                 // Optionally show success message
+
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                 showMessage('error', `Error deleting log: ${error.message}`);
+            }
+        }
+
+
+        // --- Event Listeners ---
+
+        // Netlify Identity Login Button
+        if (netlifyLoginButton) {
+            netlifyLoginButton.addEventListener('click', () => {
+                netlifyIdentity.open(); // Open the Netlify login modal
+            });
+        }
+
+        // Netlify Identity Events
+        netlifyIdentity.on('init', user => {
+            const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
+            updateAdminUI(isAdmin);
+        });
+
+        netlifyIdentity.on('login', user => {
+            const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
+            updateAdminUI(isAdmin);
+            netlifyIdentity.close(); // Close the widget modal after login
+        });
+
+        netlifyIdentity.on('logout', () => {
+            updateAdminUI(false); // Update UI to logged-out state
+        });
+
+        // Form Submissions
+        if (addLogForm) {
+            addLogForm.addEventListener('submit', addMashgiachLogSubmit);
+        }
+        if (editLogForm) {
+            editLogForm.addEventListener('submit', editLogSubmit);
+        }
+         if (deleteLogForm) {
+            deleteLogForm.addEventListener('submit', deleteLogSubmit);
+        }
+
+
+        // Event Delegation for Edit/Delete buttons in the table
+        if (logsTableBody) {
+            logsTableBody.addEventListener('click', (event) => {
+                const target = event.target.closest('a'); // Find the clicked link
+                if (!target) return; // Exit if click wasn't on a link
+
+                const logId = target.getAttribute('data-id');
+                if (!logId) return; // Exit if link doesn't have data-id
+
+                if (target.classList.contains('js-edit-log')) {
+                    event.preventDefault();
+                    openEditLogModal(logId);
+                } else if (target.classList.contains('js-delete-log')) {
+                     event.preventDefault();
+                    openDeleteLogModal(logId);
+                }
+            });
+        }
+
+        // Reset forms when modals are hidden (using jQuery for Bootstrap modals)
+        $('#addLogModal').on('hidden.bs.modal', function () {
+            addLogForm.reset();
+        });
+        $('#editLogModal').on('hidden.bs.modal', function () {
+            editLogForm.reset();
+            editLogForm.removeAttribute('data-edit-id'); // Clean up attribute
+        });
+         $('#deleteLogModal').on('hidden.bs.modal', function () {
+            deleteLogForm.removeAttribute('data-delete-id'); // Clean up attribute
+        });
+
+
+        // --- Initial Load ---
+        // The 'init' event handler for Netlify Identity handles the initial UI state.
+
+    </script>
+</body>
+</html>
