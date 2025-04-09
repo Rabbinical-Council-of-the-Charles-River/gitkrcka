@@ -143,7 +143,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // --- Firebase Configuration ---
+                // --- Firebase Configuration ---
         // IMPORTANT: Replace with your actual Firebase config
         // Consider using environment variables or a config file for security
         const firebaseConfig = {
@@ -166,7 +166,7 @@
         const alertsListDiv = document.getElementById('alerts-list');
         const loadingIndicator = document.getElementById('loading-indicator');
         const loginButton = document.getElementById('login-btn');
-        const adminControls = document.querySelectorAll('.admin-controls');
+        // We select adminControls inside updateAdminUI now
 
         // Modals (using Bootstrap 5 instances for programmatic control)
         const addAlertModalEl = document.getElementById('addAlertModal');
@@ -256,6 +256,7 @@
                     });
                     // Re-apply admin UI state after rendering new cards
                     const user = netlifyIdentity.currentUser();
+                    console.log("Applying UI state after displaying alerts. User:", user); // DEBUG
                     updateAdminUI(user && checkUserRole(user));
                 })
                 .catch((error) => {
@@ -269,29 +270,43 @@
         netlifyIdentity.init();
 
         function updateAdminUI(showAdminControls) {
+            console.log(`updateAdminUI called with showAdminControls = ${showAdminControls}`); // DEBUG
             // Select ALL admin controls again after potential re-renders
             const currentAdminControls = document.querySelectorAll('.admin-controls');
-            currentAdminControls.forEach(el => {
+            console.log(`Found ${currentAdminControls.length} elements with class 'admin-controls'`); // DEBUG
+            currentAdminControls.forEach((el, index) => {
                 // Use inline style for simplicity here, could use classes too
                 el.style.display = showAdminControls ? '' : 'none';
+                // console.log(`Element ${index} (${el.tagName}#${el.id || ''}) display set to: ${el.style.display}`); // DEBUG (can be verbose)
             });
             // Toggle top-level login/logout button visibility
-             if (loginButton) loginButton.style.display = showAdminControls ? 'none' : '';
+             if (loginButton) {
+                 loginButton.style.display = showAdminControls ? 'none' : '';
+                 console.log(`Login button display set to: ${loginButton.style.display}`); // DEBUG
+             } else {
+                 console.log("Login button not found"); // DEBUG
+             }
         }
 
         function checkUserRole(user) {
             const allowedRoles = ['admin', 'manager']; // Roles that can manage alerts
             const userRoles = user?.app_metadata?.roles || [];
-            return userRoles.some(role => allowedRoles.includes(role));
+            const hasRole = userRoles.some(role => allowedRoles.includes(role));
+            console.log("Checking user role. User:", user); // DEBUG
+            console.log("User roles:", userRoles); // DEBUG
+            console.log(`Is admin/manager? ${hasRole}`); // DEBUG
+            return hasRole;
         }
 
         netlifyIdentity.on('init', user => {
+            console.log("Netlify Identity init event. User:", user); // DEBUG
             const isAdmin = user && checkUserRole(user);
             updateAdminUI(isAdmin);
             displayAlerts(); // Fetch alerts after knowing login state
         });
 
         netlifyIdentity.on('login', user => {
+            console.log("Netlify Identity login event. User:", user); // DEBUG
             const isAdmin = checkUserRole(user);
             updateAdminUI(isAdmin);
             netlifyIdentity.close();
@@ -300,6 +315,7 @@
         });
 
         netlifyIdentity.on('logout', () => {
+            console.log("Netlify Identity logout event."); // DEBUG
             updateAdminUI(false);
             // Optionally re-fetch alerts if needed
             // displayAlerts();
@@ -335,6 +351,8 @@
                     alert('Error adding alert. Please try again.');
                 });
             });
+        } else {
+            console.error("Save Alert button (#save-alert-btn) not found!"); // DEBUG
         }
 
         // EDIT Alert (Event Delegation on the list)
@@ -398,6 +416,8 @@
                     alert('Error updating alert. Please try again.');
                 });
             });
+        } else {
+             console.error("Update Alert button (#update-alert-btn) not found!"); // DEBUG
         }
 
         // CONFIRM Delete
@@ -421,11 +441,15 @@
                     alert('Error deleting alert. Please try again.');
                 });
             });
+        } else {
+            console.error("Confirm Delete button (#confirm-delete-btn) not found!"); // DEBUG
         }
 
         // --- Initial Load ---
         // displayAlerts() is now called within netlifyIdentity.on('init', ...)
         // to ensure we know the login state before the first render.
+
+
 
     </script>
 </body>
