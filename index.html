@@ -40,34 +40,17 @@
     </style>
 </head>
 <body>
-    <div class="card portal-card shadow-sm">
-        <div class="card-body p-4 p-md-5 text-center">
-            <h2 class="card-title mb-4">KRCKA Portal</h2>
-
-            <!-- Public Links -->
-            <div class="d-grid gap-2 mb-4 public-links">
-                <a href="apply.html" class="btn btn-outline-secondary">Apply for Certification</a>
-                <a href="client-view.html" class="btn btn-outline-secondary">View Kosher Establishments</a>
-                 <a href="alerts/" class="btn btn-outline-warning">View Kashrus Alerts</a> <!-- Added Alerts Link -->
-            </div>
-
-            <!-- Login/Logout Buttons -->
-            <div class="d-grid gap-2 mb-4">
-                 <button id="login-btn" class="btn btn-primary btn-lg" onclick="netlifyIdentity.open()">Admin Login</button>
-                 <button id="logout-btn" class="btn btn-danger btn-lg hidden" onclick="netlifyIdentity.logout()">Logout</button>
-            </div>
-
-            <!-- Admin Links Section -->
-            <div id="admin-links" class="hidden">
-                <hr> <!-- Separator -->
-                <h5 class="mb-3">Admin Area</h5>
-                <ul class="list-group">
-                    <li class="list-group-item list-group-item-action"><a href="products/">Manage Products</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="establishments/">Manage Establishments</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="alerts/">Manage Alerts</a></li> <!-- Added Alerts Link -->
-                </ul>
-            </div>
-        </div>
+    <div class="container text-center">
+        <h2 class="mb-4">KRCKA</h2>
+        <a href="apply.html">Apply for Certification</a> <br>
+        <a href="client-view.html">View Kosher dining and establishments</a> <br>
+        <button id="login-btn" class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button>
+        <button id="logout-btn" class="btn btn-danger hidden" onclick="netlifyIdentity.logout()">Logout</button>
+        
+        <ul id="admin-links" class="list-group mt-4 hidden">
+            <li class="list-group-item"><a href="products/">Manage Products</a></li>
+            <li class="list-group-item"><a href="establishments/">Manage Establishments</a></li>
+        </ul>
     </div>
 
     <!-- Bootstrap 5 JS Bundle (includes Popper) - Optional if not using JS components -->
