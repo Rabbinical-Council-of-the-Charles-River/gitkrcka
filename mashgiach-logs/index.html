@@ -64,6 +64,15 @@
             cursor: help; /* Indicate it's helpful */
             color: #6c757d; /* Bootstrap secondary color */
         }
+        /* Styles for selection */
+        .select-checkbox-cell, .select-checkbox-header {
+            width: 1%; /* Minimal width for checkbox */
+            white-space: nowrap;
+            text-align: center;
+        }
+        #add-selected-to-invoice-btn {
+            margin-left: 10px; /* Space it from the Add New Log button */
+        }
     </style>
 </head>
 
@@ -93,8 +102,11 @@
                             <a href="../index.html">Home</a>
                         </div>
                         <div class="col-sm-6 text-right">
+                             <a href="#" class="btn btn-primary" id="add-selected-to-invoice-btn" style="display: none;"> <!-- Initially hidden -->
+                                <i class="material-icons">&#xE145;</i> <span>Add Selected to Invoice</span> <!-- Used add_shopping_cart icon -->
+                            </a>
                             <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLogModal">
-                                <i class="material-icons">&#xE147;</i> <span><center>Add New Log</center></span>
+                                <i class="material-icons">&#xE147;</i> <span>Add New Log</span> <!-- Removed <center> tag -->
                             </a>
                         </div>
                     </div>
@@ -103,6 +115,7 @@
                     <table id="mashgiach-log-table" class="table table-striped table-hover">
                         <thead>
                             <tr>
+                                <th class="select-checkbox-header"><input type="checkbox" id="select-all-logs" title="Select All"></th> <!-- Checkbox Header -->
                                 <th>Mashgiach</th>
                                 <th>Venue</th>
                                 <th>Time/Date</th>
@@ -262,10 +275,14 @@
         const adminContent = document.getElementById('admin-content');
         const netlifyLoginButton = document.getElementById('netlify-login-button');
         const messageDiv = document.getElementById('message');
+        const logsTable = document.getElementById('mashgiach-log-table'); // Get table reference
         const logsTableBody = document.querySelector('#mashgiach-log-table tbody');
         const addLogForm = document.getElementById('add-log-form');
         const editLogForm = document.getElementById('edit-log-form');
         const deleteLogForm = document.getElementById('delete-log-form');
+        const addSelectedToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
+        const selectAllCheckbox = document.getElementById('select-all-logs');
+
 
         // --- Netlify Identity Initialization ---
         const netlifyIdentity = window.netlifyIdentity;
@@ -275,6 +292,12 @@
             console.error("Netlify Identity widget not loaded.");
             showMessage('error', 'Authentication service failed to load.');
         }
+
+        // --- State Variables ---
+        let selectedLogIds = new Set();
+
+        // --- Configuration ---
+        const MASHGIACH_HOURLY_RATE = 50.00; // Example: $50 per hour - ADJUST AS NEEDED!
 
         // --- Helper Functions ---
         function showMessage(type, text) {
@@ -297,7 +320,7 @@
 
         function formatFirestoreTimestamp(timestamp) {
             if (timestamp && typeof timestamp.toDate === 'function') {
-                return timestamp.toDate().toLocaleString();
+                return timestamp.toDate().toLocaleString(); // Consider locale options for better formatting
             }
             return 'N/A';
         }
@@ -319,20 +342,120 @@
                      clearMessage();
                 }
                 if (logsTableBody) logsTableBody.innerHTML = '';
+                selectedLogIds.clear(); // Clear selection on logout/access denied
+                updateAddToInvoiceButtonVisibility(); // Hide button
             }
         }
 
         // --- Tooltip Initialization ---
         function initializeTooltips() {
-            // Use Bootstrap 5's method
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
-                // Ensure tooltips are not initialized multiple times if displayMashgiachLogs is called again
                 if (!bootstrap.Tooltip.getInstance(tooltipTriggerEl)) {
                     return new bootstrap.Tooltip(tooltipTriggerEl);
                 }
                 return bootstrap.Tooltip.getInstance(tooltipTriggerEl);
             });
+        }
+
+        // --- Selection & Invoice Button Logic ---
+        function updateAddToInvoiceButtonVisibility() {
+            if (addSelectedToInvoiceBtn) {
+                if (selectedLogIds.size > 0) {
+                    addSelectedToInvoiceBtn.style.display = 'inline-block'; // Show button
+                    addSelectedToInvoiceBtn.disabled = false; // Ensure enabled
+                    addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
+                } else {
+                    addSelectedToInvoiceBtn.style.display = 'none'; // Hide button
+                }
+            }
+        }
+
+        function handleCheckboxChange(event) {
+            const checkbox = event.target;
+            if (checkbox.classList.contains('log-select-checkbox')) {
+                const logId = checkbox.getAttribute('data-id');
+                if (checkbox.checked) {
+                    selectedLogIds.add(logId);
+                } else {
+                    selectedLogIds.delete(logId);
+                }
+                updateAddToInvoiceButtonVisibility();
+
+                // Update select-all checkbox state
+                const allCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox');
+                const allChecked = allCheckboxes.length > 0 && Array.from(allCheckboxes).every(cb => cb.checked);
+                if (selectAllCheckbox) selectAllCheckbox.checked = allChecked;
+            }
+        }
+
+        function handleSelectAllChange(event) {
+            const isChecked = event.target.checked;
+            const allCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const logId = checkbox.getAttribute('data-id');
+                if (isChecked) {
+                    selectedLogIds.add(logId);
+                } else {
+                    selectedLogIds.delete(logId);
+                }
+            });
+            updateAddToInvoiceButtonVisibility();
+        }
+
+        async function prepareAndRedirectToInvoice() {
+            if (selectedLogIds.size === 0) {
+                alert("Please select at least one log entry to add to the invoice.");
+                return;
+            }
+
+            console.log("Selected Log IDs:", Array.from(selectedLogIds));
+            addSelectedToInvoiceBtn.disabled = true; // Prevent double clicks
+            addSelectedToInvoiceBtn.querySelector('span').textContent = 'Processing...';
+
+            try {
+                // Fetch full data for selected logs
+                const fetchPromises = Array.from(selectedLogIds).map(id => mashgiachLogRef.doc(id).get());
+                const logDocs = await Promise.all(fetchPromises);
+
+                const invoiceItems = logDocs
+                    .filter(doc => doc.exists) // Ensure doc exists
+                    .map(doc => {
+                        const logData = doc.data();
+                        const minutes = logData.timeSpentMinutes || 0;
+                        const hours = minutes > 0 ? (minutes / 60).toFixed(2) : 0; // Calculate hours (e.g., 1.5)
+                        const itemPrice = hours * MASHGIACH_HOURLY_RATE;
+
+                        // Format description for the invoice item
+                        const description = `Mashgiach Visit: ${logData.venue || 'N/A'} (${formatFirestoreTimestamp(logData.dateTime)}) - ${logData.description || ''}`;
+
+                        return {
+                            description: description.substring(0, 200), // Limit description length if needed
+                            quantity: parseFloat(hours), // Quantity as hours
+                            unitPrice: MASHGIACH_HOURLY_RATE, // Unit price is the hourly rate
+                            // 'total' will be calculated by the invoice page
+                        };
+                    });
+
+                if (invoiceItems.length === 0) {
+                    alert("Could not retrieve data for the selected logs. Please try again.");
+                    updateAddToInvoiceButtonVisibility(); // Re-enable button
+                    return;
+                }
+
+                // Store in sessionStorage
+                sessionStorage.setItem('pendingInvoiceItems', JSON.stringify(invoiceItems));
+                console.log("Items stored in sessionStorage:", invoiceItems);
+
+                // Redirect to invoice page (adjust path if necessary)
+                window.location.href = '../invoice.html'; // Go to the invoice page
+
+            } catch (error) {
+                console.error("Error preparing logs for invoice:", error);
+                alert(`Error fetching log data: ${error.message}`);
+                updateAddToInvoiceButtonVisibility(); // Re-enable button
+            }
         }
 
 
@@ -386,13 +509,16 @@
         // Display Logs
         async function displayMashgiachLogs() {
             if (!logsTableBody) return;
-            logsTableBody.innerHTML = '<tr><td colspan="6">Loading logs...</td></tr>';
+            logsTableBody.innerHTML = `<tr><td colspan="7">Loading logs...</td></tr>`; // Adjusted colspan for checkbox
+            selectedLogIds.clear(); // Clear selection on refresh
+            updateAddToInvoiceButtonVisibility(); // Hide button initially
+            if (selectAllCheckbox) selectAllCheckbox.checked = false; // Uncheck select-all
 
             try {
                 const querySnapshot = await mashgiachLogRef.orderBy('dateTime', 'desc').get();
 
                 if (querySnapshot.empty) {
-                    logsTableBody.innerHTML = '<tr><td colspan="6">No logs found.</td></tr>';
+                    logsTableBody.innerHTML = `<tr><td colspan="7">No logs found.</td></tr>`; // Adjusted colspan
                     return;
                 }
 
@@ -400,21 +526,21 @@
                 querySnapshot.forEach(doc => {
                     const log = doc.data();
                     const logId = doc.id;
-                    // Display time as stored (minutes)
                     const timeDisplay = log.timeSpentMinutes ? `${log.timeSpentMinutes} min` : 'N/A';
 
                     tableContent += `
                         <tr data-id="${logId}">
+                            <td class="select-checkbox-cell"><input type="checkbox" class="log-select-checkbox" data-id="${logId}"></td>
                             <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
                             <td>${log.venue || 'N/A'}</td>
                             <td>${formatFirestoreTimestamp(log.dateTime)}</td>
                             <td>${log.description || ''}</td>
                             <td>${timeDisplay}</td>
                             <td>
-                                <a href="#" class="edit js-edit-log" data-id="${logId}" data-bs-toggle="modal" data-bs-target="#editLogModal" title="Edit Log">
+                                <a href="#" class="edit js-edit-log" data-id="${logId}" title="Edit Log">
                                     <i class="material-icons">&#xE254;</i>
                                 </a>
-                                <a href="#" class="delete js-delete-log" data-id="${logId}" data-bs-toggle="modal" data-bs-target="#deleteLogModal" title="Delete Log">
+                                <a href="#" class="delete js-delete-log" data-id="${logId}" title="Delete Log">
                                     <i class="material-icons">&#xE872;</i>
                                 </a>
                             </td>
@@ -427,7 +553,7 @@
 
             } catch (error) {
                 console.error("Error fetching Mashgiach logs: ", error);
-                logsTableBody.innerHTML = `<tr><td colspan="6" class="text-danger">Error loading logs: ${error.message}</td></tr>`;
+                logsTableBody.innerHTML = `<tr><td colspan="7" class="text-danger">Error loading logs: ${error.message}</td></tr>`; // Adjusted colspan
             }
         }
 
@@ -554,24 +680,47 @@
         if (deleteLogForm) deleteLogForm.addEventListener('submit', deleteLogSubmit);
 
 
-        // Event Delegation for Edit/Delete buttons
+        // Event Delegation for Edit/Delete/Checkbox clicks in the table body
         if (logsTableBody) {
             logsTableBody.addEventListener('click', (event) => {
-                const target = event.target.closest('a'); // Find the closest link ancestor
-                if (!target) return;
+                const target = event.target;
 
-                const logId = target.getAttribute('data-id');
+                // Handle Checkbox clicks (delegated from handleCheckboxChange)
+                if (target.classList.contains('log-select-checkbox')) {
+                     handleCheckboxChange(event); // Let the specific handler manage state
+                     return; // Don't process further as link click
+                }
+
+                // Handle Edit/Delete link clicks
+                const targetLink = target.closest('a'); // Find the closest link ancestor
+                if (!targetLink) return;
+
+                const logId = targetLink.getAttribute('data-id');
                 if (!logId) return;
 
-                if (target.classList.contains('js-edit-log')) {
+                if (targetLink.classList.contains('js-edit-log')) {
                     event.preventDefault();
                     openEditLogModal(logId);
-                } else if (target.classList.contains('js-delete-log')) {
+                } else if (targetLink.classList.contains('js-delete-log')) {
                      event.preventDefault();
                     openDeleteLogModal(logId);
                 }
             });
         }
+
+        // Listener for select-all checkbox
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', handleSelectAllChange);
+        }
+
+        // Listener for the "Add Selected to Invoice" button
+        if (addSelectedToInvoiceBtn) {
+            addSelectedToInvoiceBtn.addEventListener('click', (event) => {
+                event.preventDefault(); // Prevent default link behavior
+                prepareAndRedirectToInvoice();
+            });
+        }
+
 
         // Reset forms when modals are hidden
         const addModalEl = document.getElementById('addLogModal');
