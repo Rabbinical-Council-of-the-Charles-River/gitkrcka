@@ -76,13 +76,19 @@
             padding: 0.4em 0.6em;
             font-size: 0.75em;
             font-weight: 600;
+            color: white; /* Default text color for badges */
         }
-        .status-billed { background-color: #198754; color: white; } /* Success */
+        .status-billed { background-color: #198754; } /* Success */
         .status-unbilled { background-color: #ffc107; color: black; } /* Warning */
         /* Style for disabled checkboxes */
         .log-select-checkbox:disabled {
             cursor: not-allowed;
             opacity: 0.6;
+        }
+        /* Optional: Style for billed rows */
+        .table-secondary {
+             --bs-table-bg: #e9ecef; /* Lighter gray for billed rows */
+             --bs-table-striped-bg: #e1e5e9;
         }
     </style>
 </head>
@@ -117,7 +123,7 @@
                                 <i class="material-icons">&#xE145;</i> <span>Add Selected to Invoice</span>
                             </a>
                             <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLogModal">
-                                <i class="material-icons">&#xE147;</i> <span>Add New Log</span>
+                                <i class="material-icons">&#xE147;</i> <span><center>Add New Log</center></span>
                             </a>
                         </div>
                     </div>
@@ -259,12 +265,12 @@
     <script>
         // --- Firebase Configuration ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace
-            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace
-            projectId: "richardrccr-10a9d", // Replace
-            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace
-            messagingSenderId: "867270362103", // Replace
-            appId: "1:867270362103:web:7653459445810350b864f2" // Replace
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace if needed
+            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace if needed
+            projectId: "richardrccr-10a9d", // Replace if needed
+            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace if needed
+            messagingSenderId: "867270362103", // Replace if needed
+            appId: "1:867270362103:web:7653459445810350b864f2" // Replace if needed
         };
 
         // --- Initialize Firebase ---
@@ -296,7 +302,7 @@
             netlifyIdentity.init();
         } else {
             console.error("Netlify Identity widget not loaded.");
-            showMessage('error', 'Authentication service failed to load.');
+            if(showMessage) showMessage('error', 'Authentication service failed to load.');
         }
 
         // --- State Variables ---
@@ -306,9 +312,28 @@
         const MASHGIACH_HOURLY_RATE = 50.00; // ADJUST AS NEEDED!
 
         // --- Helper Functions ---
-        function showMessage(type, text) { /* ... same as before ... */ }
-        function clearMessage() { /* ... same as before ... */ }
-        function formatFirestoreTimestamp(timestamp) { /* ... same as before ... */ }
+        function showMessage(type, text) {
+            if (messageDiv) {
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = text;
+                messageDiv.style.display = 'block';
+            } else { console.warn("Message div not found"); }
+        }
+
+        function clearMessage() {
+            if (messageDiv) {
+                messageDiv.style.display = 'none';
+                messageDiv.textContent = '';
+                messageDiv.className = 'message';
+            }
+        }
+
+        function formatFirestoreTimestamp(timestamp) {
+            if (timestamp && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate().toLocaleString(); // Consider locale options
+            }
+            return 'N/A';
+        }
 
         // *** New: Get Billing Status Badge ***
         function getBillingStatusBadge(status) {
@@ -319,15 +344,49 @@
         }
 
         // --- UI Update Logic ---
-        function updateAdminUI(isAdmin) { /* ... same as before ... */ }
-        function initializeTooltips() { /* ... same as before ... */ }
+        function updateAdminUI(isAdmin) {
+             if (isAdmin) {
+                loginSection.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+                clearMessage();
+                displayMashgiachLogs();
+                initializeTooltips();
+            } else {
+                loginSection.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+                if (netlifyIdentity.currentUser()) {
+                     if(showMessage) showMessage('error', 'Admin access required.');
+                } else {
+                     clearMessage();
+                }
+                if (logsTableBody) logsTableBody.innerHTML = '';
+                selectedLogIds.clear();
+                updateAddToInvoiceButtonVisibility();
+            }
+        }
+
+        function initializeTooltips() {
+            try {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    // Dispose existing tooltips before creating new ones to avoid conflicts
+                    const existingTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
+                    if (existingTooltip) {
+                        existingTooltip.dispose();
+                    }
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            } catch (e) {
+                console.error("Error initializing tooltips:", e); // Catch potential Bootstrap errors
+            }
+        }
 
         // --- Selection & Invoice Button Logic ---
         function updateAddToInvoiceButtonVisibility() {
             if (addSelectedToInvoiceBtn) {
                 // Show button only if there are *selectable* (unbilled) logs selected
                 const hasSelectable = Array.from(selectedLogIds).some(id => {
-                    const row = logsTableBody.querySelector(`tr[data-id="${id}"]`);
+                    const row = logsTableBody?.querySelector(`tr[data-id="${id}"]`); // Optional chaining
                     const checkbox = row ? row.querySelector('.log-select-checkbox') : null;
                     return checkbox && !checkbox.disabled;
                 });
@@ -355,16 +414,19 @@
                 updateAddToInvoiceButtonVisibility();
 
                 // Update select-all checkbox state (only consider enabled checkboxes)
-                const enabledCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox:not(:disabled)');
-                const allChecked = enabledCheckboxes.length > 0 && Array.from(enabledCheckboxes).every(cb => cb.checked);
-                if (selectAllCheckbox) selectAllCheckbox.checked = allChecked;
+                const enabledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox:not(:disabled)'); // Optional chaining
+                const allChecked = enabledCheckboxes && enabledCheckboxes.length > 0 && Array.from(enabledCheckboxes).every(cb => cb.checked);
+                if (selectAllCheckbox) selectAllCheckbox.checked = !!allChecked; // Ensure boolean
+
             }
         }
 
         function handleSelectAllChange(event) {
             const isChecked = event.target.checked;
             // Only affect enabled checkboxes
-            const enabledCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox:not(:disabled)');
+            const enabledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox:not(:disabled)'); // Optional chaining
+            if (!enabledCheckboxes) return;
+
             enabledCheckboxes.forEach(checkbox => {
                 checkbox.checked = isChecked;
                 const logId = checkbox.getAttribute('data-id');
@@ -374,10 +436,10 @@
                     selectedLogIds.delete(logId);
                 }
             });
-            // Clear IDs that might have been selected but are now disabled (if any edge case exists)
+            // Clean up any potentially selected but now irrelevant IDs (e.g., if logs were updated in background)
+            const currentEnabledIds = new Set(Array.from(enabledCheckboxes).map(cb => cb.dataset.id));
             selectedLogIds.forEach(id => {
-                 const cb = logsTableBody.querySelector(`.log-select-checkbox[data-id="${id}"]`);
-                 if (!cb || cb.disabled) {
+                 if (!currentEnabledIds.has(id)) {
                      selectedLogIds.delete(id);
                  }
             });
@@ -386,16 +448,18 @@
 
         // *** Updated: Prepare Items, Mark as Billed, then Redirect ***
         async function prepareAndRedirectToInvoice() {
-            // Filter selected IDs to only include those that are actually unbilled (safety check)
+            // Filter selected IDs to only include those that are actually unbilled
             const unbilledSelectedIds = Array.from(selectedLogIds).filter(id => {
-                 const row = logsTableBody.querySelector(`tr[data-id="${id}"]`);
+                 const row = logsTableBody?.querySelector(`tr[data-id="${id}"]`); // Optional chaining
                  const checkbox = row ? row.querySelector('.log-select-checkbox') : null;
-                 return checkbox && !checkbox.disabled; // Check if checkbox exists and is not disabled
+                 // Checkbox must exist and not be disabled
+                 return checkbox && !checkbox.disabled;
             });
 
             if (unbilledSelectedIds.length === 0) {
                 alert("Please select at least one 'Unbilled' log entry to add to the invoice.");
-                selectedLogIds.clear(); // Clear selection as it contained no valid items
+                // Clear selection if it contained only billed/invalid items
+                selectedLogIds.clear();
                 updateAddToInvoiceButtonVisibility();
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 return;
@@ -414,14 +478,18 @@
                 const logDocs = await Promise.all(fetchPromises);
 
                 invoiceItems = logDocs
-                    .filter(doc => doc.exists && doc.data().billingStatus !== 'billed') // Double check status from DB
+                    .filter(doc => {
+                        // Ensure doc exists and explicitly check billingStatus is not 'billed'
+                        const data = doc.data();
+                        return doc.exists && data && data.billingStatus !== 'billed';
+                    })
                     .map(doc => {
                         const logData = doc.data();
                         const minutes = logData.timeSpentMinutes || 0;
                         const hours = minutes > 0 ? (minutes / 60).toFixed(2) : 0;
                         const description = `Mashgiach Visit: ${logData.venue || 'N/A'} (${formatFirestoreTimestamp(logData.dateTime)}) - ${logData.description || ''}`;
 
-                        successfullyProcessedLogIds.push(doc.id); // Keep track of IDs we are about to bill
+                        successfullyProcessedLogIds.push(doc.id); // Track IDs successfully formatted
 
                         return {
                             description: description.substring(0, 200),
@@ -430,17 +498,24 @@
                         };
                     });
 
+                // Check if any valid items were actually processed after filtering
                 if (invoiceItems.length === 0) {
-                    alert("Could not retrieve valid data for the selected logs or they were already billed. Please refresh and try again.");
-                    updateAddToInvoiceButtonVisibility(); // Re-enable button
-                    return;
+                     alert("No valid 'Unbilled' logs found among the selection. Please refresh and try again.");
+                     updateAddToInvoiceButtonVisibility(); // Re-enable button, don't clear selection yet
+                     addSelectedToInvoiceBtn.disabled = false; // Re-enable button explicitly
+                     addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
+                     return;
                 }
+
 
                 // 2. Update Firestore: Mark processed logs as 'billed' using a batch write
                 const batch = db.batch();
                 successfullyProcessedLogIds.forEach(logId => {
                     const docRef = mashgiachLogRef.doc(logId);
-                    batch.update(docRef, { billingStatus: 'billed', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    batch.update(docRef, {
+                        billingStatus: 'billed',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 });
 
                 await batch.commit();
@@ -457,7 +532,9 @@
                 console.error("Error processing logs for invoice:", error);
                 alert(`An error occurred: ${error.message}. Some logs might not have been marked as billed.`);
                 // Don't redirect on error, re-enable button
-                updateAddToInvoiceButtonVisibility();
+                updateAddToInvoiceButtonVisibility(); // This calls the function to potentially re-enable
+                addSelectedToInvoiceBtn.disabled = false; // Explicitly re-enable
+                addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
             }
         }
 
@@ -468,11 +545,17 @@
         async function addMashgiachLogSubmit(event) {
             event.preventDefault();
             const user = netlifyIdentity.currentUser();
-            if (!user) { /* ... */ return; }
+            if (!user) {
+                if(showMessage) showMessage('error', "You must be logged in to add a log.");
+                return;
+            }
             const venue = document.getElementById('log-venue').value.trim();
             const description = document.getElementById('log-description').value.trim();
             const timeSpent = parseInt(document.getElementById('log-time-spent').value, 10);
-            if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) { /* ... */ return; }
+            if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) {
+                 alert("Please fill in all fields correctly. Time spent must be a positive number (minutes).");
+                 return;
+            }
 
             try {
                 const logEntry = {
@@ -490,9 +573,12 @@
                 const addModalEl = document.getElementById('addLogModal');
                 const addModalInstance = bootstrap.Modal.getInstance(addModalEl);
                 if(addModalInstance) addModalInstance.hide();
-                addLogForm.reset();
+                // addLogForm.reset(); // Reset is handled by hidden.bs.modal
                 displayMashgiachLogs();
-            } catch (error) { /* ... */ }
+            } catch (error) {
+                 console.error("Error adding Mashgiach log: ", error);
+                 if(showMessage) showMessage('error', `Failed to add log: ${error.message}`);
+            }
         }
 
         // Display Logs - *** Add status column, disable checkbox if billed ***
@@ -521,7 +607,7 @@
                     const isBilled = billingStatus === 'billed';
 
                     tableContent += `
-                        <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}"> <!-- Optional: visual cue for billed rows -->
+                        <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}">
                             <td class="select-checkbox-cell">
                                 <input type="checkbox" class="log-select-checkbox" data-id="${logId}" ${isBilled ? 'disabled' : ''} title="${isBilled ? 'Already Billed' : 'Select Log'}">
                             </td>
@@ -544,7 +630,7 @@
                 });
 
                 logsTableBody.innerHTML = tableContent;
-                initializeTooltips();
+                initializeTooltips(); // Re-initialize tooltips after rendering rows
 
             } catch (error) {
                 console.error("Error fetching Mashgiach logs: ", error);
@@ -568,8 +654,14 @@
                     const editModalEl = document.getElementById('editLogModal');
                     const modal = bootstrap.Modal.getOrCreateInstance(editModalEl);
                     modal.show();
-                } else { /* ... error handling ... */ }
-            } catch (error) { /* ... error handling ... */ }
+                } else {
+                    console.error("Log document not found for editing:", logId);
+                    if(showMessage) showMessage('error', 'Could not find the log entry to edit.');
+                }
+            } catch (error) {
+                 console.error("Error getting document for edit:", error);
+                 if(showMessage) showMessage('error', `Error loading log for editing: ${error.message}`);
+            }
         }
 
         // Submit Edit - *** Save billingStatus ***
@@ -583,7 +675,10 @@
             const timeSpent = parseInt(document.getElementById('edit-log-time-spent').value, 10);
             const billingStatus = document.getElementById('edit-billing-status').value; // *** Get status ***
 
-             if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) { /* ... validation ... */ return; }
+             if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) {
+                 alert("Please fill in all fields correctly. Time spent must be a positive number (minutes).");
+                 return;
+            }
 
             try {
                 await mashgiachLogRef.doc(logId).update({
@@ -597,34 +692,92 @@
                 const editModalEl = document.getElementById('editLogModal');
                 const modal = bootstrap.Modal.getInstance(editModalEl);
                 if(modal) modal.hide();
-                editLogForm.reset();
+                // editLogForm.reset(); // Reset is handled by hidden.bs.modal
                 displayMashgiachLogs();
-            } catch (error) { /* ... error handling ... */ }
+            } catch (error) {
+                 console.error("Error updating document: ", error);
+                 if(showMessage) showMessage('error', `Error saving changes: ${error.message}`);
+            }
         }
 
          // Open Delete Modal
-        function openDeleteLogModal(logId) { /* ... same as before ... */ }
+        function openDeleteLogModal(logId) {
+            deleteLogForm.setAttribute('data-delete-id', logId);
+            const deleteModalEl = document.getElementById('deleteLogModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(deleteModalEl);
+            modal.show();
+        }
+
         // Submit Delete
-        async function deleteLogSubmit(event) { /* ... same as before ... */ }
+        async function deleteLogSubmit(event) {
+            event.preventDefault();
+            const logId = deleteLogForm.getAttribute('data-delete-id');
+             if (!logId) return;
+
+            try {
+                await mashgiachLogRef.doc(logId).delete();
+                console.log("Document successfully deleted!");
+
+                const deleteModalEl = document.getElementById('deleteLogModal');
+                const modal = bootstrap.Modal.getInstance(deleteModalEl);
+                if(modal) modal.hide();
+
+                // deleteLogForm.removeAttribute('data-delete-id'); // Handled by hidden.bs.modal
+                displayMashgiachLogs(); // Refresh table
+
+            } catch (error) {
+                 console.error("Error deleting document: ", error);
+                 if(showMessage) showMessage('error', `Error deleting log: ${error.message}`);
+            }
+        }
 
 
         // --- Event Listeners ---
-        // ... (Netlify Identity, Form Submissions) ...
 
-        // Event Delegation for Edit/Delete/Checkbox clicks
+        // Netlify Identity Login Button
+        if (netlifyLoginButton) {
+            netlifyLoginButton.addEventListener('click', () => {
+                netlifyIdentity.open();
+            });
+        }
+
+        // Netlify Identity Events
+        netlifyIdentity.on('init', user => {
+            const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
+            updateAdminUI(isAdmin);
+        });
+
+        netlifyIdentity.on('login', user => {
+            const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
+            updateAdminUI(isAdmin);
+            netlifyIdentity.close();
+        });
+
+        netlifyIdentity.on('logout', () => {
+            updateAdminUI(false);
+        });
+
+        // Form Submissions
+        if (addLogForm) addLogForm.addEventListener('submit', addMashgiachLogSubmit);
+        if (editLogForm) editLogForm.addEventListener('submit', editLogSubmit);
+        if (deleteLogForm) deleteLogForm.addEventListener('submit', deleteLogSubmit);
+
+
+        // Event Delegation for Edit/Delete/Checkbox clicks in the table body
         if (logsTableBody) {
             logsTableBody.addEventListener('click', (event) => {
                 const target = event.target;
 
-                // Checkbox clicks
+                // Handle Checkbox clicks
                 if (target.classList.contains('log-select-checkbox')) {
-                     handleCheckboxChange(event); // Handler already checks if disabled
-                     return;
+                     handleCheckboxChange(event); // Handler checks if disabled
+                     return; // Don't process further as link click
                 }
 
-                // Link clicks
-                const targetLink = target.closest('a');
+                // Handle Edit/Delete link clicks
+                const targetLink = target.closest('a'); // Find the closest link ancestor
                 if (!targetLink) return;
+
                 const logId = targetLink.getAttribute('data-id');
                 if (!logId) return;
 
@@ -638,21 +791,38 @@
             });
         }
 
-        // Select-all checkbox listener
+        // Listener for select-all checkbox
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', handleSelectAllChange);
         }
 
-        // "Add Selected to Invoice" button listener
+        // Listener for the "Add Selected to Invoice" button
         if (addSelectedToInvoiceBtn) {
             addSelectedToInvoiceBtn.addEventListener('click', (event) => {
-                event.preventDefault();
+                event.preventDefault(); // Prevent default link behavior
                 prepareAndRedirectToInvoice();
             });
         }
 
-        // Modal hidden listeners
-        // ... (same as before) ...
+
+        // Reset forms when modals are hidden
+        const addModalEl = document.getElementById('addLogModal');
+        if(addModalEl) addModalEl.addEventListener('hidden.bs.modal', () => addLogForm.reset());
+
+        const editModalEl = document.getElementById('editLogModal');
+        if(editModalEl) {
+            editModalEl.addEventListener('hidden.bs.modal', () => {
+                editLogForm.reset();
+                editLogForm.removeAttribute('data-edit-id');
+            });
+        }
+
+        const deleteModalEl = document.getElementById('deleteLogModal');
+        if(deleteModalEl) {
+            deleteModalEl.addEventListener('hidden.bs.modal', () => {
+                deleteLogForm.removeAttribute('data-delete-id');
+            });
+        }
 
         // --- Initial Load ---
         // Handled by Netlify Identity 'init' event
