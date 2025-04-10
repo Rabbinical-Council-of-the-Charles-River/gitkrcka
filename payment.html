@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Payment</title>
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Optional: Add Google Fonts or other custom styles here -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+    <style>
+        body {
+            font-family: 'Varela Round', sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        .payment-form-container {
+            max-width: 600px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        .form-label {
+            font-weight: bold;
+        }
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+        /* Optional: Style radio buttons nicely */
+        .form-check-input[type="radio"] {
+            margin-top: 0.4em;
+        }
+        .form-check-label {
+            margin-left: 0.5em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container payment-form-container">
+        <h2 class="text-center mb-4">Record Invoice Payment</h2>
+        <a href="index.html" class="d-block mb-3">&laquo; Back to Portal</a>
+
+        <!-- Message Area -->
+        <div id="message-area" class="message"></div>
+
+        <!-- *** MODIFIED: Added Netlify attributes *** -->
+        <form id="payment-form" name="invoice-payment" method="POST" netlify data-netlify="true">
+            <!-- *** ADDED: Hidden input for Netlify form name *** -->
+            <input type="hidden" name="form-name" value="invoice-payment">
+
+            <div class="mb-3">
+                <label for="client-name" class="form-label">Client Name</label>
+                <input type="text" class="form-control" id="client-name" name="clientName" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="client-email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="client-email" name="clientEmail" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="invoice-id" class="form-label">Invoice ID / Number</label>
+                <input type="text" class="form-control" id="invoice-id" name="invoiceId" required placeholder="e.g., INV-001">
+                <div class="form-text">Enter the unique Invoice Number found on the invoice.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="amount-paid" class="form-label">Amount Paying Today</label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="amount-paid" name="amountPaid" required min="0.01" step="0.01">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label d-block">Payment Method</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="method-cash" value="Cash" required>
+                    <label class="form-check-label" for="method-cash">Cash</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="method-credit" value="Account Credit">
+                    <label class="form-check-label" for="method-credit">Account Credit</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="method-boopka" value="Boopka Pay">
+                    <label class="form-check-label" for="method-boopka">Boopka Pay</label>
+                </div>
+                 <!-- Add more methods as needed -->
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" id="submit-button">Record Payment</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace if needed
+            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace if needed
+            projectId: "richardrccr-10a9d", // Replace if needed
+            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace if needed
+            messagingSenderId: "867270362103", // Replace if needed
+            appId: "1:867270362103:web:7653459445810350b864f2" // Replace if needed
+        };
+
+        // --- Initialize Firebase ---
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const invoicesRef = db.collection('invoices');
+
+        // --- DOM Elements ---
+        const paymentForm = document.getElementById('payment-form');
+        const messageArea = document.getElementById('message-area');
+        const submitButton = document.getElementById('submit-button');
+        const invoiceIdInput = document.getElementById('invoice-id');
+
+        // --- Helper Functions ---
+        function showMessage(type, text) {
+            messageArea.className = `message ${type}`;
+            messageArea.textContent = text;
+            messageArea.style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        function hideMessage() {
+            messageArea.style.display = 'none';
+            messageArea.textContent = '';
+            messageArea.className = 'message';
+        }
+
+        // --- Pre-fill Invoice ID from URL ---
+        function prefillInvoiceId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const invoiceIdFromUrl = urlParams.get('invoiceId');
+            if (invoiceIdFromUrl && invoiceIdInput) {
+                invoiceIdInput.value = invoiceIdFromUrl;
+                console.log(`Prefilled Invoice ID: ${invoiceIdFromUrl}`);
+            }
+        }
+
+        // --- Netlify Form Submission Helper ---
+        // Encodes form data for Netlify submission
+        const encode = (data) => {
+            return Object.keys(data)
+                .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(data[key]))
+                .join("&");
+        }
+
+        // --- Form Submission Handler ---
+        async function handlePaymentSubmit(event) {
+            event.preventDefault(); // Prevent default form submission initially
+            hideMessage();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+
+            // Get form data using FormData
+            const formData = new FormData(paymentForm);
+            const invoiceNumber = formData.get('invoiceId').trim();
+            const amountPaid = parseFloat(formData.get('amountPaid'));
+            const paymentMethod = formData.get('paymentMethod');
+            const clientName = formData.get('clientName').trim();
+            const clientEmail = formData.get('clientEmail').trim();
+
+            // Create a plain object from FormData for easier manipulation/logging
+            const formDataObject = Object.fromEntries(formData.entries());
+
+            if (!invoiceNumber || isNaN(amountPaid) || amountPaid <= 0 || !paymentMethod) {
+                showMessage('error', 'Please fill in all required fields correctly.');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Record Payment';
+                return;
+            }
+
+            let firestoreUpdateSuccessful = false; // Flag to track Firestore success
+
+            // --- Step 1: Update Firestore ---
+            try {
+                const querySnapshot = await invoicesRef.where('invoiceNumber', '==', invoiceNumber).limit(1).get();
+
+                if (querySnapshot.empty) {
+                    showMessage('error', `Invoice with ID "${invoiceNumber}" not found.`);
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Record Payment';
+                    return; // Stop processing if invoice not found
+                }
+
+                const invoiceDoc = querySnapshot.docs[0];
+                const invoiceRef = invoiceDoc.ref;
+
+                const updateData = {
+                    status: 'paid',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastPayment: {
+                        amount: amountPaid,
+                        method: paymentMethod,
+                        date: firebase.firestore.FieldValue.serverTimestamp(),
+                        recordedByClientName: clientName,
+                        recordedByClientEmail: clientEmail
+                    }
+                };
+
+                await invoiceRef.update(updateData);
+                console.log(`Firestore: Invoice ${invoiceDoc.id} (Number: ${invoiceNumber}) marked as paid.`);
+                firestoreUpdateSuccessful = true; // Mark Firestore update as successful
+
+            } catch (error) {
+                console.error("Error updating Firestore:", error);
+                showMessage('error', `An error occurred updating the invoice status: ${error.message}. Please try again.`);
+                // Don't proceed to Netlify submission if Firestore failed
+                submitButton.disabled = false;
+                submitButton.textContent = 'Record Payment';
+                return;
+            }
+
+            // --- Step 2: Submit to Netlify Forms (only if Firestore was successful) ---
+            if (firestoreUpdateSuccessful) {
+                try {
+                    // Use fetch to submit the data to Netlify
+                    await fetch("/", { // POST to the same path the form is on
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: encode({
+                            "form-name": paymentForm.getAttribute("name"), // Get form name attribute
+                            ...formDataObject // Spread the plain form data object
+                        })
+                    });
+                    console.log("Netlify: Form submission successful.");
+
+                    // Show success message and reset form *after* both operations (or at least Firestore)
+                    showMessage('success', `Payment recorded successfully for Invoice ${invoiceNumber}. The invoice status has been updated to 'Paid'. The payment may be flagged and we will reach out if this happens.`);
+                    paymentForm.reset(); // Clear the form
+
+                } catch (error) {
+                    console.error("Error submitting form to Netlify:", error);
+                    // Show a modified success message indicating Firestore worked but Netlify might have failed
+                    showMessage('success', `Payment recorded successfully for Invoice ${invoiceNumber} (status updated), but there was an issue submitting the record to Netlify. ${error.message}`);
+                    // Still reset the form as the main action (Firestore update) was successful
+                    paymentForm.reset();
+                } finally {
+                    // Re-enable button regardless of Netlify submission outcome
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Record Payment';
+                }
+            }
+            // If Firestore failed, the button was already re-enabled in the Firestore catch block.
+        }
+
+        // --- Event Listeners ---
+        paymentForm.addEventListener('submit', handlePaymentSubmit);
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            prefillInvoiceId();
+        });
+
+    </script>
+
+</body>
+</html>
