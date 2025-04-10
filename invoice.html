@@ -78,6 +78,16 @@
         .status-sent { background-color: #0d6efd; } /* Primary */
         .status-paid { background-color: #198754; } /* Success */
         .status-overdue { background-color: #dc3545; } /* Danger */
+
+        /* Ensure icons in actions column have consistent spacing */
+        #invoices-table td:last-child a {
+            margin: 0 3px;
+            display: inline-block; /* Helps with alignment and spacing */
+        }
+        #invoices-table td:last-child a i {
+             vertical-align: middle; /* Align icons nicely */
+        }
+
     </style>
 </head>
 
@@ -128,6 +138,7 @@
                         </thead>
                         <tbody>
                             <!-- Invoice entries populated here -->
+                            <tr><td colspan="7">Loading invoices...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -405,7 +416,8 @@
             if (timestamp && typeof timestamp.toDate === 'function') {
                 const date = timestamp.toDate();
                  if (format === 'date') {
-                    return date.toLocaleDateString(); // Adjust locale/options as needed
+                    // Use consistent locale or specify options for better consistency
+                    return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
                  } else if (format === 'datetime') {
                      return date.toLocaleString();
                  } else if (format === 'iso') {
@@ -421,7 +433,7 @@
 
         function formatCurrency(amount) {
             // Simple currency formatting, adjust as needed (e.g., locale, currency symbol)
-            return '$' + (amount || 0).toFixed(2);
+            return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
         }
 
         function getStatusBadge(status) {
@@ -507,7 +519,7 @@
 
             if (!itemsContainer || !subtotalEl || !taxRateEl || !taxAmountEl || !totalAmountEl) {
                 console.error("One or more total calculation elements not found for prefix:", modalPrefix);
-                return;
+                return { subtotal: 0, taxAmount: 0, totalAmount: 0 }; // Return zero values
             }
 
             let subtotal = 0;
@@ -524,6 +536,9 @@
             subtotalEl.textContent = formatCurrency(subtotal);
             taxAmountEl.textContent = formatCurrency(taxAmount);
             totalAmountEl.textContent = formatCurrency(totalAmount);
+
+            // Return calculated values for use elsewhere if needed
+            return { subtotal, taxAmount, totalAmount };
         }
 
         // --- Process Pending Items from Mashgiach Logs ---
@@ -559,6 +574,11 @@
                         // IMPORTANT: Clear the items from storage once processed
                         sessionStorage.removeItem('pendingInvoiceItems');
                         console.log("Pending items processed and removed from sessionStorage.");
+
+                        // Automatically open the Add Invoice modal if items were added
+                        const addModal = bootstrap.Modal.getOrCreateInstance(addInvoiceModalEl);
+                        addModal.show();
+
                     } else {
                         // If data is invalid or empty, just remove it
                         sessionStorage.removeItem('pendingInvoiceItems');
@@ -596,15 +616,13 @@
                 status: document.getElementById('add-status').value,
                 taxRate: parseFloat(document.getElementById('add-tax-rate').value) || 0,
                 items: [],
-                subtotal: 0,
-                taxAmount: 0,
-                totalAmount: 0,
+                // subtotal, taxAmount, totalAmount will be calculated below
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 createdBy: user.user_metadata?.full_name || user.email,
                 createdById: user.id
             };
 
-            // Collect invoice items
+            // Collect invoice items and calculate subtotal simultaneously
             let currentSubtotal = 0;
             addItemsContainer.querySelectorAll('.invoice-item-row').forEach(row => {
                 const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
@@ -624,14 +642,14 @@
             invoiceData.taxAmount = currentSubtotal * (invoiceData.taxRate / 100);
             invoiceData.totalAmount = invoiceData.subtotal + invoiceData.taxAmount;
 
-             if (!invoiceData.invoiceNumber || !invoiceData.clientName || !invoiceData.issueDate || !invoiceData.dueDate || invoiceData.items.length === 0) {
+             if (!invoiceData.invoiceNumber || !invoiceData.clientName || !document.getElementById('add-issue-date').value || !document.getElementById('add-due-date').value || invoiceData.items.length === 0) {
                  alert("Please fill in all required fields (Invoice #, Client Name, Dates) and add at least one item.");
                  return;
              }
 
             try {
-                await invoicesRef.add(invoiceData);
-                console.log("Invoice added.");
+                const docRef = await invoicesRef.add(invoiceData);
+                console.log("Invoice added with ID: ", docRef.id);
 
                 const addModalInstance = bootstrap.Modal.getInstance(addInvoiceModalEl);
                 if(addModalInstance) addModalInstance.hide();
@@ -646,7 +664,7 @@
             }
         }
 
-        // Display Invoices
+        // Display Invoices (MODIFIED)
         async function displayInvoices() {
             if (!invoicesTableBody) return;
             invoicesTableBody.innerHTML = '<tr><td colspan="7">Loading invoices...</td></tr>';
@@ -680,7 +698,10 @@
                                 <a href="#" class="delete js-delete-invoice" data-id="${invId}" title="Delete Invoice">
                                     <i class="material-icons">&#xE872;</i>
                                 </a>
-                                <!-- Add View/Print button later if needed -->
+                                <!-- *** NEW: View/Print Button *** -->
+                                <a href="#" class="view js-view-invoice" data-id="${invId}" title="View/Print Invoice">
+                                    <i class="material-icons">print</i>
+                                </a>
                             </td>
                         </tr>
                     `;
@@ -750,9 +771,7 @@
                 status: document.getElementById('edit-status').value,
                 taxRate: parseFloat(document.getElementById('edit-tax-rate').value) || 0,
                 items: [],
-                subtotal: 0,
-                taxAmount: 0,
-                totalAmount: 0,
+                // subtotal, taxAmount, totalAmount calculated below
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 // updatedBy: user.user_metadata?.full_name || user.email // Optional
             };
@@ -775,13 +794,14 @@
             updatedData.taxAmount = currentSubtotal * (updatedData.taxRate / 100);
             updatedData.totalAmount = updatedData.subtotal + updatedData.taxAmount;
 
-             if (!updatedData.clientName || !updatedData.issueDate || !updatedData.dueDate || updatedData.items.length === 0) {
+             if (!updatedData.clientName || !document.getElementById('edit-issue-date').value || !document.getElementById('edit-due-date').value || updatedData.items.length === 0) {
                  alert("Please fill in all required fields (Client Name, Dates) and add at least one item.");
                  return;
              }
 
             try {
                 await invoicesRef.doc(invoiceId).update(updatedData);
+                console.log("Invoice updated:", invoiceId);
 
                 const editModalInstance = bootstrap.Modal.getInstance(editInvoiceModalEl);
                 if(editModalInstance) editModalInstance.hide();
@@ -810,6 +830,7 @@
                      deleteInvoiceClientDisplay.textContent = 'Invoice not found';
                  }
              } catch (error) {
+                 console.error("Error fetching invoice details for delete confirmation:", error);
                  deleteInvoiceNumberDisplay.textContent = 'Error';
                  deleteInvoiceClientDisplay.textContent = 'Could not load details';
              }
@@ -827,7 +848,7 @@
 
             try {
                 await invoicesRef.doc(invoiceId).delete();
-                console.log("Invoice successfully deleted!");
+                console.log("Invoice successfully deleted:", invoiceId);
 
                 const deleteModalInstance = bootstrap.Modal.getInstance(deleteInvoiceModalEl);
                 if(deleteModalInstance) deleteModalInstance.hide();
@@ -839,6 +860,17 @@
                 console.error("Error deleting invoice: ", error);
                  showMessage('error', `Error deleting invoice: ${error.message}`);
             }
+        }
+
+        // *** NEW: Function to open the print view ***
+        function openPrintView(invoiceId) {
+            if (!invoiceId) {
+                console.error("Cannot open print view without an invoice ID.");
+                return;
+            }
+            // Adjust the path 'invoice-print.html' if it's not in the same directory
+            const printUrl = `invoice-print.html?id=${invoiceId}`;
+            window.open(printUrl, '_blank'); // Open in a new tab
         }
 
 
@@ -855,12 +887,20 @@
         netlifyIdentity.on('init', user => {
             const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
             updateAdminUI(isAdmin);
+            // Check for pending items *after* UI is potentially updated (if logged in)
+            if (isAdmin) {
+                processPendingInvoiceItems();
+            }
         });
 
         netlifyIdentity.on('login', user => {
             const isAdmin = user?.app_metadata?.roles?.includes('admin') ?? false;
             updateAdminUI(isAdmin);
             netlifyIdentity.close();
+            // Check for pending items after login
+            if (isAdmin) {
+                processPendingInvoiceItems();
+            }
         });
 
         netlifyIdentity.on('logout', () => {
@@ -891,7 +931,7 @@
         if(editTaxRateEl) editTaxRateEl.addEventListener('input', () => calculateTotals('edit'));
 
 
-        // Event Delegation for Edit/Delete buttons in the table
+        // Event Delegation for Edit/Delete/View buttons in the table (MODIFIED)
         if (invoicesTableBody) {
             invoicesTableBody.addEventListener('click', (event) => {
                 const targetLink = event.target.closest('a'); // Find the closest link
@@ -906,17 +946,15 @@
                 } else if (targetLink.classList.contains('js-delete-invoice')) {
                      event.preventDefault();
                     openDeleteInvoiceModal(invoiceId);
+                } else if (targetLink.classList.contains('js-view-invoice')) { // *** NEW: Handle View/Print click ***
+                     event.preventDefault();
+                    openPrintView(invoiceId);
                 }
             });
         }
 
         // Modal Event Listeners
         if(addInvoiceModalEl) {
-            // Process pending items when Add modal is about to show
-            addInvoiceModalEl.addEventListener('show.bs.modal', () => {
-                console.log("Add Invoice Modal opening, checking for pending items...");
-                processPendingInvoiceItems();
-            });
             // Reset form and clear items when Add modal is hidden
             addInvoiceModalEl.addEventListener('hidden.bs.modal', () => {
                 addInvoiceForm.reset();
@@ -945,7 +983,7 @@
         }
 
         // --- Initial Load ---
-        // Handled by Netlify Identity 'init' event
+        // Authentication and initial data load are handled by Netlify Identity 'init' event
 
     </script>
 </body>
