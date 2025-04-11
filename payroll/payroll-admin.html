@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Payroll</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Material Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Custom Styles -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .hidden { display: none !important; }
+        .table-wrapper {
+            background: #fff;
+            padding: 20px 25px;
+            margin: 30px auto;
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.05);
+            max-width: 1100px;
+        }
+        .table-title h2 { margin: 5px 0 0; font-size: 24px; }
+        .table-title .btn { float: right; height: 34px; font-size: 14px; }
+        .modal-body .form-label { font-weight: bold; }
+        .action-icons a { margin: 0 5px; cursor: pointer; }
+        .status-draft { background-color: #6c757d; color: white; }
+        .status-processed { background-color: #0d6efd; color: white; }
+        .status-paid { background-color: #198754; color: white; }
+        .badge { padding: 0.4em 0.6em; font-size: 0.8em; }
+        .deduction-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .deduction-item input { flex-grow: 1; }
+        .deduction-item button { flex-shrink: 0; }
+        #payroll-items-table td:last-child, #payrolls-table td:last-child { white-space: nowrap; }
+    </style>
+</head>
+
+<body>
+    <!-- Login Section -->
+    <div id="login-section">
+        <div class="container" style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <h1 class="text-center">Admin Access Required</h1>
+            <div class="d-grid gap-2 mt-4">
+                <button id="netlify-login-button" class="btn btn-primary btn-lg">Login with Netlify Identity</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Content -->
+    <div id="admin-content" class="hidden">
+        <div class="container-fluid">
+            <div class="table-wrapper">
+                <div class="table-title">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h2>Manage <b>Payroll Runs</b></h2>
+                            <a href="../index.html">&laquo; Back to Portal</a> <!-- Adjusted path -->
+                        </div>
+                        <div class="col-sm-6 text-end">
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#payrollRunModal" onclick="prepareAddPayrollRun()">
+                                <i class="material-icons">&#xE147;</i> <span>Create New Payroll Run</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive mt-3">
+                    <table id="payrolls-table" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Pay Period</th>
+                                <th>Issue Date</th>
+                                <th>Status</th>
+                                <th>Total Net Pay</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Payroll runs loaded here -->
+                            <tr><td colspan="5">Loading payroll runs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payroll Run Modal (Add/Edit) -->
+        <div id="payrollRunModal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="payroll-run-form">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="payrollRunModalTitle">Create Payroll Run</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="payroll-run-id">
+                            <div class="mb-3">
+                                <label for="pay-period-start" class="form-label">Pay Period Start</label>
+                                <input type="date" id="pay-period-start" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pay-period-end" class="form-label">Pay Period End</label>
+                                <input type="date" id="pay-period-end" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="issue-date" class="form-label">Issue Date (Planned)</label>
+                                <input type="date" id="issue-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Payroll Run</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Payroll Items Modal -->
+        <div id="manageItemsModal" class="modal fade" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-xl"> <!-- Extra Large -->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Manage Items for Payroll: <span id="manage-items-title"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="manage-items-payroll-id">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                             <button class="btn btn-success" onclick="prepareAddPayrollItem()">
+                                <i class="material-icons">&#xE147;</i> <span>Add Employee Payment</span>
+                            </button>
+                            <div>
+                                <strong>Status:</strong> <span id="manage-items-status-badge" class="badge"></span>
+                                <button id="process-payroll-btn" class="btn btn-primary btn-sm ms-2" onclick="processPayrollRun()">
+                                    <i class="material-icons">play_arrow</i> Process Payroll
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="payroll-items-table" class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Employee Email</th>
+                                        <th>Name</th>
+                                        <th>Gross Pay</th>
+                                        <th>Net Pay</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Items loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                         <div class="text-end mt-2">
+                            <strong>Total Net Pay for this Run: <span id="manage-items-total-net"></span></strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payroll Item Modal (Add/Edit Employee Payment) -->
+        <div id="payrollItemModal" class="modal fade" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form id="payroll-item-form">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="payrollItemModalTitle">Add Employee Payment</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="payroll-item-id">
+                            <input type="hidden" id="payroll-item-parent-id"> <!-- Hidden field for parent payroll ID -->
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="employee-email" class="form-label">Employee Email</label>
+                                    <input type="email" id="employee-email" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="employee-name" class="form-label">Employee Name</label> <!-- Made name required for log import -->
+                                    <input type="text" id="employee-name" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                     <label for="pay-rate" class="form-label">Pay Rate (e.g., hourly or fixed)</label>
+                                     <input type="number" id="pay-rate" class="form-control" step="0.01" min="0" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="hours-worked" class="form-label">Hours Worked / Quantity</label>
+                                    <div class="input-group">
+                                        <input type="number" id="hours-worked" class="form-control" step="0.01" min="0" required>
+                                       
+                                    </div>
+                                    
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Gross Earnings</label>
+                                    <input type="text" id="gross-earnings" class="form-control" readonly>
+                                </div>
+                            </div>
+
+                            <hr>
+                            <h6>Deductions</h6>
+                            <div id="deductions-container">
+                                <!-- Deduction items added here -->
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addDeductionRow()">Add Deduction</button>
+
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Total Deductions</label>
+                                    <input type="text" id="total-deductions" class="form-control" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Net Pay</label>
+                                    <input type="text" id="net-pay" class="form-control" readonly>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="item-notes" class="form-label">Notes (Optional)</label>
+                                <textarea id="item-notes" class="form-control" rows="2"></textarea>
+                            </div>
+
+                             <div class="mb-3">
+                                <label for="item-status" class="form-label">Payment Status</label>
+                                <select id="item-status" class="form-select">
+                                    <option value="pending">Pending</option>
+                                    <option value="processed">Processed</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Payment Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- End Admin Content -->
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Netlify Identity Widget -->
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
+        const payrollsRef = db.collection('payrolls');
+        const payrollItemsRef = db.collection('payrollItems');
+        const logsRef = db.collection('mashgiach-logs'); // Assuming this is your logs collection
+
+        // --- DOM Elements ---
+        const loginSection = document.getElementById('login-section');
+        const adminContent = document.getElementById('admin-content');
+        const netlifyLoginButton = document.getElementById('netlify-login-button');
+        const payrollsTableBody = document.querySelector('#payrolls-table tbody');
+        const payrollItemsTableBody = document.querySelector('#payroll-items-table tbody');
+        const payrollRunForm = document.getElementById('payroll-run-form');
+        const payrollItemForm = document.getElementById('payroll-item-form');
+        const payrollRunModalEl = document.getElementById('payrollRunModal');
+        const manageItemsModalEl = document.getElementById('manageItemsModal');
+        const payrollItemModalEl = document.getElementById('payrollItemModal');
+        const deductionsContainer = document.getElementById('deductions-container');
+
+        // Modals Instances
+        const payrollRunModal = new bootstrap.Modal(payrollRunModalEl);
+        const manageItemsModal = new bootstrap.Modal(manageItemsModalEl);
+        const payrollItemModal = new bootstrap.Modal(payrollItemModalEl);
+
+        // --- Netlify Identity ---
+        const netlifyIdentity = window.netlifyIdentity;
+        netlifyIdentity.init();
+
+        netlifyLoginButton.addEventListener('click', () => netlifyIdentity.open());
+
+        netlifyIdentity.on('init', user => handleAuthChange(user));
+        netlifyIdentity.on('login', user => { handleAuthChange(user); netlifyIdentity.close(); });
+        netlifyIdentity.on('logout', () => handleAuthChange(null));
+
+        // --- MODIFIED: Role Check ---
+        function handleAuthChange(user) {
+            // Check specifically for the 'payroll' role
+            const hasPayrollRole = user?.app_metadata?.roles?.includes('payroll') ?? false;
+            if (hasPayrollRole) {
+                loginSection.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+                loadPayrollRuns();
+            } else {
+                loginSection.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+                if (payrollsTableBody) payrollsTableBody.innerHTML = '<tr><td colspan="5">Payroll access required.</td></tr>'; // Updated message
+            }
+        }
+        // --- END MODIFICATION ---
+
+        // --- Helper Functions ---
+        function formatTimestamp(timestamp, format = 'date') {
+            if (!timestamp || typeof timestamp.toDate !== 'function') return 'N/A';
+            const date = timestamp.toDate();
+            if (format === 'date') {
+                return date.toLocaleDateString('en-CA'); // YYYY-MM-DD
+            } else if (format === 'datetime') {
+                return date.toLocaleString();
+            }
+            return 'Invalid Format';
+        }
+
+        function formatCurrency(amount) {
+            return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
+        }
+
+        function getStatusBadge(status) {
+            const statusLower = (status || 'draft').toLowerCase();
+            const badgeClass = `status-${statusLower}`;
+            const statusText = statusLower.charAt(0).toUpperCase() + statusLower.slice(1);
+            return `<span class="badge ${badgeClass}">${statusText}</span>`;
+        }
+
+        function parseDateToTimestamp(dateString) {
+            if (!dateString) return null;
+            // Assumes dateString is YYYY-MM-DD from input type="date"
+            // Important: Create date in UTC to avoid timezone issues with Firestore Timestamps
+            const date = new Date(dateString + 'T00:00:00Z');
+            return firebase.firestore.Timestamp.fromDate(date);
+        }
+
+        // --- Payroll Run Functions ---
+        async function loadPayrollRuns() {
+            payrollsTableBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+            try {
+                const snapshot = await payrollsRef.orderBy('issueDate', 'desc').get();
+                if (snapshot.empty) {
+                    payrollsTableBody.innerHTML = '<tr><td colspan="5">No payroll runs found. Create one!</td></tr>';
+                    return;
+                }
+                let html = '';
+                snapshot.forEach(doc => {
+                    const run = doc.data();
+                    const id = doc.id;
+                    html += `
+                        <tr data-id="${id}">
+                            <td>${formatTimestamp(run.payPeriodStart)} - ${formatTimestamp(run.payPeriodEnd)}</td>
+                            <td>${formatTimestamp(run.issueDate)}</td>
+                            <td>${getStatusBadge(run.status)}</td>
+                            <td>${formatCurrency(run.totalAmount)}</td>
+                            <td class="action-icons">
+                                <a onclick="openManageItemsModal('${id}')" title="Manage Items"><i class="material-icons text-primary">list</i></a>
+                                <a onclick="prepareEditPayrollRun('${id}')" title="Edit Run Details"><i class="material-icons text-warning">&#xE254;</i></a>
+                                <a onclick="deletePayrollRun('${id}')" title="Delete Run"><i class="material-icons text-danger">&#xE872;</i></a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                payrollsTableBody.innerHTML = html;
+            } catch (error) {
+                console.error("Error loading payroll runs:", error);
+                payrollsTableBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading payroll runs.</td></tr>';
+            }
+        }
+
+        function prepareAddPayrollRun() {
+            payrollRunForm.reset();
+            document.getElementById('payroll-run-id').value = '';
+            document.getElementById('payrollRunModalTitle').textContent = 'Create New Payroll Run';
+            payrollRunModal.show(); // Show the modal directly
+        }
+
+        async function prepareEditPayrollRun(id) {
+            payrollRunForm.reset();
+            try {
+                const docSnap = await payrollsRef.doc(id).get();
+                if (docSnap.exists) {
+                    const run = docSnap.data();
+                    document.getElementById('payroll-run-id').value = id;
+                    document.getElementById('pay-period-start').value = formatTimestamp(run.payPeriodStart);
+                    document.getElementById('pay-period-end').value = formatTimestamp(run.payPeriodEnd);
+                    document.getElementById('issue-date').value = formatTimestamp(run.issueDate);
+                    document.getElementById('payrollRunModalTitle').textContent = 'Edit Payroll Run';
+                    payrollRunModal.show();
+                } else {
+                    alert("Payroll run not found.");
+                }
+            } catch (error) {
+                console.error("Error preparing edit:", error);
+                alert("Error loading payroll run details.");
+            }
+        }
+
+        payrollRunForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('payroll-run-id').value;
+            const runData = {
+                payPeriodStart: parseDateToTimestamp(document.getElementById('pay-period-start').value),
+                payPeriodEnd: parseDateToTimestamp(document.getElementById('pay-period-end').value),
+                issueDate: parseDateToTimestamp(document.getElementById('issue-date').value),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (id) { // Editing existing
+                    await payrollsRef.doc(id).update(runData);
+                } else { // Creating new
+                    runData.status = 'draft'; // Default status
+                    runData.totalAmount = 0; // Initial total
+                    runData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    runData.createdBy = netlifyIdentity.currentUser()?.id || 'unknown';
+                    await payrollsRef.add(runData);
+                }
+                payrollRunModal.hide();
+                loadPayrollRuns();
+            } catch (error) {
+                console.error("Error saving payroll run:", error);
+                alert(`Error saving payroll run: ${error.message}`);
+            }
+        });
+
+        async function deletePayrollRun(id) {
+            if (!confirm("Are you sure you want to delete this entire payroll run and all its items? This cannot be undone.")) {
+                return;
+            }
+            try {
+                // Optional: Delete associated items first (more robust)
+                const itemsSnapshot = await payrollItemsRef.where('payrollId', '==', id).get();
+                const batch = db.batch();
+                itemsSnapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                console.log(`Deleted ${itemsSnapshot.size} items for payroll ${id}`);
+
+                // Delete the payroll run itself
+                await payrollsRef.doc(id).delete();
+                console.log(`Deleted payroll run ${id}`);
+                loadPayrollRuns();
+            } catch (error) {
+                console.error("Error deleting payroll run:", error);
+                alert(`Error deleting payroll run: ${error.message}`);
+            }
+        }
+
+        async function processPayrollRun(payrollIdFromButton) {
+             const payrollId = payrollIdFromButton || document.getElementById('manage-items-payroll-id').value;
+             if (!payrollId) {
+                 alert("Cannot process payroll: No Payroll ID found.");
+                 return;
+             }
+             if (!confirm("Are you sure you want to mark this payroll run as 'Processed'? This usually signifies finalization before actual payment.")) {
+                 return;
+             }
+
+             try {
+                 await payrollsRef.doc(payrollId).update({
+                     status: 'processed',
+                     processedAt: firebase.firestore.FieldValue.serverTimestamp()
+                 });
+                 // Optionally update all items to 'processed' if they are 'pending'
+                 const itemsSnapshot = await payrollItemsRef.where('payrollId', '==', payrollId).where('paymentStatus', '==', 'pending').get();
+                 const batch = db.batch();
+                 itemsSnapshot.forEach(doc => {
+                     batch.update(doc.ref, { paymentStatus: 'processed' });
+                 });
+                 await batch.commit();
+
+                 console.log(`Payroll run ${payrollId} marked as processed.`);
+                 // Refresh UI elements
+                 const runDoc = await payrollsRef.doc(payrollId).get();
+                 if (runDoc.exists) {
+                     updateManageItemsUI(runDoc.data(), payrollId); // Update status badge etc.
+                 }
+                 loadPayrollRuns(); // Refresh main table
+                 loadPayrollItems(payrollId); // Refresh items table in modal
+
+             } catch (error) {
+                 console.error("Error processing payroll run:", error);
+                 alert(`Error processing payroll run: ${error.message}`);
+             }
+        }
+
+
+        // --- Manage Payroll Items Modal ---
+        async function openManageItemsModal(payrollId) {
+            document.getElementById('manage-items-payroll-id').value = payrollId;
+            payrollItemsTableBody.innerHTML = '<tr><td colspan="6">Loading items...</td></tr>';
+            document.getElementById('manage-items-total-net').textContent = formatCurrency(0); // Reset total
+
+            try {
+                const runDoc = await payrollsRef.doc(payrollId).get();
+                if (runDoc.exists) {
+                    const runData = runDoc.data();
+                    updateManageItemsUI(runData, payrollId);
+                    loadPayrollItems(payrollId); // Load items after setting up the modal
+                    manageItemsModal.show();
+                } else {
+                    alert("Payroll run not found.");
+                }
+            } catch (error) {
+                console.error("Error opening manage items modal:", error);
+                alert("Error loading payroll run details.");
+            }
+        }
+
+        // --- Includes null checks ---
+        function updateManageItemsUI(runData, payrollId) {
+             document.getElementById('manage-items-title').textContent =
+                `${formatTimestamp(runData.payPeriodStart)} - ${formatTimestamp(runData.payPeriodEnd)}`;
+
+             // Find the status badge element
+             const statusBadgeElement = document.getElementById('manage-items-status-badge');
+             // Check if the element exists before trying to update it
+             if (statusBadgeElement) {
+                 statusBadgeElement.outerHTML = getStatusBadge(runData.status); // Replace badge
+             } else {
+                 console.warn("Could not find 'manage-items-status-badge' element to update.");
+             }
+
+            const processBtn = document.getElementById('process-payroll-btn');
+            // Check if processBtn exists too, just in case
+            if (processBtn) {
+                if (runData.status === 'draft') {
+                    processBtn.disabled = false;
+                    processBtn.onclick = () => processPayrollRun(payrollId); // Ensure correct ID is passed
+                } else {
+                    processBtn.disabled = true;
+                    processBtn.onclick = null; // Remove handler
+                }
+            } else {
+                 console.warn("Could not find 'process-payroll-btn' element.");
+            }
+        }
+        // --- END MODIFICATION ---
+
+        async function loadPayrollItems(payrollId) {
+            payrollItemsTableBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+            let totalNetPay = 0;
+            try {
+                const snapshot = await payrollItemsRef.where('payrollId', '==', payrollId).get();
+                if (snapshot.empty) {
+                    payrollItemsTableBody.innerHTML = '<tr><td colspan="6">No payment items added yet.</td></tr>';
+                     document.getElementById('manage-items-total-net').textContent = formatCurrency(0);
+                    return;
+                }
+                let html = '';
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    const id = doc.id;
+                    totalNetPay += Number(item.netPay) || 0;
+                    html += `
+                        <tr data-id="${id}">
+                            <td>${item.employeeEmail || 'N/A'}</td>
+                            <td>${item.employeeName || ''}</td>
+                            <td>${formatCurrency(item.grossEarnings)}</td>
+                            <td>${formatCurrency(item.netPay)}</td>
+                            <td>${getStatusBadge(item.paymentStatus)}</td>
+                            <td class="action-icons">
+                                <a onclick="prepareEditPayrollItem('${id}')" title="Edit Item"><i class="material-icons text-warning">&#xE254;</i></a>
+                                <a onclick="deletePayrollItem('${id}', '${payrollId}')" title="Delete Item"><i class="material-icons text-danger">&#xE872;</i></a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                payrollItemsTableBody.innerHTML = html;
+                document.getElementById('manage-items-total-net').textContent = formatCurrency(totalNetPay);
+            } catch (error) {
+                console.error("Error loading payroll items:", error);
+                payrollItemsTableBody.innerHTML = '<tr><td colspan="6" class="text-danger">Error loading items.</td></tr>';
+                 document.getElementById('manage-items-total-net').textContent = formatCurrency(0);
+            }
+        }
+
+        // --- Payroll Item Functions (Add/Edit Employee Payment) ---
+        function prepareAddPayrollItem() {
+            payrollItemForm.reset();
+            document.getElementById('payroll-item-id').value = '';
+            document.getElementById('payrollItemModalTitle').textContent = 'Add Employee Payment';
+            // Get parent payroll ID from the manage items modal
+            document.getElementById('payroll-item-parent-id').value = document.getElementById('manage-items-payroll-id').value;
+            deductionsContainer.innerHTML = ''; // Clear deductions
+            addDeductionRow(); // Add one blank deduction row
+            calculateItemTotals(); // Reset calculations
+            document.getElementById('item-status').value = 'pending'; // Default status
+            payrollItemModal.show();
+        }
+
+        async function prepareEditPayrollItem(itemId) {
+            payrollItemForm.reset();
+            deductionsContainer.innerHTML = ''; // Clear deductions
+            try {
+                const docSnap = await payrollItemsRef.doc(itemId).get();
+                if (docSnap.exists) {
+                    const item = docSnap.data();
+                    document.getElementById('payroll-item-id').value = itemId;
+                    document.getElementById('payroll-item-parent-id').value = item.payrollId; // Store parent ID
+                    document.getElementById('employee-email').value = item.employeeEmail || '';
+                    document.getElementById('employee-name').value = item.employeeName || '';
+                    document.getElementById('pay-rate').value = item.payRate || 0;
+                    document.getElementById('hours-worked').value = item.hoursWorked || 0;
+                    document.getElementById('item-notes').value = item.notes || '';
+                    document.getElementById('item-status').value = item.paymentStatus || 'pending';
+
+                    // Populate deductions
+                    if (item.deductions && Array.isArray(item.deductions)) {
+                        item.deductions.forEach(ded => addDeductionRow(ded.description, ded.amount));
+                    } else {
+                        addDeductionRow(); // Add a blank one if none exist
+                    }
+
+                    calculateItemTotals(); // Recalculate based on loaded data
+                    document.getElementById('payrollItemModalTitle').textContent = 'Edit Employee Payment';
+                    payrollItemModal.show();
+                } else {
+                    alert("Payroll item not found.");
+                }
+            } catch (error) {
+                console.error("Error preparing item edit:", error);
+                alert("Error loading item details.");
+            }
+        }
+
+        payrollItemForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const itemId = document.getElementById('payroll-item-id').value;
+            const parentPayrollId = document.getElementById('payroll-item-parent-id').value;
+
+            if (!parentPayrollId) {
+                alert("Error: Parent Payroll ID is missing.");
+                return;
+            }
+
+            // Recalculate totals one last time before saving
+            const totals = calculateItemTotals();
+
+            // Collect deductions
+            const deductions = [];
+            deductionsContainer.querySelectorAll('.deduction-item').forEach(row => {
+                const desc = row.querySelector('.deduction-desc').value.trim();
+                const amount = parseFloat(row.querySelector('.deduction-amount').value) || 0;
+                if (desc && amount > 0) {
+                    deductions.push({ description: desc, amount: amount });
+                }
+            });
+
+            // Get parent dates (fetch once before saving)
+            let parentIssueDate = null;
+            let parentStartDate = null;
+            let parentEndDate = null;
+            try {
+                const parentDoc = await payrollsRef.doc(parentPayrollId).get();
+                if (parentDoc.exists) {
+                    const parentData = parentDoc.data();
+                    parentIssueDate = parentData.issueDate || null;
+                    parentStartDate = parentData.payPeriodStart || null;
+                    parentEndDate = parentData.payPeriodEnd || null;
+                }
+            } catch (fetchError) {
+                console.error("Error fetching parent payroll dates:", fetchError);
+                // Decide if you want to proceed without dates or show an error
+            }
+
+            const itemData = {
+                payrollId: parentPayrollId,
+                employeeEmail: document.getElementById('employee-email').value.trim(),
+                employeeName: document.getElementById('employee-name').value.trim(),
+                payRate: parseFloat(document.getElementById('pay-rate').value) || 0,
+                hoursWorked: parseFloat(document.getElementById('hours-worked').value) || 0,
+                grossEarnings: totals.gross,
+                deductions: deductions,
+                netPay: totals.net,
+                notes: document.getElementById('item-notes').value.trim(),
+                paymentStatus: document.getElementById('item-status').value,
+                // Keep existing log IDs if editing, or initialize if new
+                importedLogIds: itemId ? (await payrollItemsRef.doc(itemId).get()).data()?.importedLogIds || [] : [], // Consider updating this if log import logic changes
+                // Copy parent dates for easier querying by employee later
+                issueDate: parentIssueDate,
+                payPeriodStart: parentStartDate,
+                payPeriodEnd: parentEndDate,
+            };
+
+            try {
+                if (itemId) { // Editing
+                    await payrollItemsRef.doc(itemId).update(itemData);
+                } else { // Adding
+                    await payrollItemsRef.add(itemData);
+                }
+                payrollItemModal.hide();
+                loadPayrollItems(parentPayrollId); // Refresh list in manage items modal
+                updatePayrollRunTotal(parentPayrollId); // Update total on parent run
+            } catch (error) {
+                console.error("Error saving payroll item:", error);
+                alert(`Error saving item: ${error.message}`);
+            }
+        });
+
+        async function deletePayrollItem(itemId, parentPayrollId) {
+            if (!confirm("Are you sure you want to delete this payment item?")) {
+                return;
+            }
+            try {
+                await payrollItemsRef.doc(itemId).delete();
+                loadPayrollItems(parentPayrollId); // Refresh list
+                updatePayrollRunTotal(parentPayrollId); // Update total
+            } catch (error) {
+                console.error("Error deleting item:", error);
+                alert(`Error deleting item: ${error.message}`);
+            }
+        }
+
+        // --- Calculations & Deductions ---
+        function calculateItemTotals() {
+            const rate = parseFloat(document.getElementById('pay-rate').value) || 0;
+            const hours = parseFloat(document.getElementById('hours-worked').value) || 0;
+            const gross = rate * hours;
+
+            let totalDeductions = 0;
+            deductionsContainer.querySelectorAll('.deduction-item .deduction-amount').forEach(input => {
+                totalDeductions += parseFloat(input.value) || 0;
+            });
+
+            const net = gross - totalDeductions;
+
+            document.getElementById('gross-earnings').value = formatCurrency(gross);
+            document.getElementById('total-deductions').value = formatCurrency(totalDeductions);
+            document.getElementById('net-pay').value = formatCurrency(net);
+
+            return { gross, totalDeductions, net };
+        }
+
+        // Add listeners to recalculate on input change
+        ['pay-rate', 'hours-worked'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', calculateItemTotals);
+        });
+
+        function addDeductionRow(description = '', amount = '') {
+            const row = document.createElement('div');
+            row.classList.add('deduction-item');
+            row.innerHTML = `
+                <input type="text" class="form-control form-control-sm deduction-desc" placeholder="Deduction Description" value="${description}">
+                <input type="number" class="form-control form-control-sm deduction-amount" placeholder="Amount" value="${amount}" step="0.01" min="0">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeDeductionRow(this)">&times;</button>
+            `;
+            // Add listener to amount input for recalculation
+            row.querySelector('.deduction-amount').addEventListener('input', calculateItemTotals);
+            deductionsContainer.appendChild(row);
+        }
+
+        function removeDeductionRow(button) {
+            button.closest('.deduction-item').remove();
+            calculateItemTotals(); // Recalculate after removal
+        }
+
+        // --- Mashgiach Log Import (Modified to use Name) ---
+        async function importMashgiachLogs() {
+            // Get the name entered in the form
+            const employeeName = document.getElementById('employee-name').value.trim();
+            const parentPayrollId = document.getElementById('payroll-item-parent-id').value;
+
+            // Check if name and parent ID are present
+            if (!employeeName || !parentPayrollId) {
+                alert("Please enter the Employee Name first and ensure the item is linked to a payroll run.");
+                return;
+            }
+
+            try {
+                 // Get pay period dates from the parent payroll run
+                 const runDoc = await payrollsRef.doc(parentPayrollId).get();
+                 if (!runDoc.exists) {
+                     alert("Parent payroll run not found.");
+                     return;
+                 }
+                 const runData = runDoc.data();
+                 const startDate = runData.payPeriodStart;
+                 const endDate = runData.payPeriodEnd;
+
+                 if (!startDate || !endDate) {
+                     alert("Pay period dates not set on the parent payroll run.");
+                     return;
+                 }
+
+                 // --- Firestore Query Logic (Modified for Name) ---
+                 // IMPORTANT: Replace 'mashgiachName' with the actual field name in your logs collection
+                 // that stores the Mashgiach's name.
+                 const logsSnapshot = await logsRef
+                     .where('mashgiachName', '==', employeeName) // Query by name
+                     .where('logTimestamp', '>=', startDate)    // Keep filtering by date
+                     .where('logTimestamp', '<=', endDate)
+                     .get();
+
+                 let totalHours = 0;
+                 let importedLogIds = []; // Keep track of which logs were used
+
+                 if (logsSnapshot.empty) {
+                    alert(`No logs found for "${employeeName}" within the pay period ${formatTimestamp(startDate)} to ${formatTimestamp(endDate)}.`);
+                    document.getElementById('hours-worked').value = 0; // Reset hours if no logs found
+                    calculateItemTotals();
+                    return;
+                 }
+
+                 logsSnapshot.forEach(doc => {
+                     const logData = doc.data();
+                     // IMPORTANT: Assuming logData has an 'hours' field. Adjust if needed.
+                     totalHours += Number(logData.hours) || 0;
+                     importedLogIds.push(doc.id); // Store the ID of the imported log
+                 });
+
+                 // Update the hours worked field
+                 document.getElementById('hours-worked').value = totalHours.toFixed(2);
+
+                 // --- Storing Imported Log IDs ---
+                 // We need to associate these log IDs with the payroll item when it's saved.
+                 // For now, we'll just log them. The save logic needs updating if you want to persist this link.
+                 console.log(`Imported ${logsSnapshot.size} logs for ${employeeName}, total hours: ${totalHours}`);
+                 console.log("Imported Log IDs:", importedLogIds);
+                 // You might want to store `importedLogIds` in a temporary variable or directly update
+                 // the item if it's being edited, but the current save logic initializes/keeps existing ones.
+
+                 // Recalculate totals in the modal
+                 calculateItemTotals();
+
+                 alert(`Imported ${totalHours.toFixed(2)} hours from logs for "${employeeName}".`);
+
+
+            } catch (error) {
+                console.error("Error importing logs:", error);
+                // Check if the error is the missing index error
+                if (error.code === 'failed-precondition') {
+                     alert(`Error importing logs: Firestore requires a composite index for this query. Please create it in the Firebase console for the 'mashgiach-logs' collection with fields: 'mashgiachName' (Ascending) and 'logTimestamp' (Ascending).`);
+                } else {
+                    alert(`Error importing logs: ${error.message}`);
+                }
+            }
+        }
+
+
+         // --- Update Payroll Run Total ---
+         async function updatePayrollRunTotal(payrollId) {
+             if (!payrollId) return;
+             try {
+                 const itemsSnapshot = await payrollItemsRef.where('payrollId', '==', payrollId).get();
+                 let totalNetPay = 0;
+                 itemsSnapshot.forEach(doc => {
+                     totalNetPay += Number(doc.data().netPay) || 0;
+                 });
+
+                 await payrollsRef.doc(payrollId).update({
+                     totalAmount: totalNetPay
+                 });
+                 console.log(`Updated total for payroll run ${payrollId} to ${formatCurrency(totalNetPay)}`);
+                 // Refresh total in manage items modal if open
+                 if (manageItemsModalEl.classList.contains('show') && document.getElementById('manage-items-payroll-id').value === payrollId) {
+                     document.getElementById('manage-items-total-net').textContent = formatCurrency(totalNetPay);
+                 }
+                 // Optionally refresh the main payrolls table if needed immediately
+                 // loadPayrollRuns();
+             } catch (error) {
+                 console.error("Error updating payroll run total:", error);
+                 // Don't alert user for this background update unless critical
+             }
+         }
+
+        // --- Modal Cleanup ---
+        payrollItemModalEl.addEventListener('hidden.bs.modal', () => {
+            payrollItemForm.reset();
+            deductionsContainer.innerHTML = '';
+        });
+        payrollRunModalEl.addEventListener('hidden.bs.modal', () => {
+            payrollRunForm.reset();
+        });
+         manageItemsModalEl.addEventListener('hidden.bs.modal', () => {
+            // Refresh main table when closing manage items modal to reflect potential status changes or total updates
+            loadPayrollRuns();
+        });
+
+
+    </script>
+
+
+</body>
+</html>

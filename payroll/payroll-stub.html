@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay Stub</title>
+    <!-- Bootstrap for basic styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #eee; font-family: sans-serif; font-size: 14px; }
+        .stub-container { max-width: 800px; margin: 20px auto; padding: 30px; background-color: #fff; border: 1px solid #ccc; }
+        .text-right { text-align: right; }
+        .header-section { border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 20px; }
+        .detail-section { margin-bottom: 20px; }
+        .detail-section h5 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; font-size: 1.1em; }
+        .detail-table { width: 100%; }
+        .detail-table td { padding: 4px 0; }
+        .detail-table td:first-child { font-weight: bold; padding-right: 15px; width: 60%; }
+        .detail-table td:last-child { text-align: right; width: 40%; }
+        .items-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 0.95em; }
+        .items-table th, .items-table td { border: 1px solid #dee2e6; padding: 6px 8px; text-align: left; }
+        .items-table th { background-color: #f8f9fa; }
+        .items-table td.amount { text-align: right; }
+        .summary-table { width: 50%; margin-left: 50%; margin-top: 20px; } /* Align right */
+        .summary-table td { padding: 5px 0; }
+        .summary-table td:first-child { font-weight: bold; padding-right: 15px; text-align: right; }
+        .summary-table td:last-child { text-align: right; }
+        .summary-table .net-pay td { border-top: 2px solid #333; font-weight: bold; font-size: 1.1em; padding-top: 8px; }
+        .print-button-container { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; background-color: #eee; padding-bottom: 20px; }
+        @media print {
+            body { background-color: #fff !important; margin: 0; padding: 0; font-size: 12px; }
+            .stub-container { border: none !important; box-shadow: none !important; margin: 0 !important; max-width: 100% !important; padding: 5mm !important; }
+            .print-button-container { display: none !important; }
+            a[href]:after { content: none !important; }
+            .items-table th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stub-container" id="stub-content">
+        <!-- Content loaded here -->
+        <div class="text-center p-5" id="loading-message">Loading Pay Stub Details...</div>
+    </div>
+
+    <div class="print-button-container">
+        <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
+        <button class="btn btn-secondary" onclick="window.close()">Close</button>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace if needed
+            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace if needed
+            projectId: "richardrccr-10a9d", // Replace if needed
+            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace if needed
+            messagingSenderId: "867270362103", // Replace if needed
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
+
+        // --- DOM References ---
+        const stubContentDiv = document.getElementById('stub-content');
+        const loadingMessageEl = document.getElementById('loading-message');
+
+        // --- Helper Functions ---
+        function formatTimestamp(timestamp) {
+            if (timestamp && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+            return 'N/A';
+        }
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount != null ? Number(amount) : 0);
+        }
+
+        // --- Load Stub Data ---
+        async function loadStub() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get('id');
+
+            if (!itemId) {
+                stubContentDiv.innerHTML = '<div class="alert alert-danger">Error: No Payroll Item ID provided.</div>';
+                return;
+            }
+
+            if(loadingMessageEl) loadingMessageEl.style.display = 'block';
+            const existingContent = stubContentDiv.querySelectorAll(':not(#loading-message)');
+            existingContent.forEach(el => el.remove());
+
+            try {
+                const docRef = db.collection('payrollItems').doc(itemId);
+                const docSnap = await docRef.get();
+
+                if (docSnap.exists) {
+                    if(loadingMessageEl) loadingMessageEl.style.display = 'none';
+                    renderStub(docSnap.data());
+                } else {
+                    stubContentDiv.innerHTML = `<div class="alert alert-warning">Pay Stub with ID ${itemId} not found.</div>`;
+                }
+            } catch (error) {
+                stubContentDiv.innerHTML = `<div class="alert alert-danger">Error loading pay stub: ${error.message}</div>`;
+                console.error("Error getting document:", error);
+            }
+        }
+
+        // --- Render Stub HTML ---
+        function renderStub(item) {
+            let earningsHtml = `
+                <tr>
+                    <td>Base Pay / Salary</td>
+                    <td class="amount">${item.hoursWorked || 'N/A'}</td>
+                    <td class="amount">${formatCurrency(item.payRate)}</td>
+                    <td class="amount">${formatCurrency(item.grossEarnings)}</td>
+                </tr>
+                <!-- Add other earnings types here if applicable -->
+            `;
+
+            let deductionsHtml = '';
+            let totalDeductions = 0;
+            if (item.deductions && Array.isArray(item.deductions)) {
+                item.deductions.forEach(ded => {
+                    const amount = Number(ded.amount) || 0;
+                    deductionsHtml += `
+                        <tr>
+                            <td>${ded.description || 'Deduction'}</td>
+                            <td class="amount">${formatCurrency(amount)}</td>
+                        </tr>
+                    `;
+                    totalDeductions += amount;
+                });
+            } else {
+                deductionsHtml = '<tr><td colspan="2">No deductions</td></tr>';
+            }
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `
+                <div class="header-section row">
+                    <div class="col-6">
+                        <h4>RCCR Payroll</h4>
+                        <p>Massachusetts Turnpike</p>
+                    </div>
+                    <div class="col-6 text-right">
+                        <h4>Pay Stub</h4>
+                        <p>
+                            <strong>Pay Period:</strong> ${formatTimestamp(item.payPeriodStart)} - ${formatTimestamp(item.payPeriodEnd)}<br>
+                            <strong>Pay Date:</strong> ${formatTimestamp(item.issueDate)}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <table class="detail-table">
+                        <tr><td>Employee:</td><td>${item.employeeName || item.employeeEmail}</td></tr>
+                        <tr><td>Email:</td><td>${item.employeeEmail || 'N/A'}</td></tr>
+                        <!-- Add other employee details if available -->
+                    </table>
+                </div>
+
+                <div class="detail-section">
+                    <h5>Earnings</h5>
+                    <table class="items-table">
+                        <thead><tr><th>Description</th><th class="amount">Hours/Qty</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+                        <tbody>${earningsHtml}</tbody>
+                    </table>
+                </div>
+
+                <div class="detail-section">
+                    <h5>Deductions</h5>
+                     <table class="items-table">
+                        <thead><tr><th>Description</th><th class="amount">Amount</th></tr></thead>
+                        <tbody>${deductionsHtml}</tbody>
+                    </table>
+                </div>
+
+                <table class="summary-table">
+                    <tr><td>Gross Pay:</td><td>${formatCurrency(item.grossEarnings)}</td></tr>
+                    <tr><td>Total Deductions:</td><td>${formatCurrency(totalDeductions)}</td></tr>
+                    <tr class="net-pay"><td>Net Pay:</td><td>${formatCurrency(item.netPay)}</td></tr>
+                </table>
+
+                ${item.notes ? `<div class="detail-section mt-4"><h5>Notes</h5><p>${item.notes}</p></div>` : ''}
+            `;
+
+            while (tempDiv.firstChild) {
+                stubContentDiv.appendChild(tempDiv.firstChild);
+            }
+        }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', loadStub);
+    </script>
+
+</body>
+</html>
