@@ -117,6 +117,11 @@
                         <div class="col-sm-6">
                             <h2>KRCKA <b>Mashgiach Logs</b></h2>
                             <a href="../index.html">Home</a>
+                            <!-- *** ADDED THIS DIV *** -->
+                            <div class="mt-2">
+                                <strong>Selected Total Time:</strong> <span id="selected-total-time">0 hours 0 minutes</span>
+                            </div>
+                            <!-- *** END ADDITION *** -->
                         </div>
                         <div class="col-sm-6 text-right">
                              <a href="#" class="btn btn-primary" id="add-selected-to-invoice-btn" style="display: none;">
@@ -294,6 +299,9 @@
         const deleteLogForm = document.getElementById('delete-log-form');
         const addSelectedToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
         const selectAllCheckbox = document.getElementById('select-all-logs');
+        // *** ADDED THIS REFERENCE ***
+        const selectedTotalTimeDisplay = document.getElementById('selected-total-time');
+        // *** END ADDITION ***
 
 
         // --- Netlify Identity Initialization ---
@@ -306,7 +314,7 @@
         }
 
         // --- State Variables ---
-        let selectedLogIds = new Set();
+        let selectedLogIds = new Set(); // Keep this for the invoicing feature
 
         // --- Configuration ---
         const MASHGIACH_HOURLY_RATE = 50.00; // ADJUST AS NEEDED!
@@ -362,6 +370,8 @@
                 if (logsTableBody) logsTableBody.innerHTML = '';
                 selectedLogIds.clear();
                 updateAddToInvoiceButtonVisibility();
+                // Reset time display on logout
+                if (selectedTotalTimeDisplay) selectedTotalTimeDisplay.textContent = '0 hours 0 minutes';
             }
         }
 
@@ -381,18 +391,15 @@
             }
         }
 
-        // --- Selection & Invoice Button Logic ---
+        // --- MODIFIED: Selection & Invoice Button Logic ---
         function updateAddToInvoiceButtonVisibility() {
             if (addSelectedToInvoiceBtn) {
-                // Show button only if there are *selectable* (unbilled) logs selected
-                const hasSelectable = Array.from(selectedLogIds).some(id => {
-                    const row = logsTableBody?.querySelector(`tr[data-id="${id}"]`); // Optional chaining
-                    const checkbox = row ? row.querySelector('.log-select-checkbox') : null;
-                    return checkbox && !checkbox.disabled;
-                });
+                // Show button only if the set (containing only unbilled IDs) has items
+                const hasSelectable = selectedLogIds.size > 0;
 
                 if (hasSelectable) {
                     addSelectedToInvoiceBtn.style.display = 'inline-block';
+                    // Ensure button is enabled (it might have been disabled during processing)
                     addSelectedToInvoiceBtn.disabled = false;
                     addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
                 } else {
@@ -400,68 +407,117 @@
                 }
             }
         }
+        // --- END MODIFICATION ---
 
+        // *** NEW: Function to Calculate and Display Selected Time ***
+        function calculateSelectedTime() {
+            if (!logsTableBody || !selectedTotalTimeDisplay) return; // Ensure elements exist
+
+            let totalMinutes = 0;
+            // Select ALL checked checkboxes, regardless of disabled status
+            const checkedCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox:checked');
+
+            checkedCheckboxes.forEach(checkbox => {
+                // Retrieve the duration in minutes stored in the data attribute
+                const duration = parseInt(checkbox.dataset.durationMinutes || '0', 10);
+                if (!isNaN(duration)) { // Add only if it's a valid number
+                    totalMinutes += duration;
+                }
+            });
+
+            // Convert total minutes back to hours and minutes
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            // Update the display
+            selectedTotalTimeDisplay.textContent = `${hours} hours ${minutes} minutes`;
+        }
+        // *** END NEW FUNCTION ***
+
+
+        // --- MODIFIED: handleCheckboxChange (for invoicing selection AND time calculation) ---
         function handleCheckboxChange(event) {
             const checkbox = event.target;
-            // Only process if it's a log checkbox AND not disabled
-            if (checkbox.classList.contains('log-select-checkbox') && !checkbox.disabled) {
-                const logId = checkbox.getAttribute('data-id');
+            if (!checkbox.classList.contains('log-select-checkbox')) return; // Only process log checkboxes
+
+            const logId = checkbox.dataset.id;
+            const status = checkbox.dataset.status;
+
+            // --- Invoicing Logic: Only modify selectedLogIds if the item is unbilled ---
+            if (status !== 'billed') {
                 if (checkbox.checked) {
                     selectedLogIds.add(logId);
                 } else {
                     selectedLogIds.delete(logId);
                 }
-                updateAddToInvoiceButtonVisibility();
 
-                // Update select-all checkbox state (only consider enabled checkboxes)
-                const enabledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox:not(:disabled)'); // Optional chaining
-                const allChecked = enabledCheckboxes && enabledCheckboxes.length > 0 && Array.from(enabledCheckboxes).every(cb => cb.checked);
-                if (selectAllCheckbox) selectAllCheckbox.checked = !!allChecked; // Ensure boolean
+                // Update select-all checkbox state based *only* on unbilled checkboxes
+                const unbilledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox[data-status="unbilled"]');
+                const checkedUnbilledCount = logsTableBody?.querySelectorAll('.log-select-checkbox[data-status="unbilled"]:checked').length || 0;
 
+                if (selectAllCheckbox) {
+                    if (unbilledCheckboxes && checkedUnbilledCount === unbilledCheckboxes.length && unbilledCheckboxes.length > 0) {
+                        selectAllCheckbox.checked = true;
+                        selectAllCheckbox.indeterminate = false;
+                    } else if (checkedUnbilledCount > 0) {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = true;
+                    } else {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = false;
+                    }
+                }
             }
-        }
+            // --- End Invoicing Logic ---
 
+            // Update the invoice button visibility (checks selectedLogIds which only contains unbilled)
+            updateAddToInvoiceButtonVisibility();
+
+            // Calculate total time based on ALL visually checked boxes
+            calculateSelectedTime();
+        }
+        // --- END MODIFICATION ---
+
+        // --- MODIFIED: handleSelectAllChange ---
         function handleSelectAllChange(event) {
             const isChecked = event.target.checked;
-            // Only affect enabled checkboxes
-            const enabledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox:not(:disabled)'); // Optional chaining
-            if (!enabledCheckboxes) return;
+            const allCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox'); // Select ALL checkboxes
+            if (!allCheckboxes) return;
 
-            enabledCheckboxes.forEach(checkbox => {
-                checkbox.checked = isChecked;
-                const logId = checkbox.getAttribute('data-id');
-                if (isChecked) {
+            // Clear the set used for invoicing first
+            selectedLogIds.clear();
+
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked; // Check/uncheck ALL visually
+
+                const logId = checkbox.dataset.id;
+                const status = checkbox.dataset.status;
+
+                // Only add to the invoicing set if it's unbilled and being checked
+                if (status !== 'billed' && isChecked) {
                     selectedLogIds.add(logId);
-                } else {
-                    selectedLogIds.delete(logId);
                 }
             });
-            // Clean up any potentially selected but now irrelevant IDs (e.g., if logs were updated in background)
-            const currentEnabledIds = new Set(Array.from(enabledCheckboxes).map(cb => cb.dataset.id));
-            selectedLogIds.forEach(id => {
-                 if (!currentEnabledIds.has(id)) {
-                     selectedLogIds.delete(id);
-                 }
-            });
+
+            // Update button based on unbilled selections
             updateAddToInvoiceButtonVisibility();
+            // Calculate total time based on ALL visually checked boxes
+            calculateSelectedTime();
+            // Reset indeterminate state
+             if(selectAllCheckbox) selectAllCheckbox.indeterminate = false;
         }
+        // --- END MODIFICATION ---
+
 
         // *** Updated: Prepare Items, Mark as Billed, then Redirect ***
         async function prepareAndRedirectToInvoice() {
             // Filter selected IDs to only include those that are actually unbilled
-            const unbilledSelectedIds = Array.from(selectedLogIds).filter(id => {
-                 const row = logsTableBody?.querySelector(`tr[data-id="${id}"]`); // Optional chaining
-                 const checkbox = row ? row.querySelector('.log-select-checkbox') : null;
-                 // Checkbox must exist and not be disabled
-                 return checkbox && !checkbox.disabled;
-            });
+            // This uses the `selectedLogIds` set which *only* contains unbilled items now
+            const unbilledSelectedIds = Array.from(selectedLogIds);
 
             if (unbilledSelectedIds.length === 0) {
                 alert("Please select at least one 'Unbilled' log entry to add to the invoice.");
-                // Clear selection if it contained only billed/invalid items
-                selectedLogIds.clear();
-                updateAddToInvoiceButtonVisibility();
-                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                // No need to clear selection or update checkbox, as only unbilled were considered
                 return;
             }
 
@@ -479,7 +535,7 @@
 
                 invoiceItems = logDocs
                     .filter(doc => {
-                        // Ensure doc exists and explicitly check billingStatus is not 'billed'
+                        // Double-check doc exists and billingStatus is not 'billed' (belt and suspenders)
                         const data = doc.data();
                         return doc.exists && data && data.billingStatus !== 'billed';
                     })
@@ -501,7 +557,7 @@
                 // Check if any valid items were actually processed after filtering
                 if (invoiceItems.length === 0) {
                      alert("No valid 'Unbilled' logs found among the selection. Please refresh and try again.");
-                     updateAddToInvoiceButtonVisibility(); // Re-enable button, don't clear selection yet
+                     updateAddToInvoiceButtonVisibility(); // Re-enable button
                      addSelectedToInvoiceBtn.disabled = false; // Re-enable button explicitly
                      addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
                      return;
@@ -581,20 +637,25 @@
             }
         }
 
-        // Display Logs - *** Add status column, disable checkbox if billed ***
+        // --- MODIFIED: displayMashgiachLogs ---
         async function displayMashgiachLogs() {
             if (!logsTableBody) return;
             const newColspan = 8; // Updated colspan
             logsTableBody.innerHTML = `<tr><td colspan="${newColspan}">Loading logs...</td></tr>`;
-            selectedLogIds.clear();
+            selectedLogIds.clear(); // Clear invoicing selection
             updateAddToInvoiceButtonVisibility();
-            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            // calculateSelectedTime(); // Calculate initial time (will be 0) - Moved to end
 
             try {
                 const querySnapshot = await mashgiachLogRef.orderBy('dateTime', 'desc').get();
 
                 if (querySnapshot.empty) {
                     logsTableBody.innerHTML = `<tr><td colspan="${newColspan}">No logs found.</td></tr>`;
+                    calculateSelectedTime(); // Ensure display is 0 if no logs
                     return;
                 }
 
@@ -602,21 +663,26 @@
                 querySnapshot.forEach(doc => {
                     const log = doc.data();
                     const logId = doc.id;
-                    const timeDisplay = log.timeSpentMinutes ? `${log.timeSpentMinutes} min` : 'N/A';
-                    const billingStatus = log.billingStatus || 'unbilled'; // Default if missing
+                    const timeInMinutes = log.timeSpentMinutes || 0; // Default to 0 if missing
+                    const timeDisplay = timeInMinutes ? `${timeInMinutes} min` : 'N/A';
+                    const billingStatus = log.billingStatus || 'unbilled';
                     const isBilled = billingStatus === 'billed';
 
                     tableContent += `
                         <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}">
                             <td class="select-checkbox-cell">
-                                <input type="checkbox" class="log-select-checkbox" data-id="${logId}" ${isBilled ? 'disabled' : ''} title="${isBilled ? 'Already Billed' : 'Select Log'}">
+                                <!-- *** MODIFIED: Removed 'disabled', Added 'data-status' *** -->
+                                <input type="checkbox" class="log-select-checkbox" data-id="${logId}"
+                                       data-duration-minutes="${timeInMinutes}"
+                                       data-status="${billingStatus}"
+                                       title="${isBilled ? 'Already Billed (Selectable for time calc)' : 'Select Log'}">
                             </td>
                             <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
                             <td>${log.venue || 'N/A'}</td>
                             <td>${formatFirestoreTimestamp(log.dateTime)}</td>
                             <td>${log.description || ''}</td>
                             <td>${timeDisplay}</td>
-                            <td>${getBillingStatusBadge(billingStatus)}</td> <!-- Display Status -->
+                            <td>${getBillingStatusBadge(billingStatus)}</td>
                             <td>
                                 <a href="#" class="edit js-edit-log" data-id="${logId}" title="Edit Log">
                                     <i class="material-icons">&#xE254;</i>
@@ -631,12 +697,15 @@
 
                 logsTableBody.innerHTML = tableContent;
                 initializeTooltips(); // Re-initialize tooltips after rendering rows
+                calculateSelectedTime(); // Calculate time after table is populated
 
             } catch (error) {
                 console.error("Error fetching Mashgiach logs: ", error);
                 logsTableBody.innerHTML = `<tr><td colspan="${newColspan}" class="text-danger">Error loading logs: ${error.message}</td></tr>`;
+                calculateSelectedTime(); // Ensure display is 0 on error
             }
         }
+        // --- END MODIFICATION ---
 
         // Open Edit Modal - *** Populate status dropdown ***
         async function openEditLogModal(logId) {
@@ -763,14 +832,15 @@
         if (deleteLogForm) deleteLogForm.addEventListener('submit', deleteLogSubmit);
 
 
-        // Event Delegation for Edit/Delete/Checkbox clicks in the table body
+        // --- MODIFIED: Event Delegation for table body ---
         if (logsTableBody) {
             logsTableBody.addEventListener('click', (event) => {
                 const target = event.target;
 
                 // Handle Checkbox clicks
                 if (target.classList.contains('log-select-checkbox')) {
-                     handleCheckboxChange(event); // Handler checks if disabled
+                     // Call the handler which now includes calculateSelectedTime()
+                     handleCheckboxChange(event);
                      return; // Don't process further as link click
                 }
 
@@ -790,6 +860,7 @@
                 }
             });
         }
+        // --- END MODIFICATION ---
 
         // Listener for select-all checkbox
         if (selectAllCheckbox) {
@@ -828,5 +899,6 @@
         // Handled by Netlify Identity 'init' event
 
     </script>
+
 </body>
 </html>
