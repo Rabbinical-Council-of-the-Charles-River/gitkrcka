@@ -66,13 +66,25 @@
                 <ul class="list-group">
                     <li class="list-group-item list-group-item-action"><a href="products/">Manage Products</a></li>
                     <li class="list-group-item list-group-item-action"><a href="establishments/">Manage Establishments</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html">Manage Alerts</a></li> <!-- Added Alerts Link -->
+                    <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html">Manage Alerts</a></li>
                     <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
                     <li class="list-group-item list-group-item-action"><a href="invoice.html">Invoicing</a></li>
                     <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
                     <li class="list-group-item list-group-item-action"><a href="payroll/payroll-admin.html">Manage Payroll</a></li>
                 </ul>
             </div>
+
+            <!-- *** NEW: Mashgiach Links Section *** -->
+            <div id="mashgiach-links" class="hidden">
+                <hr> <!-- Separator -->
+                <h5 class="mb-3">Mashgiach Area</h5>
+                <ul class="list-group">
+                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
+                </ul>
+            </div>
+            <!-- *** END NEW SECTION *** -->
+
         </div>
     </div>
 
@@ -86,21 +98,35 @@
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const adminLinks = document.getElementById('admin-links');
+        const mashgiachLinks = document.getElementById('mashgiach-links'); // Get the new div
 
         function updateUI(user) {
-            const allowedRoles = ['admin', 'manager']; // Adjust roles as needed
+            const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
+            const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
+
             // Safely access roles, default to empty array if properties don't exist
             const userRoles = user?.app_metadata?.roles || [];
 
-            const isAdmin = userRoles.some(role => allowedRoles.includes(role));
+            // Determine if user has admin-level access
+            const isAdmin = userRoles.some(role => adminRoles.includes(role));
+            // Determine if user has mashgiach access
+            const isMashgiach = userRoles.includes(mashgiachRole);
 
+            // Update Login/Logout Button Visibility
             loginBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
 
+            // Update Menu Visibility (Admin takes precedence)
             if (isAdmin) {
                 adminLinks.classList.remove('hidden');
+                mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
+            } else if (isMashgiach) {
+                adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
+                mashgiachLinks.classList.remove('hidden');
             } else {
-                adminLinks.classList.add('hidden'); // Hide admin links if not admin
+                // Hide both menus if user has neither role
+                adminLinks.classList.add('hidden');
+                mashgiachLinks.classList.add('hidden');
             }
         }
 
@@ -112,6 +138,7 @@
                 loginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
                 adminLinks.classList.add('hidden');
+                mashgiachLinks.classList.add('hidden'); // Also hide mashgiach links
             }
         });
 
@@ -121,7 +148,9 @@
         });
 
         netlifyIdentity.on('logout', () => {
+            // Reset to logged-out state
             adminLinks.classList.add('hidden');
+            mashgiachLinks.classList.add('hidden'); // Hide mashgiach links on logout
             loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
         });
