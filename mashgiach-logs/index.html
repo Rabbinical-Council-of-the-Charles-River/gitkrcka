@@ -12,7 +12,7 @@
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <!-- Your Custom CSS (Adjust path if needed) -->
-    <link rel="stylesheet" href="../css/style.css">
+    
     <style>
         body {
             background-color: #f8f9fa;
@@ -94,6 +94,11 @@
         .admin-only-func { display: none; }
         /* Class for the billing status field in the edit modal */
         .admin-only-field { display: none; }
+        /* Class for the billing status field in the edit modal */
+        /* Class for the billing status field in the edit modal */
+        .admin-only-field { display: none; }
+
+
 
     </style>
 </head>
@@ -124,7 +129,7 @@
                             <a href="../index.html">Home</a>
                             <!-- MODIFIED: Added admin-only-func class -->
                              <!-- MODIFIED: Added admin-only-func class -->
- <div class="">
+ <div class="mt-2 admin-only-func">
     <strong>Selected Total Time:</strong> <span id="selected-total-time">0 hours 0 minutes</span>
 </div>
 
@@ -200,47 +205,51 @@
             </div>
         </div>
 
-        <!-- Edit Log Modal -->
-        <div id="editLogModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="editLogModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form id="edit-log-form">
-                        <div class="modal-header">
-                            <h4 class="modal-title" id="editLogModalLabel">Edit Log</h4>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <!-- Edit Log Modal -->
+                    <div id="editLogModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="editLogModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form id="edit-log-form">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title" id="editLogModalLabel">Edit Log</h4>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="edit-log-venue" class="form-label">Venue</label>
+                                            <input type="text" id="edit-log-venue" class="form-control" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit-log-description" class="form-label">Description</label>
+                                            <textarea id="edit-log-description" class="form-control" required></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit-log-time-spent" class="form-label">Time Spent (Minutes)
+                                                 <i class="material-icons info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Enter total time in minutes (e.g., 90 for 1.5 hours)">help_outline</i>
+                                            </label>
+                                            <input type="number" id="edit-log-time-spent" class="form-control" required min="1" placeholder="e.g., 120">
+                                        </div>
+        
+                                        <!-- **** THIS IS THE SECTION TO CHECK **** -->
+                                        <div class="">
+                                            <label for="edit-billing-status" class="form-label">Billing Status</label>
+                                            <select id="edit-billing-status" class="form-select" required>
+                                                <option value="unbilled">Unbilled</option>
+                                                <option value="billed">Billed</option>
+                                            </select>
+                                        </div>
+                                        <!-- **** END SECTION TO CHECK **** -->
+        
+                                    </div>
+                                    <div class="modal-footer">
+                                        <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
+                                        <input type="submit" class="btn btn-info" value="Save">
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="edit-log-venue" class="form-label">Venue</label>
-                                <input type="text" id="edit-log-venue" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-log-description" class="form-label">Description</label>
-                                <textarea id="edit-log-description" class="form-control" required></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit-log-time-spent" class="form-label">Time Spent (Minutes)
-                                     <i class="material-icons info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Enter total time in minutes (e.g., 90 for 1.5 hours)">help_outline</i>
-                                </label>
-                                <input type="number" id="edit-log-time-spent" class="form-control" required min="1" placeholder="e.g., 120">
-                            </div>
-                            <!-- MODIFIED: Added admin-only-field class -->
-                            <div class="mb-3 admin-only-field">
-                                <label for="edit-billing-status" class="form-label">Billing Status (Admin Only)</label>
-                                <select id="edit-billing-status" class="form-select" required>
-                                    <option value="unbilled">Unbilled</option>
-                                    <option value="billed">Billed</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
-                            <input type="submit" class="btn btn-info" value="Save">
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+                    </div>
+        
 
         <!-- Delete Log Modal -->
         <div id="deleteLogModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="deleteLogModalLabel" aria-hidden="true">
@@ -357,13 +366,24 @@
             return `<span class="badge ${badgeClass}">${statusText}</span>`;
         }
 
-        // --- UI Update Logic ---
+                           // --- UI Update Logic ---
         function updateAccessUI(user) {
+            console.log("updateAccessUI called. User:", user); // Log user object
             currentUser = user; // Store user globally
             const userRoles = user?.app_metadata?.roles || [];
+            console.log("User Roles:", userRoles); // Log detected roles
+
             currentUserIsAdmin = userRoles.includes('admin');
+            console.log("Is Admin?", currentUserIsAdmin); // Log admin status determination
+
             const isMashgiach = userRoles.includes('mashgiach');
             const canAccess = currentUserIsAdmin || isMashgiach;
+            console.log("Can Access?", canAccess); // Log access status
+
+            // Select admin-specific elements *once*
+            const adminOnlyFuncElements = logsContent.querySelectorAll('.admin-only-func');
+            const adminOnlyFieldElements = logsContent.querySelectorAll('.admin-only-field'); // Includes the billing status div
+            console.log("Found admin-only-field elements:", adminOnlyFieldElements.length); // Log how many elements were found
 
             // Toggle visibility based on access
             if (canAccess) {
@@ -373,24 +393,35 @@
                 displayMashgiachLogs(); // Load logs based on role
                 initializeTooltips();
 
-                // Show/Hide Admin-specific FUNCTIONALITY elements
-                const adminOnlyFuncElements = logsContent.querySelectorAll('.admin-only-func');
+                // Explicitly set display based on admin status
+                const adminDisplayValue = currentUserIsAdmin ? '' : 'none';
+                const adminDisplayImportance = currentUserIsAdmin ? 'important' : ''; // Add !important only if admin
+
+                console.log(`Setting admin elements display to: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log the display value being set
+
                 adminOnlyFuncElements.forEach(el => {
-                    el.style.display = currentUserIsAdmin ? '' : 'none'; // Show if admin, hide if not
+                    // Use setProperty for !important
+                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
                 });
-                // Show/Hide Admin-specific FIELD elements (like in modals)
-                const adminOnlyFieldElements = logsContent.querySelectorAll('.admin-only-field');
-                 adminOnlyFieldElements.forEach(el => {
-                    el.style.display = currentUserIsAdmin ? '' : 'none'; // Show if admin, hide if not
+                adminOnlyFieldElements.forEach((el, index) => {
+                    console.log(`Setting display for admin-only-field element ${index}: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log for each specific element
+                    // Use setProperty for !important
+                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
                 });
 
                 // Disable admin checkboxes for non-admins
                 if (selectAllCheckbox) selectAllCheckbox.disabled = !currentUserIsAdmin;
 
-
             } else {
+                // Logged out or no access
+                console.log("User cannot access. Hiding content.");
                 loginSection.classList.remove('hidden');
                 logsContent.classList.add('hidden');
+
+                // Ensure admin elements are hidden when logged out (no !important needed here)
+                adminOnlyFuncElements.forEach(el => { el.style.display = 'none'; });
+                adminOnlyFieldElements.forEach(el => { el.style.display = 'none'; });
+
                 if (user) { // If logged in but no access
                      if(showMessage) showMessage('error', 'Access Denied. Required roles: admin or mashgiach.');
                 } else { // Not logged in
@@ -398,10 +429,14 @@
                 }
                 if (logsTableBody) logsTableBody.innerHTML = '';
                 selectedLogIds.clear();
-                updateAddToInvoiceButtonVisibility();
+                updateAddToInvoiceButtonVisibility(); // This will hide the button if not admin
                 if (selectedTotalTimeDisplay) selectedTotalTimeDisplay.textContent = '0 hours 0 minutes';
             }
+            console.log("updateAccessUI finished."); // Log end of function
         }
+
+
+
 
         function initializeTooltips() {
             try {
@@ -422,17 +457,21 @@
             // Only show if admin and items are selected
             if (addSelectedToInvoiceBtn) {
                 const hasSelectable = selectedLogIds.size > 0;
-                // Button visibility is now controlled by .admin-only-func class in updateAccessUI
-                // We only need to manage the disabled state and text based on selection
+                // Button visibility is initially controlled by .admin-only-func class in updateAccessUI
+                // Now, we also control display based on selection for admins.
                 if (currentUserIsAdmin) {
                     addSelectedToInvoiceBtn.disabled = !hasSelectable;
                     addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
+                    // *** ADD THIS LINE BACK ***
+                    // Show the button if items are selected, hide it otherwise.
+                    addSelectedToInvoiceBtn.style.display = hasSelectable ? 'inline-block' : 'none';
                 } else {
-                    // Ensure it's hidden if somehow the class wasn't applied
+                    // Ensure it's hidden if not admin (redundant due to admin-only-func, but safe)
                     addSelectedToInvoiceBtn.style.display = 'none';
                 }
             }
         }
+
 
 
         function calculateSelectedTime() {
@@ -649,8 +688,8 @@
             }
         }
 
-        // MODIFIED: displayMashgiachLogs - Filters by user if not admin, but shows all columns
-        async function displayMashgiachLogs() {
+                // MODIFIED: displayMashgiachLogs - Filters by user if not admin, but shows all columns
+                async function displayMashgiachLogs() {
             if (!logsTableBody || !currentUser) return; // Need user info
 
             const colspan = 8; // Always 8 columns now
@@ -694,10 +733,14 @@
                     // Checkbox is disabled if not admin OR if item is billed (for invoicing)
                     const checkboxDisabled = !currentUserIsAdmin; // Simplified: Only admins can interact
 
+                    // *** ADDED id attribute to checkbox ***
+                    const checkboxId = `log-checkbox-${logId}`;
+
                     tableContent += `
                         <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}">
                             <td class="select-checkbox-cell">
-                                <input type="checkbox" class="log-select-checkbox" data-id="${logId}"
+                                <input type="checkbox" class="log-select-checkbox" id="${checkboxId}"
+                                       data-id="${logId}"
                                        data-duration-minutes="${timeInMinutes}"
                                        data-status="${billingStatus}"
                                        title="${currentUserIsAdmin ? (isBilled ? 'Already Billed' : 'Select Log') : 'Admin Only'}"
@@ -731,6 +774,7 @@
                 calculateSelectedTime(); // Reset time display on error
             }
         }
+
 
         // MODIFIED: openEditLogModal - Added ownership check
         async function openEditLogModal(logId) {
@@ -770,8 +814,8 @@
             }
         }
 
-        // MODIFIED: editLogSubmit - Added ownership check
-        async function editLogSubmit(event) {
+                // MODIFIED: editLogSubmit - Added ownership check
+                async function editLogSubmit(event) {
             event.preventDefault();
             const logId = editLogForm.getAttribute('data-edit-id');
             if (!logId || !currentUser) return;
@@ -825,6 +869,7 @@
                  if(showMessage) showMessage('error', `Error saving changes: ${error.message}`);
             }
         }
+
 
          // MODIFIED: openDeleteLogModal - Added ownership check (pre-check)
         async function openDeleteLogModal(logId) {
