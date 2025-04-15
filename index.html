@@ -4,42 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KRCKA Portal</title>
-    <!-- Netlify Identity Widget -->
+    <!-- Netlify Identity Widget (Loaded from CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/netlify-identity-widget@1.9.1/build/netlify-identity-widget.min.js"></script>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Optional: Add Google Fonts or other custom styles here -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
     <style>
         body {
-            font-family: 'Varela Round', sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Varela Round', sans-serif; /* Example font */
+            background-color: #f8f9fa; /* Light gray background */
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px; /* Add padding for smaller screens */
         }
         .portal-card {
-            max-width: 450px;
+            max-width: 450px; /* Slightly wider card */
             width: 100%;
         }
         .hidden {
-            display: none !important;
+            display: none !important; /* Ensure hidden class overrides Bootstrap */
         }
-        .list-group-item a { text-decoration: none; color: inherit; }
-        .list-group-item a:hover { text-decoration: underline; }
-        .public-links a { margin-bottom: 0.5rem; }
-        /* Style for login error messages */
-        .login-message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            display: none; /* Hidden by default */
+        /* Style links within the list group to remove default underline */
+        .list-group-item a {
+            text-decoration: none;
+            color: inherit; /* Inherit color from list group item */
         }
-        .login-message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .list-group-item a:hover {
+            text-decoration: underline; /* Add underline on hover */
+        }
+        .public-links a {
+            margin-bottom: 0.5rem; /* Add some space between public links */
         }
     </style>
 </head>
@@ -48,254 +44,116 @@
         <div class="card-body p-4 p-md-5 text-center">
             <h2 class="card-title mb-4">KRCKA Portal</h2>
 
-            <!-- Login Form (Initially Visible) -->
-            <div id="login-form-container">
-                <form id="custom-login-form">
-                    <div id="login-message-area" class="login-message"></div>
-                    <div class="form-floating mb-3">
-                        <input type="email" class="form-control" id="login-email" placeholder="name@example.com" required>
-                        <label for="login-email">Email address</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input type="password" class="form-control" id="login-password" placeholder="Password" required>
-                        <label for="login-password">Password</label>
-                    </div>
-                    <div class="d-grid mb-3">
-                        <button type="submit" class="btn btn-primary btn-lg" id="login-submit-btn">Login</button>
-                    </div>
-                    <!-- Optional: Links for signup/password recovery -->
-                    <div class="text-center">
-                        <small>
-                            <a href="#" onclick="netlifyIdentity.open('signup'); return false;">Sign Up</a> |
-                            <a href="#" onclick="netlifyIdentity.open('requestPasswordRecovery'); return false;">Forgot Password?</a>
-                        </small>
-                    </div>
-                </form>
+            <!-- Public Links -->
+            <div class="d-grid gap-2 mb-4 public-links">
+                <a href="apply.html" class="btn btn-outline-secondary">Apply for Certification</a>
+                <a href="client-view.html" class="btn btn-outline-secondary">View Kosher Establishments</a>
+                 <a href="alerts/alerts.html" class="btn btn-outline-warning">View Kashrus Alerts</a> <!-- Added Alerts Link -->
+                 <a href="clients/index.html" class="btn btn-primary btn">Client Area</a>
+                 <a href="payment.html" class="btn btn-outline-success">Make Payment</a> <!-- Added Alerts Link -->
             </div>
 
-            <!-- Logged In Content (Initially Hidden) -->
-            <div id="logged-in-content" class="hidden">
-                <p id="user-greeting" class="lead"></p>
-
-                <!-- Public Links -->
-                <div class="d-grid gap-2 mb-4 public-links">
-                    <a href="apply.html" class="btn btn-outline-secondary">Apply for Certification</a>
-                    <a href="client-view.html" class="btn btn-outline-secondary">View Kosher Establishments</a>
-                    <a href="alerts/alerts.html" class="btn btn-outline-warning">View Kashrus Alerts</a>
-                    <a href="clients/index.html" class="btn btn-primary btn">Client Area</a>
-                    <a href="payment.html" class="btn btn-outline-success">Make Payment</a>
-                </div>
-
-                <!-- Admin Links Section -->
-                <div id="admin-links" class="hidden">
-                    <hr>
-                    <h5 class="mb-3">Admin Area</h5>
-                    <ul class="list-group mb-3">
-                        <li class="list-group-item list-group-item-action"><a href="products/">Manage Products</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="establishments/">Manage Establishments</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html">Manage Alerts</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="invoice.html">Invoicing</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="payroll/payroll-admin.html">Manage Payroll</a></li>
-                    </ul>
-                </div>
-
-                <!-- Mashgiach Links Section -->
-                <div id="mashgiach-links" class="hidden">
-                    <hr>
-                    <h5 class="mb-3">Mashgiach Area</h5>
-                    <ul class="list-group mb-3">
-                        <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
-                        <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
-                    </ul>
-                </div>
-
-                <!-- Logout Button -->
-                <div class="d-grid">
-                    <button id="logout-btn" class="btn btn-danger btn-lg" onclick="netlifyIdentity.logout()">Logout</button>
-                </div>
+            <!-- Login/Logout Buttons -->
+            <div class="d-grid gap-2 mb-4">
+                 <button id="login-btn" class="btn btn-primary btn-lg" onclick="netlifyIdentity.open()">Login</button>
+                 <button id="logout-btn" class="btn btn-danger btn-lg hidden" onclick="netlifyIdentity.logout()">Logout</button>
             </div>
+
+            <!-- Admin Links Section -->
+            <div id="admin-links" class="hidden">
+                <hr> <!-- Separator -->
+                <h5 class="mb-3">Admin Area</h5>
+                <ul class="list-group">
+                    <li class="list-group-item list-group-item-action"><a href="products/">Manage Products</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="establishments/">Manage Establishments</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html">Manage Alerts</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="invoice.html">Invoicing</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-admin.html">Manage Payroll</a></li>
+                </ul>
+            </div>
+
+            <!-- *** NEW: Mashgiach Links Section *** -->
+            <div id="mashgiach-links" class="hidden">
+                <hr> <!-- Separator -->
+                <h5 class="mb-3">Mashgiach Area</h5>
+                <ul class="list-group">
+                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
+                </ul>
+            </div>
+            <!-- *** END NEW SECTION *** -->
 
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle (includes Popper) - Optional if not using JS components -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     <script>
-        console.log('Script start. Netlify Identity object on window:', window.netlifyIdentity);
+        // Initialize Netlify Identity
+        netlifyIdentity.init();
 
-        // --- State Variable ---
-        let isNetlifyIdentityInitialized = false; // Flag to track initialization
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const adminLinks = document.getElementById('admin-links');
+        const mashgiachLinks = document.getElementById('mashgiach-links'); // Get the new div
 
-        // Check if the object exists before trying to initialize
-        if (window.netlifyIdentity) {
-            // Initialize Netlify Identity
-            window.netlifyIdentity.init();
+        function updateUI(user) {
+            const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
+            const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
 
-            // --- DOM References ---
-            const loginFormContainer = document.getElementById('login-form-container');
-            const loggedInContent = document.getElementById('logged-in-content');
-            const customLoginForm = document.getElementById('custom-login-form');
-            const loginEmailInput = document.getElementById('login-email');
-            const loginPasswordInput = document.getElementById('login-password');
-            const loginSubmitBtn = document.getElementById('login-submit-btn');
-            const loginMessageArea = document.getElementById('login-message-area');
-            const userGreeting = document.getElementById('user-greeting');
-            const adminLinks = document.getElementById('admin-links');
-            const mashgiachLinks = document.getElementById('mashgiach-links');
+            // Safely access roles, default to empty array if properties don't exist
+            const userRoles = user?.app_metadata?.roles || [];
 
-            // --- Helper Functions ---
-            function showLoginMessage(type, text) {
-                loginMessageArea.className = `login-message ${type}`;
-                loginMessageArea.textContent = text;
-                loginMessageArea.style.display = 'block';
+            // Determine if user has admin-level access
+            const isAdmin = userRoles.some(role => adminRoles.includes(role));
+            // Determine if user has mashgiach access
+            const isMashgiach = userRoles.includes(mashgiachRole);
+
+            // Update Login/Logout Button Visibility
+            loginBtn.classList.add('hidden');
+            logoutBtn.classList.remove('hidden');
+
+            // Update Menu Visibility (Admin takes precedence)
+            if (isAdmin) {
+                adminLinks.classList.remove('hidden');
+                mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
+            } else if (isMashgiach) {
+                adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
+                mashgiachLinks.classList.remove('hidden');
+            } else {
+                // Hide both menus if user has neither role
+                adminLinks.classList.add('hidden');
+                mashgiachLinks.classList.add('hidden');
             }
-
-            function hideLoginMessage() {
-                loginMessageArea.style.display = 'none';
-                loginMessageArea.textContent = '';
-                loginMessageArea.className = 'login-message';
-            }
-
-            // --- Update UI Function ---
-            function updateUI(user) {
-                // Only update UI if initialization is complete
-                if (!isNetlifyIdentityInitialized && user) {
-                    console.log("updateUI called before init complete, deferring UI update.");
-                    return; // Don't update UI before 'init' event fires
-                }
-                 console.log("updateUI called. User:", user, "Initialized:", isNetlifyIdentityInitialized);
-
-                if (user) {
-                    loginFormContainer.classList.add('hidden');
-                    loggedInContent.classList.remove('hidden');
-                    userGreeting.textContent = `Welcome, ${user.user_metadata?.full_name || user.email}!`;
-                    const adminRoles = ['admin', 'manager'];
-                    const mashgiachRole = 'mashgiach';
-                    const userRoles = user.app_metadata?.roles || [];
-                    const isAdmin = userRoles.some(role => adminRoles.includes(role));
-                    const isMashgiach = userRoles.includes(mashgiachRole);
-
-                    adminLinks.classList.toggle('hidden', !isAdmin);
-                    mashgiachLinks.classList.toggle('hidden', isAdmin || !isMashgiach);
-
-                } else {
-                    loginFormContainer.classList.remove('hidden');
-                    loggedInContent.classList.add('hidden');
-                    adminLinks.classList.add('hidden');
-                    mashgiachLinks.classList.add('hidden');
-                    userGreeting.textContent = '';
-                    hideLoginMessage();
-                }
-            }
-
-            // --- Netlify Identity Event Listeners ---
-            window.netlifyIdentity.on('init', user => {
-                console.log('Netlify Identity: init event fired. User:', user);
-                isNetlifyIdentityInitialized = true; // Set the flag HERE
-                // Now that init is complete, update the UI
-                updateUI(user);
-                // Double-check if login function exists now
-                console.log('Login function available on init?', typeof window.netlifyIdentity.login === 'function');
-            });
-
-            window.netlifyIdentity.on('login', user => {
-                console.log('Netlify Identity: login event', user);
-                 if (!isNetlifyIdentityInitialized) {
-                     console.warn("Login event fired before init completed? This is unexpected.");
-                     isNetlifyIdentityInitialized = true; // Ensure flag is set if this somehow happens
-                 }
-                updateUI(user);
-                window.netlifyIdentity.close(); // Close modal if opened for signup/recovery
-            });
-
-            window.netlifyIdentity.on('logout', () => {
-                console.log('Netlify Identity: logout event');
-                updateUI(null);
-            });
-
-            window.netlifyIdentity.on('error', err => {
-                console.error('Netlify Identity Global Error:', err);
-                // Avoid showing login-specific messages for global errors
-                // showLoginMessage('error', `Authentication system error: ${err.message}`);
-            });
-
-            // --- Custom Login Form Submit Handler ---
-            if (customLoginForm) {
-                customLoginForm.addEventListener('submit', async (event) => {
-                    event.preventDefault();
-                    hideLoginMessage();
-
-                    // *** Check the initialization flag ***
-                    if (!isNetlifyIdentityInitialized) {
-                        console.warn('Login attempt before Netlify Identity finished initializing.');
-                        showLoginMessage('error', 'Authentication service is not ready yet. Please wait a moment and try again.');
-                        return; // Prevent login attempt
-                    }
-
-                    // --- Proceed with login ---
-                    loginSubmitBtn.disabled = true;
-                    loginSubmitBtn.textContent = 'Logging in...';
-
-                    const email = loginEmailInput.value;
-                    const password = loginPasswordInput.value;
-
-                    console.log('Attempting login. Netlify Identity object:', window.netlifyIdentity);
-
-                    // Re-check function existence just before calling (belt and suspenders)
-                    if (typeof window.netlifyIdentity.login !== 'function') {
-                         console.error('CRITICAL: window.netlifyIdentity.login is STILL not a function right before call!');
-                         showLoginMessage('error', 'Login function unexpectedly unavailable. Please refresh.');
-                         loginSubmitBtn.disabled = false;
-                         loginSubmitBtn.textContent = 'Login';
-                         return;
-                    }
-
-                    try {
-                        // Attempt login using Netlify Identity API
-                        // The 'true' argument enables the "Remember me" functionality
-                        const user = await window.netlifyIdentity.login(email, password, true);
-                        // If successful, the 'login' event listener handles the UI update.
-                        console.log('Login call promise resolved successfully:', user);
-                    } catch (err) {
-                        console.error('Custom Login Error:', err);
-                        // Handle specific login errors (like wrong password, user not found)
-                        let errorMessage = 'Login failed. Please check your email and password.';
-                        if (err.message) {
-                            // Provide more specific feedback if available, but keep it user-friendly
-                            if (err.message.includes('No user found') || err.message.includes('Incorrect password')) {
-                                errorMessage = 'Incorrect email or password.';
-                            } else if (err.message.includes('Email not confirmed')) {
-                                errorMessage = 'Email not confirmed. Please check your inbox for a confirmation link.';
-                                // Optionally, add a resend confirmation link/button here
-                            } else {
-                                // Keep the generic message for other errors
-                                console.log("Specific error message:", err.message); // Log for debugging
-                            }
-                        }
-                        showLoginMessage('error', errorMessage);
-                        loginSubmitBtn.disabled = false;
-                        loginSubmitBtn.textContent = 'Login';
-                    }
-                });
-            }
-
-        } else {
-            // --- Critical Error: Netlify Identity did not load ---
-            console.error("CRITICAL: Netlify Identity widget script did not load or `window.netlifyIdentity` is not defined.");
-            const body = document.querySelector('body');
-            if (body) {
-                const errorDiv = document.createElement('div');
-                errorDiv.textContent = 'Error: Authentication service failed to load. Please check your connection and refresh the page.';
-                errorDiv.style.color = 'red'; errorDiv.style.padding = '20px'; errorDiv.style.textAlign = 'center';
-                body.insertBefore(errorDiv, body.firstChild);
-            }
-            const loginContainer = document.getElementById('login-form-container');
-            if(loginContainer) loginContainer.classList.add('hidden');
         }
 
+        netlifyIdentity.on('init', user => {
+            if (user) {
+                updateUI(user);
+            } else {
+                // Ensure UI is in logged-out state if no user on init
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                adminLinks.classList.add('hidden');
+                mashgiachLinks.classList.add('hidden'); // Also hide mashgiach links
+            }
+        });
+
+        netlifyIdentity.on('login', user => {
+            updateUI(user);
+            netlifyIdentity.close(); // Close the modal widget
+        });
+
+        netlifyIdentity.on('logout', () => {
+            // Reset to logged-out state
+            adminLinks.classList.add('hidden');
+            mashgiachLinks.classList.add('hidden'); // Hide mashgiach links on logout
+            loginBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+        });
     </script>
 </body>
 </html>
