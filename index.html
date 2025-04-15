@@ -124,8 +124,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // --- Debug: Check if the object exists immediately after script load ---
-        console.log('Netlify Identity object on window:', window.netlifyIdentity);
+        console.log('Script start. Netlify Identity object on window:', window.netlifyIdentity);
+
+        // --- State Variable ---
+        let isNetlifyIdentityInitialized = false; // Flag to track initialization
 
         // Check if the object exists before trying to initialize
         if (window.netlifyIdentity) {
@@ -159,6 +161,13 @@
 
             // --- Update UI Function ---
             function updateUI(user) {
+                // Only update UI if initialization is complete
+                if (!isNetlifyIdentityInitialized && user) {
+                    console.log("updateUI called before init complete, deferring UI update.");
+                    return; // Don't update UI before 'init' event fires
+                }
+                 console.log("updateUI called. User:", user, "Initialized:", isNetlifyIdentityInitialized);
+
                 if (user) {
                     loginFormContainer.classList.add('hidden');
                     loggedInContent.classList.remove('hidden');
@@ -170,7 +179,7 @@
                     const isMashgiach = userRoles.includes(mashgiachRole);
 
                     adminLinks.classList.toggle('hidden', !isAdmin);
-                    mashgiachLinks.classList.toggle('hidden', isAdmin || !isMashgiach); // Hide if admin OR if not mashgiach
+                    mashgiachLinks.classList.toggle('hidden', isAdmin || !isMashgiach);
 
                 } else {
                     loginFormContainer.classList.remove('hidden');
@@ -184,14 +193,22 @@
 
             // --- Netlify Identity Event Listeners ---
             window.netlifyIdentity.on('init', user => {
-                console.log('Netlify Identity: init event', user);
+                console.log('Netlify Identity: init event fired. User:', user);
+                isNetlifyIdentityInitialized = true; // Set the flag HERE
+                // Now that init is complete, update the UI
                 updateUI(user);
+                // Double-check if login function exists now
+                console.log('Login function available on init?', typeof window.netlifyIdentity.login === 'function');
             });
 
             window.netlifyIdentity.on('login', user => {
                 console.log('Netlify Identity: login event', user);
+                 if (!isNetlifyIdentityInitialized) {
+                     console.warn("Login event fired before init completed? This is unexpected.");
+                     isNetlifyIdentityInitialized = true; // Ensure flag is set if this somehow happens
+                 }
                 updateUI(user);
-                window.netlifyIdentity.close();
+                window.netlifyIdentity.close(); // Close modal if opened for signup/recovery
             });
 
             window.netlifyIdentity.on('logout', () => {
@@ -200,8 +217,8 @@
             });
 
             window.netlifyIdentity.on('error', err => {
-                console.error('Netlify Identity Error:', err);
-                // Display a more generic error for non-login specific issues
+                console.error('Netlify Identity Global Error:', err);
+                // Avoid showing login-specific messages for global errors
                 // showLoginMessage('error', `Authentication system error: ${err.message}`);
             });
 
@@ -210,33 +227,55 @@
                 customLoginForm.addEventListener('submit', async (event) => {
                     event.preventDefault();
                     hideLoginMessage();
+
+                    // *** Check the initialization flag ***
+                    if (!isNetlifyIdentityInitialized) {
+                        console.warn('Login attempt before Netlify Identity finished initializing.');
+                        showLoginMessage('error', 'Authentication service is not ready yet. Please wait a moment and try again.');
+                        return; // Prevent login attempt
+                    }
+
+                    // --- Proceed with login ---
                     loginSubmitBtn.disabled = true;
                     loginSubmitBtn.textContent = 'Logging in...';
 
                     const email = loginEmailInput.value;
                     const password = loginPasswordInput.value;
 
-                    // --- Debug: Check the object right before calling login ---
                     console.log('Attempting login. Netlify Identity object:', window.netlifyIdentity);
 
-                    // Ensure the login function exists before calling
+                    // Re-check function existence just before calling (belt and suspenders)
                     if (typeof window.netlifyIdentity.login !== 'function') {
-                         console.error('Error: window.netlifyIdentity.login is still not a function!');
-                         showLoginMessage('error', 'Login function is not available. Please refresh.');
+                         console.error('CRITICAL: window.netlifyIdentity.login is STILL not a function right before call!');
+                         showLoginMessage('error', 'Login function unexpectedly unavailable. Please refresh.');
                          loginSubmitBtn.disabled = false;
                          loginSubmitBtn.textContent = 'Login';
-                         return; // Stop execution
+                         return;
                     }
 
                     try {
                         // Attempt login using Netlify Identity API
+                        // The 'true' argument enables the "Remember me" functionality
                         const user = await window.netlifyIdentity.login(email, password, true);
-                        // Success is handled by the 'login' event listener
-                        console.log('Login call successful (event listener will update UI):', user);
+                        // If successful, the 'login' event listener handles the UI update.
+                        console.log('Login call promise resolved successfully:', user);
                     } catch (err) {
                         console.error('Custom Login Error:', err);
-                        // Handle specific login errors (like wrong password)
-                        showLoginMessage('error', `Login failed: ${err.message || 'Incorrect email or password.'}`);
+                        // Handle specific login errors (like wrong password, user not found)
+                        let errorMessage = 'Login failed. Please check your email and password.';
+                        if (err.message) {
+                            // Provide more specific feedback if available, but keep it user-friendly
+                            if (err.message.includes('No user found') || err.message.includes('Incorrect password')) {
+                                errorMessage = 'Incorrect email or password.';
+                            } else if (err.message.includes('Email not confirmed')) {
+                                errorMessage = 'Email not confirmed. Please check your inbox for a confirmation link.';
+                                // Optionally, add a resend confirmation link/button here
+                            } else {
+                                // Keep the generic message for other errors
+                                console.log("Specific error message:", err.message); // Log for debugging
+                            }
+                        }
+                        showLoginMessage('error', errorMessage);
                         loginSubmitBtn.disabled = false;
                         loginSubmitBtn.textContent = 'Login';
                     }
@@ -246,17 +285,13 @@
         } else {
             // --- Critical Error: Netlify Identity did not load ---
             console.error("CRITICAL: Netlify Identity widget script did not load or `window.netlifyIdentity` is not defined.");
-            // Optionally display an error message to the user on the page itself
             const body = document.querySelector('body');
             if (body) {
                 const errorDiv = document.createElement('div');
                 errorDiv.textContent = 'Error: Authentication service failed to load. Please check your connection and refresh the page.';
-                errorDiv.style.color = 'red';
-                errorDiv.style.padding = '20px';
-                errorDiv.style.textAlign = 'center';
-                body.insertBefore(errorDiv, body.firstChild); // Add message at the top
+                errorDiv.style.color = 'red'; errorDiv.style.padding = '20px'; errorDiv.style.textAlign = 'center';
+                body.insertBefore(errorDiv, body.firstChild);
             }
-            // Hide the login form if the widget failed to load
             const loginContainer = document.getElementById('login-form-container');
             if(loginContainer) loginContainer.classList.add('hidden');
         }
