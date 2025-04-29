@@ -8,20 +8,36 @@
     <script src="https://cdn.jsdelivr.net/npm/netlify-identity-widget@1.9.1/build/netlify-identity-widget.min.js"></script>
     <style>
         .card { margin-bottom: 1rem; }
-        .alert-content { white-space: pre-wrap; }
+        .alert-content { white-space: pre-wrap; } /* Keep pre-wrap for details */
+        /* Use classes for visibility toggling */
         .admin-controls { display: none; }
+        .logged-out-controls { display: inline-block; } /* Default for login button */
+        .logged-in-controls { display: none; } /* Default for logout button */
     </style>
 </head>
 <body>
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1>Kashrus Alerts</h1>
+            <!-- Login/Logout buttons remain here -->
             <div id="login-prompt">
-                <button id="login-btn" class="btn btn-sm btn-outline-primary" onclick="netlifyIdentity.open()">Admin Login</button>
-                <button id="logout-btn" class="btn btn-sm btn-outline-danger admin-controls" onclick="netlifyIdentity.logout()">Logout</button>
+                <button id="login-btn" class="btn btn-sm btn-outline-primary logged-out-controls" onclick="netlifyIdentity.open()">Admin Login</button>
+                <button id="logout-btn" class="btn btn-sm btn-outline-danger logged-in-controls" onclick="netlifyIdentity.logout()">Logout</button>
             </div>
         </div>
+
+        <!-- MOVED ALERT BOX HERE -->
+        <div class="alert alert-success mb-3" role="alert">
+             <!-- Added <small> tag around the text -->
+            <small>
+                You can now receive Kashrus alert notifications on your phone or computer! <br>
+                For phones: Download the NTFY app (for iOS <a href="https://apps.apple.com/us/app/ntfy/id1625396347">click here.</a> for Android <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en_US">click here</a>), click on the plus, or "add" button, enter the topic name called, "krcka-alerts", and you have it on your phone! 
+               
+            </small>
+        </div>
+
         <hr>
+
         <div id="add-alert-controls" class="mb-3 admin-controls">
             <button id="add-alert-btn" class="btn btn-success mb-2" data-bs-toggle="modal" data-bs-target="#addAlertModal">Add New Alert</button>
         </div>
@@ -32,12 +48,15 @@
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
+            <!-- Alerts will be loaded here -->
         </div>
         <div class="mt-4">
-            <a href="/" class="btn btn-secondary">Back to Portal Home</a>
+             <!-- Corrected link to go back one directory to index.html -->
+            <a href="../index.html" class="btn btn-secondary">Back to Portal Home</a>
         </div>
     </div>
 
+    <!-- Add Alert Modal -->
     <div class="modal fade" id="addAlertModal" tabindex="-1" aria-labelledby="addAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -65,6 +84,7 @@
         </div>
     </div>
 
+    <!-- Edit Alert Modal -->
     <div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -93,6 +113,7 @@
         </div>
     </div>
 
+    <!-- Delete Alert Modal -->
     <div class="modal fade" id="deleteAlertModal" tabindex="-1" aria-labelledby="deleteAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -114,6 +135,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Using consistent Firebase version -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -139,6 +161,7 @@
         const logoutButton = document.getElementById('logout-btn');
         const addAlertControlsDiv = document.getElementById('add-alert-controls');
 
+        // Ensure modal elements exist before creating instances
         const addAlertModalEl = document.getElementById('addAlertModal');
         const addAlertModal = addAlertModalEl ? new bootstrap.Modal(addAlertModalEl) : null;
         const editAlertModalEl = document.getElementById('editAlertModal');
@@ -146,12 +169,23 @@
         const deleteAlertModalEl = document.getElementById('deleteAlertModal');
         const deleteAlertModal = deleteAlertModalEl ? new bootstrap.Modal(deleteAlertModalEl) : null;
 
+        // --- Helper to safely escape HTML ---
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         function createAlertCard(doc, isAdmin) {
             const data = doc.data();
             const alertId = doc.id;
 
             const card = document.createElement('div');
-            card.className = 'card';
+            card.className = 'card shadow-sm'; // Added subtle shadow
             card.setAttribute('data-id', alertId);
 
             const cardBody = document.createElement('div');
@@ -159,39 +193,48 @@
 
             const title = document.createElement('h5');
             title.className = 'card-title';
-            title.textContent = data.title || 'No Title';
+            // Safely set text content
+            title.textContent = data.title ? escapeHtml(data.title) : 'No Title';
             cardBody.appendChild(title);
 
             const details = document.createElement('p');
             details.className = 'card-text alert-content';
-            details.textContent = data.details || 'No Details Provided.';
+             // Safely set text content, preserving line breaks
+            details.textContent = data.details ? escapeHtml(data.details) : 'No Details Provided.';
             cardBody.appendChild(details);
 
             const timestamp = document.createElement('small');
-            timestamp.className = 'text-muted';
+            timestamp.className = 'text-muted d-block mt-2'; // Display block and add margin
             let dateStr = 'Date not available';
+            // Robust date handling
             if (data.createdAt?.toDate) {
-                try { dateStr = data.createdAt.toDate().toLocaleDateString(); } catch (e) { console.error("Date format error", e); }
-            } else if (data.createdAt) {
-                try { dateStr = new Date(data.createdAt).toLocaleDateString(); } catch (e) { console.error("Date format error", e); }
+                try {
+                    dateStr = data.createdAt.toDate().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                } catch (e) { console.error("Date format error (Firestore Timestamp):", e); }
+            } else if (data.createdAt && !isNaN(new Date(data.createdAt))) { // Check if it's a valid date string/number
+                try {
+                    dateStr = new Date(data.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                } catch (e) { console.error("Date format error (Other):", e); }
             }
-            timestamp.textContent = `Posted on: ${dateStr}`;
+            timestamp.textContent = `Posted: ${dateStr}`;
             cardBody.appendChild(timestamp);
 
             if (isAdmin) {
                 const controlsDiv = document.createElement('div');
-                controlsDiv.className = 'mt-2';
+                controlsDiv.className = 'mt-3 border-top pt-2'; // Add separator and padding
 
                 const editButton = document.createElement('button');
-                editButton.className = 'btn btn-sm btn-warning me-2 edit-alert-btn';
+                editButton.className = 'btn btn-sm btn-outline-warning me-2 edit-alert-btn'; // Changed style
                 editButton.textContent = 'Edit';
                 editButton.setAttribute('data-alert-id', alertId);
+                editButton.setAttribute('title', 'Edit this alert'); // Added title attribute
                 controlsDiv.appendChild(editButton);
 
                 const deleteButton = document.createElement('button');
-                deleteButton.className = 'btn btn-sm btn-danger delete-alert-btn';
+                deleteButton.className = 'btn btn-sm btn-outline-danger delete-alert-btn'; // Changed style
                 deleteButton.textContent = 'Delete';
                 deleteButton.setAttribute('data-alert-id', alertId);
+                deleteButton.setAttribute('title', 'Delete this alert'); // Added title attribute
                 controlsDiv.appendChild(deleteButton);
 
                 cardBody.appendChild(controlsDiv);
@@ -203,7 +246,7 @@
 
         function displayAlerts(isAdmin) {
             if (loadingIndicator) loadingIndicator.style.display = 'block';
-            alertsListDiv.innerHTML = '';
+            alertsListDiv.innerHTML = ''; // Clear previous alerts
 
             alertsCollection
                 .orderBy('createdAt', 'desc')
@@ -211,7 +254,7 @@
                 .then((querySnapshot) => {
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
                     if (querySnapshot.empty) {
-                        alertsListDiv.innerHTML = '<p>No alerts found.</p>';
+                        alertsListDiv.innerHTML = '<div class="alert alert-info">No current alerts found.</div>';
                         return;
                     }
                     querySnapshot.forEach((doc) => {
@@ -222,30 +265,33 @@
                 .catch((error) => {
                     console.error("Error getting alerts: ", error);
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
-                    alertsListDiv.innerHTML = '<p class="text-danger">Error loading alerts.</p>';
+                    alertsListDiv.innerHTML = '<div class="alert alert-danger">Error loading alerts. Please try again later.</div>';
                 });
         }
 
         function checkUserRole(user) {
+            // Added check for user existence
             return user?.app_metadata?.roles?.includes('admin');
         }
 
         function updateUserInterface(user) {
-            const isAdmin = user && checkUserRole(user);
+            const isAdmin = checkUserRole(user);
 
-            if (isAdmin) {
-                loginButton.classList.add('admin-controls');
-                logoutButton.classList.remove('admin-controls');
-                addAlertControlsDiv.classList.remove('admin-controls');
-            } else {
-                loginButton.classList.remove('admin-controls');
-                logoutButton.classList.add('admin-controls');
-                addAlertControlsDiv.classList.add('admin-controls');
-            }
+            // Toggle visibility using classes for cleaner management
+            loginButton.classList.toggle('logged-out-controls', !isAdmin);
+            loginButton.classList.toggle('admin-controls', isAdmin); // Hide login if admin
 
+            logoutButton.classList.toggle('logged-in-controls', isAdmin);
+            logoutButton.classList.toggle('admin-controls', !isAdmin); // Hide logout if not admin
+
+            addAlertControlsDiv.classList.toggle('admin-controls', !isAdmin); // Show add button container only if admin
+
+
+            // Refresh the alerts list with appropriate controls
             displayAlerts(isAdmin);
         }
 
+        // --- Netlify Identity Initialization and Event Handlers ---
         netlifyIdentity.init();
 
         netlifyIdentity.on('init', user => {
@@ -254,25 +300,30 @@
 
         netlifyIdentity.on('login', user => {
             updateUserInterface(user);
-            netlifyIdentity.close();
+            netlifyIdentity.close(); // Close the login modal
         });
 
         netlifyIdentity.on('logout', () => {
-            updateUserInterface(null);
+            updateUserInterface(null); // Set user to null on logout
         });
 
+        // --- Add Alert Logic ---
         const saveAlertBtn = document.getElementById('save-alert-btn');
-        if (saveAlertBtn) {
+        if (saveAlertBtn && addAlertModal) { // Check if button and modal exist
             saveAlertBtn.addEventListener('click', () => {
-                const title = document.getElementById('alert-title').value.trim();
-                const details = document.getElementById('alert-details').value.trim();
+                const titleInput = document.getElementById('alert-title');
+                const detailsInput = document.getElementById('alert-details');
+                const title = titleInput.value.trim();
+                const details = detailsInput.value.trim();
 
                 if (!title || !details) {
                     alert('Please fill in both title and details.');
                     return;
                 }
 
+                // Provide visual feedback
                 saveAlertBtn.disabled = true;
+                saveAlertBtn.textContent = 'Saving...';
 
                 alertsCollection.add({
                     title: title,
@@ -280,81 +331,135 @@
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 })
                 .then(() => {
-                    if(addAlertModal) addAlertModal.hide();
-                    document.getElementById('add-alert-form').reset();
-                    updateUserInterface(netlifyIdentity.currentUser());
+                    console.log("Alert added to Firestore successfully.");
+
+                    // *** START NTFY NOTIFICATION ***
+                    // Construct the message body with the additional text
+                    const notificationBody = `${details}\n\nPlease check the KRCKA alert webpage for the latest information, as details may change.`;
+
+                    fetch('https://ntfy.sh/krcka-alerts', { // Target your ntfy topic
+                        method: 'POST',
+                        body: notificationBody, // Use the modified body
+                        headers: {
+                            'Title': ` KRCKA Kashrus Alert: ${title}`, // Use alert title in the notification title
+                            'Priority': 'high', // Optional: Set priority
+                            'Click': 'https://krcka.rebchardle.org/alerts/alerts', // *** ADDED: Click action URL ***
+                            'Tags': '' // *** MODIFIED: Removed emoji tags ***
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log("ntfy notification sent successfully.");
+                        } else {
+                            // Log error but don't block user flow
+                            console.error("Failed to send ntfy notification.", response.status, response.statusText);
+                            // Optionally, inform the admin via a non-blocking message if needed
+                            // alert("Alert saved, but notification failed to send.");
+                        }
+                    })
+                    .catch(error => {
+                        // Log network error but don't block user flow
+                        console.error("Error sending ntfy notification:", error);
+                        // Optionally, inform the admin
+                        // alert("Alert saved, but encountered an error sending notification.");
+                    });
+                    // *** END NTFY NOTIFICATION ***
+
+                    addAlertModal.hide(); // Hide modal after successful save & notification attempt
+                    // Form reset is handled by 'hidden.bs.modal' event listener below
+                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
                 })
                 .catch((error) => {
-                    console.error("Error adding alert: ", error);
-                    alert('Error adding alert. Please check console.');
+                    console.error("Error adding alert to Firestore: ", error);
+                    alert(`Error adding alert: ${error.message}`); // Show specific error
                 })
                 .finally(() => {
+                    // Re-enable button and reset text regardless of success/failure
                     saveAlertBtn.disabled = false;
+                    saveAlertBtn.textContent = 'Save Alert';
                 });
             });
+        } else {
+            if (!saveAlertBtn) console.error("Save Alert button not found.");
+            if (!addAlertModal) console.error("Add Alert modal instance not created.");
         }
 
+        // --- Edit and Delete Logic (Event Delegation) ---
         alertsListDiv.addEventListener('click', (event) => {
-            const target = event.target;
-            const alertId = target.getAttribute('data-alert-id');
+            const targetButton = event.target.closest('button'); // Find the closest button clicked
+            if (!targetButton) return; // Exit if the click wasn't on or inside a button
 
-            if (!alertId) return;
+            const alertId = targetButton.getAttribute('data-alert-id');
+            if (!alertId) return; // Exit if the button doesn't have the alert ID
 
-            if (target.classList.contains('edit-alert-btn')) {
+            if (targetButton.classList.contains('edit-alert-btn') && editAlertModal) {
+                // Fetch data and populate edit modal
                 alertsCollection.doc(alertId).get().then(doc => {
                     if (doc.exists) {
                         const data = doc.data();
                         document.getElementById('edit-alert-id').value = alertId;
                         document.getElementById('edit-alert-title').value = data.title || '';
                         document.getElementById('edit-alert-details').value = data.details || '';
-                        if(editAlertModal) editAlertModal.show();
+                        editAlertModal.show();
                     } else {
                         alert("Could not find the alert to edit.");
                     }
                 }).catch(error => {
+                    console.error("Error fetching alert for edit:", error);
                     alert("Error fetching alert details. Please check console.");
                 });
-            }
-
-            if (target.classList.contains('delete-alert-btn')) {
+            } else if (targetButton.classList.contains('delete-alert-btn') && deleteAlertModal) {
+                // Populate and show delete confirmation modal
                 document.getElementById('delete-alert-id').value = alertId;
-                if(deleteAlertModal) deleteAlertModal.show();
+                deleteAlertModal.show();
             }
         });
 
+        // --- Update Alert Logic ---
         const updateAlertBtn = document.getElementById('update-alert-btn');
-        if (updateAlertBtn) {
+        if (updateAlertBtn && editAlertModal) { // Check if button and modal exist
             updateAlertBtn.addEventListener('click', () => {
                 const alertId = document.getElementById('edit-alert-id').value;
-                const title = document.getElementById('edit-alert-title').value.trim();
-                const details = document.getElementById('edit-alert-details').value.trim();
+                const titleInput = document.getElementById('edit-alert-title');
+                const detailsInput = document.getElementById('edit-alert-details');
+                const title = titleInput.value.trim();
+                const details = detailsInput.value.trim();
 
                 if (!alertId || !title || !details) {
-                    alert('Invalid data for update.');
+                    alert('Invalid data. Please ensure title and details are filled.');
                     return;
                 }
 
                 updateAlertBtn.disabled = true;
+                updateAlertBtn.textContent = 'Updating...';
 
                 alertsCollection.doc(alertId).update({
                     title: title,
                     details: details,
+                    // Optionally add updatedAt timestamp
+                    // updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 })
                 .then(() => {
-                    if(editAlertModal) editAlertModal.hide();
-                    updateUserInterface(netlifyIdentity.currentUser());
+                    editAlertModal.hide();
+                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
                 })
                 .catch((error) => {
-                    alert('Error updating alert. Please check console.');
+                    console.error("Error updating alert:", error);
+                    alert(`Error updating alert: ${error.message}`);
                 })
                 .finally(() => {
                     updateAlertBtn.disabled = false;
+                    updateAlertBtn.textContent = 'Update Alert';
                 });
             });
+        } else {
+             if (!updateAlertBtn) console.error("Update Alert button not found.");
+             if (!editAlertModal) console.error("Edit Alert modal instance not created.");
         }
 
+        // --- Delete Alert Logic ---
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        if (confirmDeleteBtn) {
+        if (confirmDeleteBtn && deleteAlertModal) { // Check if button and modal exist
             confirmDeleteBtn.addEventListener('click', () => {
                 const alertId = document.getElementById('delete-alert-id').value;
                 if (!alertId) {
@@ -363,20 +468,50 @@
                 }
 
                 confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.textContent = 'Deleting...';
 
                 alertsCollection.doc(alertId).delete()
                 .then(() => {
-                    if(deleteAlertModal) deleteAlertModal.hide();
-                    updateUserInterface(netlifyIdentity.currentUser());
+                    deleteAlertModal.hide();
+                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
                 })
                 .catch((error) => {
-                    alert('Error deleting alert. Please check console.');
+                    console.error("Error deleting alert:", error);
+                    alert(`Error deleting alert: ${error.message}`);
                 })
                 .finally(() => {
                     confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.textContent = 'Delete';
                 });
             });
+        } else {
+             if (!confirmDeleteBtn) console.error("Confirm Delete button not found.");
+             if (!deleteAlertModal) console.error("Delete Alert modal instance not created.");
         }
+
+        // --- Modal Cleanup on Hide ---
+        // Reset forms when modals are hidden to prevent stale data
+        [addAlertModalEl, editAlertModalEl].forEach(modalEl => {
+            if (modalEl) {
+                modalEl.addEventListener('hidden.bs.modal', event => {
+                    const form = event.target.querySelector('form');
+                    if (form) {
+                        form.reset();
+                        // Clear hidden ID fields as well
+                        const hiddenIdInput = form.querySelector('input[type="hidden"]');
+                        if (hiddenIdInput) hiddenIdInput.value = '';
+                    }
+                });
+            }
+        });
+         // Also clear delete ID when delete modal is hidden
+        if (deleteAlertModalEl) {
+             deleteAlertModalEl.addEventListener('hidden.bs.modal', event => {
+                 const hiddenIdInput = event.target.querySelector('#delete-alert-id');
+                 if (hiddenIdInput) hiddenIdInput.value = '';
+             });
+        }
+
     </script>
 </body>
 </html>
