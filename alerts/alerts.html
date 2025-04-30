@@ -31,8 +31,8 @@
              <!-- Added <small> tag around the text -->
             <small>
                 You can now receive Kashrus alert notifications on your phone or computer! <br>
-                For phones: Download the NTFY app (for iOS <a href="https://apps.apple.com/us/app/ntfy/id1625396347">click here.</a> for Android <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en_US">click here</a>), click on the plus, or "add" button, enter the topic name called, "krcka-alerts", and you have it on your phone! 
-               
+                For phones: Download the NTFY app (for iOS <a href="https://apps.apple.com/us/app/ntfy/id1625396347" class="alert-link" target="_blank">click here.</a> for Android <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en_US" class="alert-link" target="_blank">click here</a>), click on the plus, or "add" button, enter the topic name called, "krcka-alerts", and you have it on your phone!
+
             </small>
         </div>
 
@@ -74,6 +74,12 @@
                             <label for="alert-details" class="form-label">Details</label>
                             <textarea class="form-control" id="alert-details" rows="5" required></textarea>
                         </div>
+                        <!-- *** START: Added Checkbox *** -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="exclude-ntfy-checkbox">
+                            <label class="form-check-label" for="exclude-ntfy-checkbox">Do not send phone notification</label>
+                        </div>
+                        <!-- *** END: Added Checkbox *** -->
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -313,8 +319,10 @@
             saveAlertBtn.addEventListener('click', () => {
                 const titleInput = document.getElementById('alert-title');
                 const detailsInput = document.getElementById('alert-details');
+                const excludeNtfyCheckbox = document.getElementById('exclude-ntfy-checkbox'); // *** Get the checkbox ***
                 const title = titleInput.value.trim();
                 const details = detailsInput.value.trim();
+                const excludeNtfy = excludeNtfyCheckbox.checked; // *** Get checkbox state ***
 
                 if (!title || !details) {
                     alert('Please fill in both title and details.');
@@ -333,39 +341,44 @@
                 .then(() => {
                     console.log("Alert added to Firestore successfully.");
 
-                    // *** START NTFY NOTIFICATION ***
-                    // Construct the message body with the additional text
-                    const notificationBody = `${details}\n\nPlease check the KRCKA alert webpage for the latest information, as details may change.`;
+                    // *** START NTFY NOTIFICATION (Conditional) ***
+                    if (!excludeNtfy) { // *** Check if checkbox is NOT checked ***
+                        console.log("Sending ntfy notification...");
+                        // Construct the message body with the additional text
+                        const notificationBody = `${details}\n\nPlease check the KRCKA alert webpage for the latest information, as details may change.`;
 
-                    fetch('https://ntfy.sh/krcka-alerts', { // Target your ntfy topic
-                        method: 'PUT',
-                        body: notificationBody, // Use the modified body
-                        headers: {
-                            'Title': ` KRCKA Kashrus Alert: ${title}`, // Use alert title in the notification title
-                            'Priority': 'high', // Optional: Set priority
-                            'Click': 'https://krcka.rebchardle.org/alerts/alerts', // *** ADDED: Click action URL ***
-                            'Tags': '' // *** MODIFIED: Removed emoji tags ***
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            console.log("ntfy notification sent successfully.");
-                        } else {
-                            // Log error but don't block user flow
-                            console.error("Failed to send ntfy notification.", response.status, response.statusText);
-                            // Optionally, inform the admin via a non-blocking message if needed
-                            // alert("Alert saved, but notification failed to send.");
-                        }
-                    })
-                    .catch(error => {
-                        // Log network error but don't block user flow
-                        console.error("Error sending ntfy notification:", error);
-                        // Optionally, inform the admin
-                        // alert("Alert saved, but encountered an error sending notification.");
-                    });
+                        fetch('https://ntfy.sh/krcka-alerts', { // Target your ntfy topic
+                            method: 'POST',
+                            body: notificationBody, // Use the modified body
+                            headers: {
+                                'Title': ` KRCKA Kashrus Alert: ${title}`, // Use alert title in the notification title
+                                'Priority': 'high', // Optional: Set priority
+                                'Click': 'https://krcka.rebchardle.org/alerts/alerts', // Click action URL
+                                'Tags': '' // Removed emoji tags
+                            }
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                console.log("ntfy notification sent successfully.");
+                            } else {
+                                // Log error but don't block user flow
+                                console.error("Failed to send ntfy notification.", response.status, response.statusText);
+                                // Optionally, inform the admin via a non-blocking message if needed
+                                // alert("Alert saved, but notification failed to send.");
+                            }
+                        })
+                        .catch(error => {
+                            // Log network error but don't block user flow
+                            console.error("Error sending ntfy notification:", error);
+                            // Optionally, inform the admin
+                            // alert("Alert saved, but encountered an error sending notification.");
+                        });
+                    } else {
+                        console.log("Skipping ntfy notification as requested.");
+                    }
                     // *** END NTFY NOTIFICATION ***
 
-                    addAlertModal.hide(); // Hide modal after successful save & notification attempt
+                    addAlertModal.hide(); // Hide modal after successful save & notification attempt/skip
                     // Form reset is handled by 'hidden.bs.modal' event listener below
                     updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
                 })
@@ -500,6 +513,9 @@
                         // Clear hidden ID fields as well
                         const hiddenIdInput = form.querySelector('input[type="hidden"]');
                         if (hiddenIdInput) hiddenIdInput.value = '';
+                        // *** Also uncheck the ntfy checkbox when Add modal closes ***
+                        const ntfyCheckbox = form.querySelector('#exclude-ntfy-checkbox');
+                        if (ntfyCheckbox) ntfyCheckbox.checked = false;
                     }
                 });
             }
