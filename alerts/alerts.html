@@ -19,17 +19,14 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1>Kashrus Alerts</h1>
-            <!-- Login/Logout buttons remain here -->
             <div id="login-prompt">
                 <button id="login-btn" class="btn btn-sm btn-outline-primary logged-out-controls" onclick="netlifyIdentity.open()">Admin Login</button>
                 <button id="logout-btn" class="btn btn-sm btn-outline-danger logged-in-controls" onclick="netlifyIdentity.logout()">Logout</button>
             </div>
         </div>
 
-        <!-- MOVED ALERT BOX HERE -->
         <div class="alert alert-success mb-3" role="alert">
-             <!-- Added <small> tag around the text -->
-            <small>
+             <small>
                 You can now receive Kashrus alert notifications on your phone or computer! <br>
                 For phones: Download the NTFY app (for iOS <a href="https://apps.apple.com/us/app/ntfy/id1625396347" class="alert-link" target="_blank">click here.</a> for Android <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy&hl=en_US" class="alert-link" target="_blank">click here</a>), click on the plus, or "add" button, enter the topic name called, "krcka-alerts", and you have it on your phone!
 
@@ -48,15 +45,12 @@
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
-            <!-- Alerts will be loaded here -->
-        </div>
+            </div>
         <div class="mt-4">
-             <!-- Corrected link to go back one directory to index.html -->
-            <a href="../index.html" class="btn btn-secondary">Back to Portal Home</a>
+             <a href="../index.html" class="btn btn-secondary">Back to Portal Home</a>
         </div>
     </div>
 
-    <!-- Add Alert Modal -->
     <div class="modal fade" id="addAlertModal" tabindex="-1" aria-labelledby="addAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -74,13 +68,11 @@
                             <label for="alert-details" class="form-label">Details</label>
                             <textarea class="form-control" id="alert-details" rows="5" required></textarea>
                         </div>
-                        <!-- *** START: Added Checkbox *** -->
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="exclude-ntfy-checkbox">
                             <label class="form-check-label" for="exclude-ntfy-checkbox">Do not send phone notification</label>
                         </div>
-                        <!-- *** END: Added Checkbox *** -->
-                    </form>
+                        </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -90,7 +82,6 @@
         </div>
     </div>
 
-    <!-- Edit Alert Modal -->
     <div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -119,7 +110,6 @@
         </div>
     </div>
 
-    <!-- Delete Alert Modal -->
     <div class="modal fade" id="deleteAlertModal" tabindex="-1" aria-labelledby="deleteAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -141,7 +131,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <!-- Using consistent Firebase version -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -321,213 +310,4 @@
                 const detailsInput = document.getElementById('alert-details');
                 const excludeNtfyCheckbox = document.getElementById('exclude-ntfy-checkbox'); // *** Get the checkbox ***
                 const title = titleInput.value.trim();
-                const details = detailsInput.value.trim();
-                const excludeNtfy = excludeNtfyCheckbox.checked; // *** Get checkbox state ***
-
-                if (!title || !details) {
-                    alert('Please fill in both title and details.');
-                    return;
-                }
-
-                // Provide visual feedback
-                saveAlertBtn.disabled = true;
-                saveAlertBtn.textContent = 'Saving...';
-
-                alertsCollection.add({
-                    title: title,
-                    details: details,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                })
-                .then(() => {
-                    console.log("Alert added to Firestore successfully.");
-
-                    // *** START NTFY NOTIFICATION (Conditional) ***
-                    if (!excludeNtfy) { // *** Check if checkbox is NOT checked ***
-                        console.log("Sending ntfy notification...");
-                        // Construct the message body with the additional text
-                        const notificationBody = `${details}\n\nPlease check the KRCKA alert webpage for the latest information, as details may change.`;
-
-                        fetch('https://ntfy.sh/krcka-alerts', { // Target your ntfy topic
-                            method: 'POST',
-                            body: notificationBody, // Use the modified body
-                            headers: {
-                                'Title': ` KRCKA Kashrus Alert: ${title}`, // Use alert title in the notification title
-                                'Priority': 'high', // Optional: Set priority
-                                'Click': 'https://krcka.rebchardle.org/alerts/alerts', // Click action URL
-                                'Tags': '' // Removed emoji tags
-                            }
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                console.log("ntfy notification sent successfully.");
-                            } else {
-                                // Log error but don't block user flow
-                                console.error("Failed to send ntfy notification.", response.status, response.statusText);
-                                // Optionally, inform the admin via a non-blocking message if needed
-                                // alert("Alert saved, but notification failed to send.");
-                            }
-                        })
-                        .catch(error => {
-                            // Log network error but don't block user flow
-                            console.error("Error sending ntfy notification:", error);
-                            // Optionally, inform the admin
-                            // alert("Alert saved, but encountered an error sending notification.");
-                        });
-                    } else {
-                        console.log("Skipping ntfy notification as requested.");
-                    }
-                    // *** END NTFY NOTIFICATION ***
-
-                    addAlertModal.hide(); // Hide modal after successful save & notification attempt/skip
-                    // Form reset is handled by 'hidden.bs.modal' event listener below
-                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
-                })
-                .catch((error) => {
-                    console.error("Error adding alert to Firestore: ", error);
-                    alert(`Error adding alert: ${error.message}`); // Show specific error
-                })
-                .finally(() => {
-                    // Re-enable button and reset text regardless of success/failure
-                    saveAlertBtn.disabled = false;
-                    saveAlertBtn.textContent = 'Save Alert';
-                });
-            });
-        } else {
-            if (!saveAlertBtn) console.error("Save Alert button not found.");
-            if (!addAlertModal) console.error("Add Alert modal instance not created.");
-        }
-
-        // --- Edit and Delete Logic (Event Delegation) ---
-        alertsListDiv.addEventListener('click', (event) => {
-            const targetButton = event.target.closest('button'); // Find the closest button clicked
-            if (!targetButton) return; // Exit if the click wasn't on or inside a button
-
-            const alertId = targetButton.getAttribute('data-alert-id');
-            if (!alertId) return; // Exit if the button doesn't have the alert ID
-
-            if (targetButton.classList.contains('edit-alert-btn') && editAlertModal) {
-                // Fetch data and populate edit modal
-                alertsCollection.doc(alertId).get().then(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        document.getElementById('edit-alert-id').value = alertId;
-                        document.getElementById('edit-alert-title').value = data.title || '';
-                        document.getElementById('edit-alert-details').value = data.details || '';
-                        editAlertModal.show();
-                    } else {
-                        alert("Could not find the alert to edit.");
-                    }
-                }).catch(error => {
-                    console.error("Error fetching alert for edit:", error);
-                    alert("Error fetching alert details. Please check console.");
-                });
-            } else if (targetButton.classList.contains('delete-alert-btn') && deleteAlertModal) {
-                // Populate and show delete confirmation modal
-                document.getElementById('delete-alert-id').value = alertId;
-                deleteAlertModal.show();
-            }
-        });
-
-        // --- Update Alert Logic ---
-        const updateAlertBtn = document.getElementById('update-alert-btn');
-        if (updateAlertBtn && editAlertModal) { // Check if button and modal exist
-            updateAlertBtn.addEventListener('click', () => {
-                const alertId = document.getElementById('edit-alert-id').value;
-                const titleInput = document.getElementById('edit-alert-title');
-                const detailsInput = document.getElementById('edit-alert-details');
-                const title = titleInput.value.trim();
-                const details = detailsInput.value.trim();
-
-                if (!alertId || !title || !details) {
-                    alert('Invalid data. Please ensure title and details are filled.');
-                    return;
-                }
-
-                updateAlertBtn.disabled = true;
-                updateAlertBtn.textContent = 'Updating...';
-
-                alertsCollection.doc(alertId).update({
-                    title: title,
-                    details: details,
-                    // Optionally add updatedAt timestamp
-                    // updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                })
-                .then(() => {
-                    editAlertModal.hide();
-                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
-                })
-                .catch((error) => {
-                    console.error("Error updating alert:", error);
-                    alert(`Error updating alert: ${error.message}`);
-                })
-                .finally(() => {
-                    updateAlertBtn.disabled = false;
-                    updateAlertBtn.textContent = 'Update Alert';
-                });
-            });
-        } else {
-             if (!updateAlertBtn) console.error("Update Alert button not found.");
-             if (!editAlertModal) console.error("Edit Alert modal instance not created.");
-        }
-
-        // --- Delete Alert Logic ---
-        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        if (confirmDeleteBtn && deleteAlertModal) { // Check if button and modal exist
-            confirmDeleteBtn.addEventListener('click', () => {
-                const alertId = document.getElementById('delete-alert-id').value;
-                if (!alertId) {
-                    alert('Invalid alert ID for deletion.');
-                    return;
-                }
-
-                confirmDeleteBtn.disabled = true;
-                confirmDeleteBtn.textContent = 'Deleting...';
-
-                alertsCollection.doc(alertId).delete()
-                .then(() => {
-                    deleteAlertModal.hide();
-                    updateUserInterface(netlifyIdentity.currentUser()); // Refresh list
-                })
-                .catch((error) => {
-                    console.error("Error deleting alert:", error);
-                    alert(`Error deleting alert: ${error.message}`);
-                })
-                .finally(() => {
-                    confirmDeleteBtn.disabled = false;
-                    confirmDeleteBtn.textContent = 'Delete';
-                });
-            });
-        } else {
-             if (!confirmDeleteBtn) console.error("Confirm Delete button not found.");
-             if (!deleteAlertModal) console.error("Delete Alert modal instance not created.");
-        }
-
-        // --- Modal Cleanup on Hide ---
-        // Reset forms when modals are hidden to prevent stale data
-        [addAlertModalEl, editAlertModalEl].forEach(modalEl => {
-            if (modalEl) {
-                modalEl.addEventListener('hidden.bs.modal', event => {
-                    const form = event.target.querySelector('form');
-                    if (form) {
-                        form.reset();
-                        // Clear hidden ID fields as well
-                        const hiddenIdInput = form.querySelector('input[type="hidden"]');
-                        if (hiddenIdInput) hiddenIdInput.value = '';
-                        // *** Also uncheck the ntfy checkbox when Add modal closes ***
-                        const ntfyCheckbox = form.querySelector('#exclude-ntfy-checkbox');
-                        if (ntfyCheckbox) ntfyCheckbox.checked = false;
-                    }
-                });
-            }
-        });
-         // Also clear delete ID when delete modal is hidden
-        if (deleteAlertModalEl) {
-             deleteAlertModalEl.addEventListener('hidden.bs.modal', event => {
-                 const hiddenIdInput = event.target.querySelector('#delete-alert-id');
-                 if (hiddenIdInput) hiddenIdInput.value = '';
-             });
-        }
-
-    </script>
-</body>
-</html>
+                const details = details
