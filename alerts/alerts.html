@@ -338,7 +338,7 @@
                     const notificationBody = `${details}\n\nPlease check the KRCKA alert webpage for the latest information, as details may change.`;
 
                     fetch('https://ntfy.sh/krcka-alerts', { // Target your ntfy topic
-                        method: 'POST',
+                        method: 'PUT',
                         body: notificationBody, // Use the modified body
                         headers: {
                             'Title': ` KRCKA Kashrus Alert: ${title}`, // Use alert title in the notification title
