@@ -182,7 +182,7 @@
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Login</button>
                         <button type="button" id="cancel-login-btn" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Cancel</button>
-                       
+
                     </div>
                     <div class="text-center mt-3">
                         <a href="#" id="show-forgot-password-link">Forgot Password?</a> |
@@ -291,12 +291,13 @@
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         function updateUI(user) {
-            console.log("Updating UI for user:", user); // Debug
+            console.log("Inside updateUI. Received user:", user); // Debug
             const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
             const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
 
             // Safely access roles, default to empty array if properties don't exist
             const userRoles = user?.app_metadata?.roles || [];
+            console.log("Inside updateUI. User roles found:", userRoles); // Debug roles
 
             // Determine if user has admin-level access
             const isAdmin = userRoles.some(role => adminRoles.includes(role));
@@ -304,6 +305,7 @@
             const isMashgiach = userRoles.includes(mashgiachRole);
 
             // Update Login/Logout Button Visibility
+            console.log(`Inside updateUI. isAdmin: ${isAdmin}, isMashgiach: ${isMashgiach}`); // Debug decisions
             showLoginFormBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
 
@@ -549,18 +551,21 @@
             // If a token wasn't handled (which updates the UI), check current user
             if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
                 let user = auth.currentUser(); // Use 'let' to allow potential reassignment
-                console.log("Initial user check on load:", user); // Log initial user object
+                console.log("GoTrue initial user check on load:", user); // Log initial user object
                 if (user) {
                     // *** Force refresh user data to get roles ***
                     try {
                         console.log("Attempting user.jwt(true) to refresh data...");
                         await user.jwt(true); // Force refresh JWT and user data
-                        // Re-fetch the user object after potential update by jwt()
-                        user = auth.currentUser(); // Get potentially updated user object
-                        console.log("Token refresh attempt complete. Current user object:", user); // Log potentially updated user
-                        console.log("User app_metadata after refresh attempt:", user?.app_metadata); // *** Explicitly log metadata ***
-                        if (user) { // Check if user still exists after refresh
-                           updateUI(user); // Update UI with potentially updated user object (with roles)
+
+                        // *** Try getting user from Netlify Identity widget after refresh ***
+                        const netlifyUser = window.netlifyIdentity.currentUser();
+                        console.log("Token refresh attempt complete. GoTrue user:", auth.currentUser()); // Log GoTrue user state
+                        console.log("Netlify Identity user after refresh attempt:", netlifyUser); // Log Netlify Identity user state
+                        console.log("Netlify Identity user app_metadata:", netlifyUser?.app_metadata); // *** Explicitly log metadata from Netlify Identity ***
+
+                        if (netlifyUser) { // Check if user still exists after refresh using Netlify Identity
+                           updateUI(netlifyUser); // Update UI with potentially updated user object (with roles)
                         } else {
                            // User became null after refresh (e.g., token truly invalid)
                            console.log("User became null after token refresh.");
