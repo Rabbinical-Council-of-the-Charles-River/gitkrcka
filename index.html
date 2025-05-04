@@ -551,21 +551,24 @@
             // If a token wasn't handled (which updates the UI), check current user
             if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
                 let user = auth.currentUser(); // Use 'let' to allow potential reassignment
-                console.log("GoTrue initial user check on load:", user); // Log initial user object
+                console.log("GoTrue initial user check on load:", user);
                 if (user) {
                     // *** Force refresh user data to get roles ***
                     try {
                         console.log("Attempting user.jwt(true) to refresh data...");
                         await user.jwt(true); // Force refresh JWT and user data
+                        console.log("Token refresh attempt complete.");
 
-                        // *** Try getting user from Netlify Identity widget after refresh ***
-                        const netlifyUser = window.netlifyIdentity.currentUser();
-                        console.log("Token refresh attempt complete. GoTrue user:", auth.currentUser()); // Log GoTrue user state
-                        console.log("Netlify Identity user after refresh attempt:", netlifyUser); // Log Netlify Identity user state
-                        console.log("Netlify Identity user app_metadata:", netlifyUser?.app_metadata); // *** Explicitly log metadata from Netlify Identity ***
+                        // *** Add a small delay before re-checking user ***
+                        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
 
-                        if (netlifyUser) { // Check if user still exists after refresh using Netlify Identity
-                           updateUI(netlifyUser); // Update UI with potentially updated user object (with roles)
+                        // Re-fetch the user object after potential update and delay
+                        user = auth.currentUser();
+                        console.log("GoTrue user after refresh attempt and delay:", user);
+                        console.log("GoTrue user app_metadata after refresh attempt:", user?.app_metadata); // *** Explicitly log metadata ***
+
+                        if (user) { // Check if user still exists after refresh
+                           updateUI(user); // Update UI with potentially updated user object (with roles)
                         } else {
                            // User became null after refresh (e.g., token truly invalid)
                            console.log("User became null after token refresh.");
