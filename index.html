@@ -550,21 +550,19 @@
             if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
                 const user = auth.currentUser();
                 if (user) {
-                    // Optional: Verify token validity if needed (adds network request)
-                    // try {
-                    //   // Check if the user object is valid and has the jwt method
-                    //   if (user && typeof user.jwt === 'function') {
-                    //      await user.jwt(); // This refreshes and validates the token
-                    //      updateUI(user);
-                    //   } else { throw new Error("Invalid user object or missing jwt method"); }
-                    //
-                    //   await user.jwt(); // This refreshes and validates the token
-                    //   updateUI(user);
-                    // } catch (err) {
-                    //   console.error("Token validation failed on load:", err);
-                    //   showLoggedOutState();
-                    // }
-                    updateUI(user); // Update UI based on existing cookie/session
+                    // *** Force refresh user data to get roles ***
+                    try {
+                        console.log("User found on load, attempting to refresh token/data...");
+                        await user.jwt(true); // Force refresh JWT and user data
+                        console.log("User data refreshed, updating UI:", user);
+                        updateUI(user); // Update UI with potentially updated user object (with roles)
+                    } catch (err) {
+                        // If refresh fails (e.g., expired token), treat as logged out
+                        console.error("Token refresh failed on load:", err);
+                        await auth.logout(); // Ensure GoTrue state is cleared
+                        showLoggedOutState();
+                    }
+                    // updateUI(user); // Update UI based on existing cookie/session - MOVED inside try block
                 } else {
                     // No user logged in. Check if we should show the login form directly.
                     if (location.hash === '#login') {
