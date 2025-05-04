@@ -549,14 +549,16 @@
             // If a token wasn't handled (which updates the UI), check current user
             if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
                 let user = auth.currentUser(); // Use 'let' to allow potential reassignment
+                console.log("Initial user check on load:", user); // Log initial user object
                 if (user) {
                     // *** Force refresh user data to get roles ***
                     try {
-                        console.log("User found on load, attempting to refresh token/data...", user); // Log initial user
+                        console.log("Attempting user.jwt(true) to refresh data...");
                         await user.jwt(true); // Force refresh JWT and user data
                         // Re-fetch the user object after potential update by jwt()
                         user = auth.currentUser(); // Get potentially updated user object
-                        console.log("User data refreshed, current user object:", user); // Log potentially updated user
+                        console.log("Token refresh attempt complete. Current user object:", user); // Log potentially updated user
+                        console.log("User app_metadata after refresh attempt:", user?.app_metadata); // *** Explicitly log metadata ***
                         if (user) { // Check if user still exists after refresh
                            updateUI(user); // Update UI with potentially updated user object (with roles)
                         } else {
@@ -564,6 +566,7 @@
                            console.log("User became null after token refresh.");
                            showLoggedOutState();
                         }
+
                     } catch (err) {
                         // If refresh fails (e.g., expired token), treat as logged out
                         console.error("Token refresh failed on load:", err);
