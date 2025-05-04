@@ -4,23 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KRCKA Portal</title>
+    <!-- GoTrue-JS Client (used by Netlify Identity) -->
+    <script type="text/javascript" src="https://unpkg.com/gotrue-js@latest"></script>
     <!-- Netlify Identity Widget (Loaded from CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/netlify-identity-widget@1.9.1/build/netlify-identity-widget.min.js"></script>
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Optional: Add Google Fonts or other custom styles here -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
     <style>
         body {
             font-family: 'Varela Round', sans-serif; /* Example font */
             background-color: #f8f9fa; /* Light gray background */
-            display: flex;
+            display: flex; /* Use flexbox */
+            flex-direction: column; /* Stack children vertically */
             justify-content: center;
             align-items: center;
             min-height: 100vh;
         }
         .portal-card {
-            max-width: 450px; /* Slightly wider card */
+            max-width: 550px; /* Wider card for better layout */
             width: 100%;
         }
         .hidden {
@@ -34,29 +39,104 @@
         .list-group-item a:hover {
             text-decoration: underline; /* Add underline on hover */
         }
-        .public-links a {
-            margin-bottom: 0.5rem; /* Add some space between public links */
+        .list-group-item i {
+            margin-right: 0.5rem; /* Space between icon and text */
+            width: 1.2em; /* Align text nicely */
+            text-align: center;
+        }
+        .btn i {
+             margin-right: 0.4rem;
+        }
+        .card-header {
+            background-color: #e9ecef; /* Light header background */
+            font-size: 1.5rem; /* Larger title */
+            font-weight: 500;
+        }
+        /* Custom Login Form Styles */
+        #custom-login-form {
+            border-top: 1px solid #dee2e6;
+            padding-top: 1.5rem;
+        }
+        #login-error-message {
+            display: none; /* Hidden by default */
+            margin-top: 1rem;
+        }
+        #auth-message { /* General messages for signup/reset */
+             display: none;
+             margin-bottom: 1rem;
+        }
+        /* --- Logo Styles --- */
+        .top-logo-container {
+            text-align: center;
+            margin-bottom: 15px; /* Space below the top logo */
+            width: 100%; /* Ensure container spans width for centering */
+        }
+        .header-logo {
+            /* --- Increased Size --- */
+            max-height: 150px; /* Increased size, adjust as needed */
+            /* Removed margin-right and vertical-align as it's now centered above */
+            display: inline-block; /* Ensure it respects text-align */
+           /* margin-right: 10px; */
+            /* vertical-align: middle; */
+        }
+        .footer-logo-container {
+            text-align: center;
+            margin-top: 20px; /* Space above the bottom logo */
+            /* Removed width: 100% to let text-align center the inline-block image */
+        }
+        .footer-logo {
+            /* Use max-height to control size, let width adjust */
+            /* --- Increased Size --- */
+            max-height: 80px; /* Increased size */
+            /* --- Made Less Opaque --- */
+            opacity: 0.9; /* Closer to 1 is less opaque */
+            display: inline-block; /* Ensure it respects text-align */
+            /* --- Increased Height --- */
+            height: 80px; /* Adjust this value as needed */
+            width: auto; /* Allow width to adjust based on height and aspect ratio */
         }
     </style>
 </head>
 <body>
-    <div class="card portal-card shadow-sm">
-        <div class="card-body p-4 p-md-5 text-center">
-            <h2 class="card-title mb-4">KRCKA Portal</h2>
+    <!-- *** NEW: Top Logo Container (Moved Above Card) *** -->
+    <div class="top-logo-container">
+        <img src="images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png" alt="KRCKA Logo" class="header-logo">
+    </div>
 
+    <div class="card portal-card shadow-sm">
+        <div class="card-header text-center"> <!-- Removed flex alignment styles -->
+            KRCKA Portal
+        </div>
+        <div class="card-body p-4">
+            <!-- General Auth Message Area -->
+            <div id="auth-message" class="alert" role="alert">
+                <!-- Messages like 'Check your email' will appear here -->
+            </div>
+            <div id="main-portal-content"> <!-- Wrap existing content -->
             <!-- Public Links -->
-            <div class="d-grid gap-2 mb-4 public-links">
-                <a href="apply.html" class="btn btn-outline-secondary">Apply for Certification</a>
-                <a href="client-view.html" class="btn btn-outline-secondary">View Kosher Establishments</a>
-                 <a href="alerts/alerts.html" class="btn btn-outline-warning">View Kashrus Alerts</a> <!-- Added Alerts Link -->
-                 <a href="clients/index.html" class="btn btn-primary btn">Client Area</a>
-                 <a href="payment.html" class="btn btn-outline-success">Make Payment</a> <!-- Added Alerts Link -->
+            <h5 class="mb-3 text-center text-muted">Public Resources</h5>
+            <div class="row g-3 mb-4">
+                 <div class="col-md-6 d-grid">
+                    <a href="apply.html" class="btn btn-outline-primary"><i class="bi bi-file-earmark-text"></i> Apply for Certification</a>
+                </div>
+                <div class="col-md-6 d-grid">
+                    <a href="client-view.html" class="btn btn-outline-secondary"><i class="bi bi-building"></i> View Establishments</a>
+                </div>
+                <div class="col-md-6 d-grid">
+                    <a href="alerts/alerts.html" class="btn btn-outline-warning"><i class="bi bi-exclamation-triangle"></i> View Kashrus Alerts</a>
+                </div>
+                <div class="col-md-6 d-grid">
+                    <a href="payment.html" class="btn btn-outline-success"><i class="bi bi-credit-card"></i> Make Payment</a>
+                </div>
+                 <div class="col-12 d-grid">
+                     <a href="clients/index.html" class="btn btn-info text-white"><i class="bi bi-person-check"></i> Client Area</a>
+                 </div>
             </div>
 
             <!-- Login/Logout Buttons -->
             <div class="d-grid gap-2 mb-4">
-                 <button id="login-btn" class="btn btn-primary btn-lg" onclick="netlifyIdentity.open()">Login</button>
-                 <button id="logout-btn" class="btn btn-danger btn-lg hidden" onclick="netlifyIdentity.logout()">Logout</button>
+                 <button id="show-login-form-btn" class="btn btn-primary btn-lg"><i class="bi bi-box-arrow-in-right"></i> Staff Login</button> <!-- Changed ID and removed onclick -->
+                 <button id="logout-btn" class="btn btn-danger btn-lg hidden"><i class="bi bi-box-arrow-left"></i> Logout</button> <!-- Removed onclick, will add listener -->
             </div>
 
             <!-- Admin Links Section -->
@@ -64,14 +144,14 @@
                 <hr> <!-- Separator -->
                 <h5 class="mb-3">Admin Area</h5>
                 <ul class="list-group">
-                    <li class="list-group-item list-group-item-action"><a href="products/">Manage Products</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="establishments/">Manage Establishments</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html">Manage Alerts</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="/kmailer/index.html">KRCKA Communicator</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="invoice.html">Invoicing</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-admin.html">Manage Payroll</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="products/"><i class="bi bi-box-seam"></i> Manage Products</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="establishments/"><i class="bi bi-shop"></i> Manage Establishments</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="alerts/alerts.html"><i class="bi bi-bell"></i> Manage Alerts</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/"><i class="bi bi-journal-check"></i> Mashgiach Logs</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="/kmailer/index.html"><i class="bi bi-envelope"></i> KRCKA Communicator</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="invoice.html"><i class="bi bi-receipt"></i> Invoicing</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html"><i class="bi bi-wallet2"></i> My Payroll</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-admin.html"><i class="bi bi-cash-stack"></i> Manage Payroll</a></li>
                 </ul>
             </div>
 
@@ -80,14 +160,91 @@
                 <hr> <!-- Separator -->
                 <h5 class="mb-3">Mashgiach Area</h5>
                 <ul class="list-group">
-                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/">Mashgiach Logs</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html">My Payroll</a></li>
-                    <li class="list-group-item list-group-item-action"><a href="jobs/">Job Board</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="mashgiach-logs/"><i class="bi bi-journal-check"></i> Mashgiach Logs</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="payroll/payroll-employee.html"><i class="bi bi-wallet2"></i> My Payroll</a></li>
+                    <li class="list-group-item list-group-item-action"><a href="jobs/"><i class="bi bi-briefcase"></i> Job Board</a></li>
                 </ul>
             </div>
-            <!-- *** END NEW SECTION *** -->
+            </div> <!-- End main-portal-content -->
+
+            <!-- *** NEW: Custom Login Form Section *** -->
+            <div id="login-view" class="hidden">
+                <h5 class="mb-3 text-center">Staff/Client Login</h5>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <label for="login-email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="login-email" required autocomplete="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="login-password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="login-password" required autocomplete="current-password">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Login</button>
+                        <button type="button" id="cancel-login-btn" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Cancel</button>
+                       
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="#" id="show-forgot-password-link">Forgot Password?</a> |
+                        <a href="#" id="show-signup-link-from-login">Need an account? Sign Up</a>
+                    </div>
+                     <div id="login-error-message" class="alert alert-danger mt-3" role="alert">
+                        <!-- Error messages will appear here -->
+                     </div>
+                </form>
+            </div>
+            <!-- *** END LOGIN SECTION *** -->
+
+            <!-- *** NEW: Signup Form Section *** -->
+            <div id="signup-view" class="hidden">
+                <h5 class="mb-3 text-center">Staff Signup</h5>
+                <form id="signup-form">
+                    <div class="mb-3">
+                        <label for="signup-fullname" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="signup-fullname" required autocomplete="name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="signup-email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="signup-email" required autocomplete="email">
+                    </div>
+                    <div class="mb-3">
+                        <label for="signup-password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="signup-password" required autocomplete="new-password" minlength="6">
+                        <div class="form-text">Minimum 6 characters.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Sign Up</button>
+                        <button type="button" id="cancel-signup-btn" class="btn btn-secondary btn-sm">Cancel</button>
+                    </div>
+                     <div class="text-center mt-3">
+                        <a href="#" id="show-login-link-from-signup">Already have an account? Login</a>
+                    </div>
+                </form>
+            </div>
+            <!-- *** END SIGNUP SECTION *** -->
+
+            <!-- *** NEW: Forgot Password Form Section *** -->
+            <div id="forgot-password-view" class="hidden">
+                <h5 class="mb-3 text-center">Reset Password</h5>
+                <form id="forgot-password-form">
+                    <div class="mb-3">
+                        <label for="reset-email" class="form-label">Enter your email address</label>
+                        <input type="email" class="form-control" id="reset-email" required autocomplete="email">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">Send Reset Link</button>
+                        <button type="button" id="cancel-reset-btn" class="btn btn-secondary btn-sm">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            <!-- *** END FORGOT PASSWORD SECTION *** -->
 
         </div>
+    </div>
+
+    <!-- Footer Logo Container -->
+    <div class="footer-logo-container">
+      Powered By: <a href="https://rebchardle.org/"> <img src="images/Rabbinical Council (1).png" alt="KRCKA Logo" class="footer-logo"></a> <!-- Added Footer Logo -->
     </div>
 
     <!-- Bootstrap 5 JS Bundle (includes Popper) - Optional if not using JS components -->
@@ -95,14 +252,46 @@
 
     <script>
         // Initialize Netlify Identity
-        netlifyIdentity.init();
+        // netlifyIdentity.init(); // We won't use the widget's init directly
 
-        const loginBtn = document.getElementById('login-btn');
+        // --- GoTrue Auth Instance ---
+        // Use your Netlify site URL here
+        const siteUrl = 'https://krcka.rebchardle.org'; // Replace with your actual Netlify site URL
+        const auth = new GoTrue({
+            APIUrl: `${siteUrl}/.netlify/identity`,
+            audience: '',
+            setCookie: true, // Use cookies to manage sessions
+        });
+
+        // --- DOM Elements ---
+        const showLoginFormBtn = document.getElementById('show-login-form-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const adminLinks = document.getElementById('admin-links');
-        const mashgiachLinks = document.getElementById('mashgiach-links'); // Get the new div
+        const mashgiachLinks = document.getElementById('mashgiach-links');
+        const mainPortalContent = document.getElementById('main-portal-content');
+        const authMessageDiv = document.getElementById('auth-message'); // General message area
+
+        // Auth Views
+        const loginView = document.getElementById('login-view');
+        const signupView = document.getElementById('signup-view');
+        const forgotPasswordView = document.getElementById('forgot-password-view');
+
+        // Login Form
+        const loginForm = document.getElementById('login-form');
+        const cancelLoginBtn = document.getElementById('cancel-login-btn');
+        const loginErrorMessage = document.getElementById('login-error-message');
+        const googleLoginBtn = document.getElementById('google-login-btn'); // Added Google button reference
+
+        // Signup Form
+        const signupForm = document.getElementById('signup-form');
+        const cancelSignupBtn = document.getElementById('cancel-signup-btn');
+
+        // Forgot Password Form
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         function updateUI(user) {
+            console.log("Updating UI for user:", user); // Debug
             const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
             const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
 
@@ -115,8 +304,15 @@
             const isMashgiach = userRoles.includes(mashgiachRole);
 
             // Update Login/Logout Button Visibility
-            loginBtn.classList.add('hidden');
+            showLoginFormBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
+
+            // Hide all auth forms/views if user is logged in
+            loginView.classList.add('hidden');
+            signupView.classList.add('hidden');
+            forgotPasswordView.classList.add('hidden');
+
+            mainPortalContent.classList.remove('hidden'); // Ensure main content is visible
 
             // Update Menu Visibility (Admin takes precedence)
             if (isAdmin) {
@@ -132,30 +328,255 @@
             }
         }
 
-        netlifyIdentity.on('init', user => {
-            if (user) {
-                updateUI(user);
-            } else {
-                // Ensure UI is in logged-out state if no user on init
-                loginBtn.classList.remove('hidden');
-                logoutBtn.classList.add('hidden');
-                adminLinks.classList.add('hidden');
-                mashgiachLinks.classList.add('hidden'); // Also hide mashgiach links
+        function showLoggedOutState() {
+            // Reset to logged-out state
+            adminLinks.classList.add('hidden');
+            mashgiachLinks.classList.add('hidden');
+            showLoginFormBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+
+            // Hide all auth views, show main content
+            loginView.classList.add('hidden');
+            signupView.classList.add('hidden');
+            forgotPasswordView.classList.add('hidden');
+            mainPortalContent.classList.remove('hidden'); // Show main content
+
+            // Clear messages
+            loginErrorMessage.style.display = 'none'; // Hide any previous error
+            authMessageDiv.style.display = 'none';
+
+            // Reset forms
+            loginForm.reset(); // Clear email/password fields
+            signupForm.reset();
+            forgotPasswordForm.reset();
+        }
+
+        // --- Show/Hide Auth Views ---
+        function showAuthView(viewToShow) {
+            // Hide main content and all auth views first
+            mainPortalContent.classList.add('hidden');
+            loginView.classList.add('hidden');
+            signupView.classList.add('hidden');
+            forgotPasswordView.classList.add('hidden');
+
+            // Clear messages
+            loginErrorMessage.style.display = 'none';
+            authMessageDiv.style.display = 'none';
+
+            // Show the requested view
+            if (viewToShow === 'login') {
+                loginView.classList.remove('hidden');
+            } else if (viewToShow === 'signup') {
+                signupView.classList.remove('hidden');
+            } else if (viewToShow === 'forgotPassword') {
+                forgotPasswordView.classList.remove('hidden');
+            } else { // Default to showing main content (logged out state)
+                showLoggedOutState();
+            }
+        }
+
+        // --- Auth Action Handlers ---
+
+        // Login
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            loginErrorMessage.style.display = 'none';
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const remember = true; // Or get from a checkbox if you add one
+
+            try {
+                const user = await auth.login(email, password, remember);
+                console.log("Login successful:", user);
+                updateUI(user); // Update UI with logged-in user
+            } catch (err) {
+                console.error("Login failed:", err);
+                loginErrorMessage.textContent = `Login failed: ${err.message || 'Please check credentials.'}`;
+                loginErrorMessage.style.display = 'block';
             }
         });
 
-        netlifyIdentity.on('login', user => {
-            updateUI(user);
-            netlifyIdentity.close(); // Close the modal widget
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            const user = auth.currentUser();
+            if (user) {
+                try {
+                    await user.logout();
+                    console.log("Logout successful");
+                    showLoggedOutState(); // Update UI to logged-out state
+                } catch (err) {
+                    console.error("Logout failed:", err);
+                    // Optionally show an error message
+                }
+            } else {
+                showLoggedOutState(); // Already logged out, just ensure UI is correct
+            }
         });
 
-        netlifyIdentity.on('logout', () => {
-            // Reset to logged-out state
-            adminLinks.classList.add('hidden');
-            mashgiachLinks.classList.add('hidden'); // Hide mashgiach links on logout
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
+        // Signup
+        signupForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            authMessageDiv.style.display = 'none';
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const fullName = document.getElementById('signup-fullname').value;
+
+            try {
+                // Sign up the user. Netlify Identity usually requires email confirmation.
+                const user = await auth.signup(email, password, {
+                    full_name: fullName
+                    // You can add more user_metadata here if needed
+                });
+                console.log("Signup request successful:", user);
+                // Show message asking user to confirm email
+                authMessageDiv.className = 'alert alert-success';
+                authMessageDiv.textContent = 'Signup successful! Please check your email to confirm your account.';
+                authMessageDiv.style.display = 'block';
+                showAuthView('login'); // Switch back to login view after signup request
+            } catch (err) {
+                console.error("Signup failed:", err);
+                authMessageDiv.className = 'alert alert-danger';
+                authMessageDiv.textContent = `Signup failed: ${err.message || 'An error occurred.'}`;
+                authMessageDiv.style.display = 'block';
+            }
         });
+
+        // Request Password Reset
+        forgotPasswordForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            authMessageDiv.style.display = 'none';
+            const email = document.getElementById('reset-email').value;
+
+            try {
+                await auth.requestPasswordRecovery(email);
+                console.log("Password recovery email requested for:", email);
+                authMessageDiv.className = 'alert alert-info';
+                authMessageDiv.textContent = 'If an account exists for this email, a password reset link has been sent. Please check your inbox.';
+                authMessageDiv.style.display = 'block';
+                showAuthView('login'); // Switch back to login view
+            } catch (err) {
+                console.error("Password recovery request failed:", err);
+                authMessageDiv.className = 'alert alert-danger';
+                // Show a generic message for security reasons, but log the specific error
+                authMessageDiv.textContent = `Password reset request failed: ${err.message || 'An error occurred.'}`;
+                authMessageDiv.style.display = 'block';
+            }
+        });
+
+
+        // --- Handle Tokens from URL Hash (Confirmation, Recovery) ---
+        async function handleUrlTokens() {
+            const hash = location.hash.replace(/^#/, '');
+            if (!hash) return; // No hash, nothing to do
+
+            const params = new URLSearchParams(hash);
+            const confirmationToken = params.get('confirmation_token');
+            const recoveryToken = params.get('recovery_token');
+            // const inviteToken = params.get('invite_token'); // If using invites
+
+            authMessageDiv.style.display = 'none'; // Clear previous messages
+
+            try {
+                if (confirmationToken) {
+                    console.log("Found confirmation token:", confirmationToken);
+                    const user = await auth.confirm(confirmationToken, true); // true = remember user
+                    console.log("Email confirmed successfully:", user);
+                    authMessageDiv.className = 'alert alert-success';
+                    authMessageDiv.textContent = 'Email confirmed successfully! You are now logged in.';
+                    authMessageDiv.style.display = 'block';
+                    location.hash = ''; // Clear the hash
+                    updateUI(user); // Update UI immediately
+                } else if (recoveryToken) {
+                    console.log("Found recovery token:", recoveryToken);
+                    // GoTrue doesn't directly handle the password update UI with just the token.
+                    // Netlify Identity typically directs to a page where the user enters a new password.
+                    // For this single-page app, we'll just log the user in (if possible) and tell them to update their password via settings (if available) or log out/in again.
+                    // A more robust solution involves a dedicated password reset page/view.
+                    const user = await auth.recover(recoveryToken, true); // Logs the user in
+                    console.log("Password recovery successful, user logged in:", user);
+                    authMessageDiv.className = 'alert alert-success';
+                    authMessageDiv.textContent = 'Password recovery successful. You are logged in. Please consider changing your password if prompted or via account settings.';
+                    authMessageDiv.style.display = 'block';
+                    location.hash = ''; // Clear the hash
+                    updateUI(user); // Update UI immediately
+                }
+                // Add handling for invite_token if needed
+
+            } catch (err) {
+                console.error("Error handling token from URL:", err);
+                authMessageDiv.className = 'alert alert-danger';
+                authMessageDiv.textContent = `Error processing link: ${err.message || 'Invalid or expired link.'}`;
+                authMessageDiv.style.display = 'block';
+                location.hash = ''; // Clear the hash even on error
+                // Show logged out state if token handling fails
+                showLoggedOutState();
+            }
+        }
+
+        // --- UI Navigation Event Listeners ---
+
+        // Show custom login form when "Staff Login" is clicked
+        showLoginFormBtn.addEventListener('click', () => {
+            showAuthView('login');
+        });
+
+        // Hide custom login form when "Cancel" is clicked
+        cancelLoginBtn.addEventListener('click', () => {
+            showAuthView(null); // Show main content (logged out)
+        });
+
+        // Cancel Signup
+        cancelSignupBtn.addEventListener('click', () => {
+            showAuthView(null); // Show main content (logged out)
+        });
+
+        // Cancel Password Reset
+        cancelResetBtn.addEventListener('click', () => {
+            showAuthView(null); // Show main content (logged out)
+        });
+
+        // Links to switch views
+        document.getElementById('show-signup-link-from-login').addEventListener('click', (e) => { e.preventDefault(); showAuthView('signup'); });
+        document.getElementById('show-login-link-from-signup').addEventListener('click', (e) => { e.preventDefault(); showAuthView('login'); });
+        document.getElementById('show-forgot-password-link').addEventListener('click', (e) => { e.preventDefault(); showAuthView('forgotPassword'); });
+
+
+        // --- Initial Page Load Logic ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM Loaded. Checking for tokens and current user...");
+            await handleUrlTokens(); // Check for confirmation/recovery tokens first
+
+            // If a token wasn't handled (which updates the UI), check current user
+            if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
+                const user = auth.currentUser();
+                if (user) {
+                    // Optional: Verify token validity if needed (adds network request)
+                    // try {
+                    //   // Check if the user object is valid and has the jwt method
+                    //   if (user && typeof user.jwt === 'function') {
+                    //      await user.jwt(); // This refreshes and validates the token
+                    //      updateUI(user);
+                    //   } else { throw new Error("Invalid user object or missing jwt method"); }
+                    //
+                    //   await user.jwt(); // This refreshes and validates the token
+                    //   updateUI(user);
+                    // } catch (err) {
+                    //   console.error("Token validation failed on load:", err);
+                    //   showLoggedOutState();
+                    // }
+                    updateUI(user); // Update UI based on existing cookie/session
+                } else {
+                    // No user logged in. Check if we should show the login form directly.
+                    if (location.hash === '#login') {
+                        showAuthView('login');
+                        location.hash = ''; // Clear the hash after processing
+                    } else {
+                        showLoggedOutState(); // Otherwise, show the default logged out state
+                    }
+                }
+            }
+        });
+
     </script>
 </body>
 </html>

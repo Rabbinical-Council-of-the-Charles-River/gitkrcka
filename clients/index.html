@@ -73,21 +73,23 @@
 </head>
 
 <body>
-    <!-- Login Section -->
-    <div id="login-section">
+       <!-- Login Section -->
+       <div id="login-section">
         <div class="container"
             style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
             <h1 class="text-center">Client Portal Access</h1>
             <p class="text-center text-muted">Please log in to view your invoices.</p>
             <div id="message" class="message"></div>
             <div class="d-grid gap-2">
-                <button id="netlify-login-button" class="btn btn-primary btn-lg">
+                <!-- This is now a link -->
+                <a href="../index.html#login" id="netlify-login-button" class="btn btn-primary btn-lg"> <!-- Added #login -->
                     Login / Sign Up
-                </button>
+                </a>
                  <a href="../index.html" class="btn btn-outline-secondary mt-2">Back to Main Portal</a>
             </div>
         </div>
     </div>
+
 
     <!-- Client Content -->
     <div id="client-content" class="hidden">
@@ -315,13 +317,7 @@
 
         // --- Event Listeners ---
 
-        // Netlify Identity Login Button
-        if (netlifyLoginButton) {
-            netlifyLoginButton.addEventListener('click', () => {
-                clearMessage(); // Clear any previous messages
-                netlifyIdentity.open(); // Open the login modal
-            });
-        }
+        // Removed event listener for netlifyLoginButton as it's now a simple link
          // Logout Button
         if (logoutButton) {
             logoutButton.addEventListener('click', () => {

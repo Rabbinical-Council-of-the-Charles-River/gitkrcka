@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Portal Menu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for Menu */
+        .top-menu {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: #f0f0f0; /* Light background */
+            color: #333;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .top-menu-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .top-menu-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .menu-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            color: #555;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .menu-item:hover {
+            background-color: #e0e0e0;
+            color: #222;
+        }
+
+        .active-menu-item {
+            background-color: #d0d0d0;
+            color: #111;
+            font-weight: 500;
+        }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.375rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+            z-index: 10;
+        }
+
+        .dropdown.active .dropdown-content {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            color: #555;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f0f0;
+            color: #222;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .user-profile:hover {
+            background-color: #e0e0e0;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.375rem;
+            padding-left: 0.5rem;
+            background-color: white;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-container:focus-within {
+            border-color: #90caf9;
+            box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.2);
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            padding: 0.5rem;
+            width: 150px;
+            font-size: 0.875rem;
+        }
+
+        .search-icon {
+            color: #777;
+        }
+
+        .content-section {
+            display: none;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 0.375rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .embed-container {
+            height: 500px; /* Adjust as needed */
+            width: 100%;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+
+        .embed-responsive-item {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        @media (max-width: 768px) {
+            .top-menu-left, .top-menu-right {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.5rem;
+            }
+            .top-menu {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-inter">
+    <header class="top-menu">
+        <div class="top-menu-left">
+            <span class="menu-item active-menu-item" data-target="dashboard">Dashboard</span>
+            <span class="menu-item" data-target="users">Users</span>
+            <div class="dropdown">
+                <span class="menu-item" data-target="reports">Reports</span>
+                <div class="dropdown-content">
+                    <a href="#" class="dropdown-item" data-target="daily-report">Daily Report</a>
+                    <a href="#" class="dropdown-item" data-target="monthly-report">Monthly Report</a>
+                    <a href="#" class="dropdown-item" data-target="yearly-report">Yearly Report</a>
+                </div>
+            </div>
+            <span class="menu-item" data-target="Invoicing">Invoicng</span>
+        </div>
+        <div class="top-menu-right">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search...">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 search-icon">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="user-profile">
+                <div class="user-avatar">JD</div>
+                <span class="user-name">John Doe</span>
+            </div>
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Logout
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-semibold text-gray-800 mb-6">Welcome to the Internal Portal</h1>
+        <p class="text-gray-600">This is the main content area.  Select a menu item to view the corresponding section.</p>
+
+        <section id="dashboard" class="content-section active">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Dashboard</h2>
+            <div class="embed-container">
+                <iframe class="embed-responsive-item" src="/dashboard.html"></iframe>
+            </div>
+        </section>
+
+        <section id="users" class="content-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Users</h2>
+            <div class="embed-container">
+                <iframe class="embed-responsive-item" src="/users.html"></iframe>
+            </div>
+        </section>
+
+        <section id="reports" class="content-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Reports</h2>
+            <p class="text-gray-600 mb-4">Select a report to view:</p>
+            <div id="daily-report" class="embed-container">
+                <iframe class="embed-responsive-item" src="/reports/daily.html"></iframe>
+            </div>
+            <div id="monthly-report" class="embed-container">
+                <iframe class="embed-responsive-item" src="/reports/monthly.html"></iframe>
+            </div>
+            <div id="yearly-report" class="embed-container">
+                <iframe class="embed-responsive-item" src="/reports/yearly.html"></iframe>
+            </div>
+        </section>
+
+        <section id="Invoicing" class="content-section">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Invoicing</h2>
+            <div class="embed-container">
+                <iframe class="embed-responsive-item" src="invoice.html"></iframe>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const dropdowns = document.querySelectorAll('.dropdown');
+        const menuItems = document.querySelectorAll('.menu-item');
+        const contentSections = document.querySelectorAll('.content-section');
+        const dropdownContents = document.querySelectorAll('.dropdown-content');
+
+
+        dropdowns.forEach(dropdown => {
+            dropdown.addEventListener('click', () => {
+                dropdown.classList.toggle('active');
+            });
+        });
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove active class from all menu items
+                menuItems.forEach(otherItem => {
+                    otherItem.classList.remove('active-menu-item');
+                });
+                // Add active class to the clicked item
+                item.classList.add('active-menu-item');
+
+                // Hide all content sections
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                //show only the content section related to the menu item clicked.
+                const targetId = item.dataset.target;
+                if (targetId) {
+                  const targetSection = document.getElementById(targetId);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                    }
+                }
+
+                // Close all dropdowns
+                dropdowns.forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
+                dropdownContents.forEach(dc => {
+                    dc.style.display = 'none';
+                });
+
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(event.target)  ) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
