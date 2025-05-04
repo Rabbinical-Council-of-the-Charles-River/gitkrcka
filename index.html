@@ -548,18 +548,26 @@
 
             // If a token wasn't handled (which updates the UI), check current user
             if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
-                const user = auth.currentUser();
+                let user = auth.currentUser(); // Use 'let' to allow potential reassignment
                 if (user) {
                     // *** Force refresh user data to get roles ***
                     try {
-                        console.log("User found on load, attempting to refresh token/data...");
+                        console.log("User found on load, attempting to refresh token/data...", user); // Log initial user
                         await user.jwt(true); // Force refresh JWT and user data
-                        console.log("User data refreshed, updating UI:", user);
-                        updateUI(user); // Update UI with potentially updated user object (with roles)
+                        // Re-fetch the user object after potential update by jwt()
+                        user = auth.currentUser(); // Get potentially updated user object
+                        console.log("User data refreshed, current user object:", user); // Log potentially updated user
+                        if (user) { // Check if user still exists after refresh
+                           updateUI(user); // Update UI with potentially updated user object (with roles)
+                        } else {
+                           // User became null after refresh (e.g., token truly invalid)
+                           console.log("User became null after token refresh.");
+                           showLoggedOutState();
+                        }
                     } catch (err) {
                         // If refresh fails (e.g., expired token), treat as logged out
                         console.error("Token refresh failed on load:", err);
-                        await auth.logout(); // Ensure GoTrue state is cleared
+                        try { await auth.logout(); } catch (logoutErr) { console.error("Error during logout after failed refresh:", logoutErr); } // Ensure GoTrue state is cleared
                         showLoggedOutState();
                     }
                     // updateUI(user); // Update UI based on existing cookie/session - MOVED inside try block
