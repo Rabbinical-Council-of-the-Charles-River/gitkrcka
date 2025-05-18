@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KRCKA Portal</title>
-    <!-- GoTrue-JS Client (used by Netlify Identity) -->
-    <script type="text/javascript" src="https://unpkg.com/gotrue-js@latest/dist/gotrue.js"></script> <!-- Explicitly load UMD build -->
+    <title>KRCKA Portal</title>    
     <!-- Netlify Identity Widget (Loaded from CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/netlify-identity-widget@1.9.1/build/netlify-identity-widget.min.js"></script>
     <!-- Bootstrap 5 CSS CDN -->
@@ -58,11 +56,6 @@
             padding-top: 1.5rem;
         }
         #login-error-message {
-            display: none; /* Hidden by default */
-            margin-top: 1rem;
-        }
-        #auth-message { /* General messages for signup/reset */
-             display: none;
              margin-bottom: 1rem;
         }
         /* --- Logo Styles --- */
@@ -108,10 +101,7 @@
             KRCKA Portal
         </div>
         <div class="card-body p-4">
-            <!-- General Auth Message Area -->
-            <div id="auth-message" class="alert" role="alert">
-                <!-- Messages like 'Check your email' will appear here -->
-            </div>
+            
             <div id="main-portal-content"> <!-- Wrap existing content -->
             <!-- Public Links -->
             <h5 class="mb-3 text-center text-muted">Public Resources</h5>
@@ -135,8 +125,8 @@
 
             <!-- Login/Logout Buttons -->
             <div class="d-grid gap-2 mb-4">
-                 <button id="show-login-form-btn" class="btn btn-primary btn-lg"><i class="bi bi-box-arrow-in-right"></i> Staff Login</button> <!-- Changed ID and removed onclick -->
-                 <button id="logout-btn" class="btn btn-danger btn-lg hidden"><i class="bi bi-box-arrow-left"></i> Logout</button> <!-- Removed onclick, will add listener -->
+                 <button id="login-btn" class="btn btn-primary btn-lg"><i class="bi bi-box-arrow-in-right"></i> Staff Login</button>
+                 <button id="logout-btn" class="btn btn-danger btn-lg hidden"><i class="bi bi-box-arrow-left"></i> Logout</button>
             </div>
 
             <!-- Admin Links Section -->
@@ -167,84 +157,12 @@
             </div>
             </div> <!-- End main-portal-content -->
 
-            <!-- *** NEW: Custom Login Form Section *** -->
-            <div id="login-view" class="hidden">
-                <h5 class="mb-3 text-center">Staff/Client Login</h5>
-                <form id="login-form">
-                    <div class="mb-3">
-                        <label for="login-email" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="login-email" required autocomplete="email">
-                    </div>
-                    <div class="mb-3">
-                        <label for="login-password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="login-password" required autocomplete="current-password">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Login</button>
-                        <button type="button" id="cancel-login-btn" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Cancel</button>
-
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="#" id="show-forgot-password-link">Forgot Password?</a> |
-                        <a href="#" id="show-signup-link-from-login">Need an account? Sign Up</a>
-                    </div>
-                     <div id="login-error-message" class="alert alert-danger mt-3" role="alert">
-                        <!-- Error messages will appear here -->
-                     </div>
-                </form>
-            </div>
-            <!-- *** END LOGIN SECTION *** -->
-
-            <!-- *** NEW: Signup Form Section *** -->
-            <div id="signup-view" class="hidden">
-                <h5 class="mb-3 text-center">Staff Signup</h5>
-                <form id="signup-form">
-                    <div class="mb-3">
-                        <label for="signup-fullname" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="signup-fullname" required autocomplete="name">
-                    </div>
-                    <div class="mb-3">
-                        <label for="signup-email" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="signup-email" required autocomplete="email">
-                    </div>
-                    <div class="mb-3">
-                        <label for="signup-password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="signup-password" required autocomplete="new-password" minlength="6">
-                        <div class="form-text">Minimum 6 characters.</div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success">Sign Up</button>
-                        <button type="button" id="cancel-signup-btn" class="btn btn-secondary btn-sm">Cancel</button>
-                    </div>
-                     <div class="text-center mt-3">
-                        <a href="#" id="show-login-link-from-signup">Already have an account? Login</a>
-                    </div>
-                </form>
-            </div>
-            <!-- *** END SIGNUP SECTION *** -->
-
-            <!-- *** NEW: Forgot Password Form Section *** -->
-            <div id="forgot-password-view" class="hidden">
-                <h5 class="mb-3 text-center">Reset Password</h5>
-                <form id="forgot-password-form">
-                    <div class="mb-3">
-                        <label for="reset-email" class="form-label">Enter your email address</label>
-                        <input type="email" class="form-control" id="reset-email" required autocomplete="email">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning">Send Reset Link</button>
-                        <button type="button" id="cancel-reset-btn" class="btn btn-secondary btn-sm">Cancel</button>
-                    </div>
-                </form>
-            </div>
-            <!-- *** END FORGOT PASSWORD SECTION *** -->
-
         </div>
     </div>
 
     <!-- Footer Logo Container -->
     <div class="footer-logo-container">
-      Powered By: <a href="https://rebchardle.org/"> <img src="images/Rabbinical Council (1).png" alt="KRCKA Logo" class="footer-logo"></a> <!-- Added Footer Logo -->
+      Powered By: <a href="https://rebchardle.org/"> <img src="images/Rabbinical Council (1).png" alt="RebChardle.org Logo" class="footer-logo"></a> <!-- Added Footer Logo -->
     </div>
 
     <!-- Bootstrap 5 JS Bundle (includes Popper) - Optional if not using JS components -->
@@ -252,81 +170,48 @@
 
     <script>
         // Initialize Netlify Identity
-        // netlifyIdentity.init(); // We won't use the widget's init directly
-
-        // --- GoTrue Auth Instance ---
-        // Use your Netlify site URL here
-        const siteUrl = 'https://krcka.rebchardle.org'; // Replace with your actual Netlify site URL
-        const auth = new GoTrue({
-            APIUrl: `${siteUrl}/.netlify/identity`,
-            audience: '',
-            setCookie: true, // Use cookies to manage sessions
-        });
+        // netlifyIdentity.init(); // Initialization will be handled further down
 
         // --- DOM Elements ---
-        const showLoginFormBtn = document.getElementById('show-login-form-btn');
+        const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const adminLinks = document.getElementById('admin-links');
         const mashgiachLinks = document.getElementById('mashgiach-links');
         const mainPortalContent = document.getElementById('main-portal-content');
-        const authMessageDiv = document.getElementById('auth-message'); // General message area
-
-        // Auth Views
-        const loginView = document.getElementById('login-view');
-        const signupView = document.getElementById('signup-view');
-        const forgotPasswordView = document.getElementById('forgot-password-view');
-
-        // Login Form
-        const loginForm = document.getElementById('login-form');
-        const cancelLoginBtn = document.getElementById('cancel-login-btn');
-        const loginErrorMessage = document.getElementById('login-error-message');
-        const googleLoginBtn = document.getElementById('google-login-btn'); // Added Google button reference
-
-        // Signup Form
-        const signupForm = document.getElementById('signup-form');
-        const cancelSignupBtn = document.getElementById('cancel-signup-btn');
-
-        // Forgot Password Form
-        const forgotPasswordForm = document.getElementById('forgot-password-form');
-        const cancelResetBtn = document.getElementById('cancel-reset-btn');
 
         function updateUI(user) {
-            console.log("Inside updateUI. Received user:", user); // Debug
+            console.log("Netlify Identity User:", user);
             const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
             const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
 
             // Safely access roles, default to empty array if properties don't exist
-            const userRoles = user?.app_metadata?.roles || [];
-            console.log("Inside updateUI. User roles found:", userRoles); // Debug roles
+            const userRoles = user && user.app_metadata && user.app_metadata.roles ? user.app_metadata.roles : [];
+            console.log("User roles found:", userRoles);
 
             // Determine if user has admin-level access
             const isAdmin = userRoles.some(role => adminRoles.includes(role));
             // Determine if user has mashgiach access
             const isMashgiach = userRoles.includes(mashgiachRole);
 
-            // Update Login/Logout Button Visibility
-            console.log(`Inside updateUI. isAdmin: ${isAdmin}, isMashgiach: ${isMashgiach}`); // Debug decisions
-            showLoginFormBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
+            if (user) { // Logged in
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                mainPortalContent.classList.remove('hidden'); // Ensure main content is visible
 
-            // Hide all auth forms/views if user is logged in
-            loginView.classList.add('hidden');
-            signupView.classList.add('hidden');
-            forgotPasswordView.classList.add('hidden');
-
-            mainPortalContent.classList.remove('hidden'); // Ensure main content is visible
-
-            // Update Menu Visibility (Admin takes precedence)
-            if (isAdmin) {
-                adminLinks.classList.remove('hidden');
-                mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
-            } else if (isMashgiach) {
-                adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
-                mashgiachLinks.classList.remove('hidden');
-            } else {
-                // Hide both menus if user has neither role
-                adminLinks.classList.add('hidden');
-                mashgiachLinks.classList.add('hidden');
+                // Update Menu Visibility (Admin takes precedence)
+                if (isAdmin) {
+                    adminLinks.classList.remove('hidden');
+                    mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
+                } else if (isMashgiach) {
+                    adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
+                    mashgiachLinks.classList.remove('hidden');
+                } else {
+                    // Hide both menus if user has neither role
+                    adminLinks.classList.add('hidden');
+                    mashgiachLinks.classList.add('hidden');
+                }
+            } else { // Logged out
+                showLoggedOutState();
             }
         }
 
@@ -334,264 +219,64 @@
             // Reset to logged-out state
             adminLinks.classList.add('hidden');
             mashgiachLinks.classList.add('hidden');
-            showLoginFormBtn.classList.remove('hidden');
+            loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
-
-            // Hide all auth views, show main content
-            loginView.classList.add('hidden');
-            signupView.classList.add('hidden');
-            forgotPasswordView.classList.add('hidden');
-            mainPortalContent.classList.remove('hidden'); // Show main content
-
-            // Clear messages
-            loginErrorMessage.style.display = 'none'; // Hide any previous error
-            authMessageDiv.style.display = 'none';
-
-            // Reset forms
-            loginForm.reset(); // Clear email/password fields
-            signupForm.reset();
-            forgotPasswordForm.reset();
+            mainPortalContent.classList.remove('hidden'); // Main content area is always visible, sections within are controlled
         }
 
-        // --- Show/Hide Auth Views ---
-        function showAuthView(viewToShow) {
-            // Hide main content and all auth views first
-            mainPortalContent.classList.add('hidden');
-            loginView.classList.add('hidden');
-            signupView.classList.add('hidden');
-            forgotPasswordView.classList.add('hidden');
-
-            // Clear messages
-            loginErrorMessage.style.display = 'none';
-            authMessageDiv.style.display = 'none';
-
-            // Show the requested view
-            if (viewToShow === 'login') {
-                loginView.classList.remove('hidden');
-            } else if (viewToShow === 'signup') {
-                signupView.classList.remove('hidden');
-            } else if (viewToShow === 'forgotPassword') {
-                forgotPasswordView.classList.remove('hidden');
-            } else { // Default to showing main content (logged out state)
-                showLoggedOutState();
-            }
-        }
-
-        // --- Auth Action Handlers ---
-
-        // Login
-        loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            loginErrorMessage.style.display = 'none';
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const remember = true; // Or get from a checkbox if you add one
-
-            try {
-                const user = await auth.login(email, password, remember);
-                console.log("Login successful:", user);
-                updateUI(user); // Update UI with logged-in user
-            } catch (err) {
-                console.error("Login failed:", err);
-                loginErrorMessage.textContent = `Login failed: ${err.message || 'Please check credentials.'}`;
-                loginErrorMessage.style.display = 'block';
-            }
+        // --- Event Listeners for Login/Logout buttons ---
+        loginBtn.addEventListener('click', () => {
+            netlifyIdentity.open(); // Opens the widget, default is login
         });
 
-        // Logout
-        logoutBtn.addEventListener('click', async () => {
-            const user = auth.currentUser();
-            if (user) {
-                try {
-                    await user.logout();
-                    console.log("Logout successful");
-                    showLoggedOutState(); // Update UI to logged-out state
-                } catch (err) {
-                    console.error("Logout failed:", err);
-                    // Optionally show an error message
+        logoutBtn.addEventListener('click', () => {
+            netlifyIdentity.logout();
+        });
+
+        // --- Netlify Identity Widget Event Handlers ---
+        if (window.netlifyIdentity) {
+            netlifyIdentity.on('init', user => {
+                console.log('Netlify Identity init event, user:', user);
+                if (user) {
+                    updateUI(user);
+                } else {
+                    showLoggedOutState();
                 }
-            } else {
-                showLoggedOutState(); // Already logged out, just ensure UI is correct
-            }
-        });
+            });
 
-        // Signup
-        signupForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            authMessageDiv.style.display = 'none';
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            const fullName = document.getElementById('signup-fullname').value;
+            netlifyIdentity.on('login', user => {
+                console.log('Netlify Identity login event, user:', user);
+                updateUI(user);
+                netlifyIdentity.close(); // Close the widget modal after login
+            });
 
-            try {
-                // Sign up the user. Netlify Identity usually requires email confirmation.
-                const user = await auth.signup(email, password, {
-                    full_name: fullName
-                    // You can add more user_metadata here if needed
-                });
-                console.log("Signup request successful:", user);
-                // Show message asking user to confirm email
-                authMessageDiv.className = 'alert alert-success';
-                authMessageDiv.textContent = 'Signup successful! Please check your email to confirm your account.';
-                authMessageDiv.style.display = 'block';
-                showAuthView('login'); // Switch back to login view after signup request
-            } catch (err) {
-                console.error("Signup failed:", err);
-                authMessageDiv.className = 'alert alert-danger';
-                authMessageDiv.textContent = `Signup failed: ${err.message || 'An error occurred.'}`;
-                authMessageDiv.style.display = 'block';
-            }
-        });
-
-        // Request Password Reset
-        forgotPasswordForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            authMessageDiv.style.display = 'none';
-            const email = document.getElementById('reset-email').value;
-
-            try {
-                await auth.requestPasswordRecovery(email);
-                console.log("Password recovery email requested for:", email);
-                authMessageDiv.className = 'alert alert-info';
-                authMessageDiv.textContent = 'If an account exists for this email, a password reset link has been sent. Please check your inbox.';
-                authMessageDiv.style.display = 'block';
-                showAuthView('login'); // Switch back to login view
-            } catch (err) {
-                console.error("Password recovery request failed:", err);
-                authMessageDiv.className = 'alert alert-danger';
-                // Show a generic message for security reasons, but log the specific error
-                authMessageDiv.textContent = `Password reset request failed: ${err.message || 'An error occurred.'}`;
-                authMessageDiv.style.display = 'block';
-            }
-        });
-
-
-        // --- Handle Tokens from URL Hash (Confirmation, Recovery) ---
-        async function handleUrlTokens() {
-            const hash = location.hash.replace(/^#/, '');
-            if (!hash) return; // No hash, nothing to do
-
-            const params = new URLSearchParams(hash);
-            const confirmationToken = params.get('confirmation_token');
-            const recoveryToken = params.get('recovery_token');
-            // const inviteToken = params.get('invite_token'); // If using invites
-
-            authMessageDiv.style.display = 'none'; // Clear previous messages
-
-            try {
-                if (confirmationToken) {
-                    console.log("Found confirmation token:", confirmationToken);
-                    const user = await auth.confirm(confirmationToken, true); // true = remember user
-                    console.log("Email confirmed successfully:", user);
-                    authMessageDiv.className = 'alert alert-success';
-                    authMessageDiv.textContent = 'Email confirmed successfully! You are now logged in.';
-                    authMessageDiv.style.display = 'block';
-                    location.hash = ''; // Clear the hash
-                    updateUI(user); // Update UI immediately
-                } else if (recoveryToken) {
-                    console.log("Found recovery token:", recoveryToken);
-                    // GoTrue doesn't directly handle the password update UI with just the token.
-                    // Netlify Identity typically directs to a page where the user enters a new password.
-                    // For this single-page app, we'll just log the user in (if possible) and tell them to update their password via settings (if available) or log out/in again.
-                    // A more robust solution involves a dedicated password reset page/view.
-                    const user = await auth.recover(recoveryToken, true); // Logs the user in
-                    console.log("Password recovery successful, user logged in:", user);
-                    authMessageDiv.className = 'alert alert-success';
-                    authMessageDiv.textContent = 'Password recovery successful. You are logged in. Please consider changing your password if prompted or via account settings.';
-                    authMessageDiv.style.display = 'block';
-                    location.hash = ''; // Clear the hash
-                    updateUI(user); // Update UI immediately
-                }
-                // Add handling for invite_token if needed
-
-            } catch (err) {
-                console.error("Error handling token from URL:", err);
-                authMessageDiv.className = 'alert alert-danger';
-                authMessageDiv.textContent = `Error processing link: ${err.message || 'Invalid or expired link.'}`;
-                authMessageDiv.style.display = 'block';
-                location.hash = ''; // Clear the hash even on error
-                // Show logged out state if token handling fails
+            netlifyIdentity.on('logout', () => {
+                console.log('Netlify Identity logout event');
                 showLoggedOutState();
-            }
+            });
+
+            netlifyIdentity.on('error', err => {
+                console.error('Netlify Identity Error:', err);
+                // alert(`Error: ${err.message}`); // Optional: user-facing error
+            });
+
+            // Initialize Netlify Identity
+            netlifyIdentity.init({
+                // container: '#netlify-modal-container', // Optional: if you want to embed it
+                // APIUrl: 'https://your-site.netlify.app/.netlify/identity' // Usually auto-detected
+            });
+        } else {
+            console.error("Netlify Identity widget script not loaded.");
+            loginBtn.textContent = "Login Service Unavailable";
+            loginBtn.disabled = true;
         }
-
-        // --- UI Navigation Event Listeners ---
-
-        // Show custom login form when "Staff Login" is clicked
-        showLoginFormBtn.addEventListener('click', () => {
-            showAuthView('login');
-        });
-
-        // Hide custom login form when "Cancel" is clicked
-        cancelLoginBtn.addEventListener('click', () => {
-            showAuthView(null); // Show main content (logged out)
-        });
-
-        // Cancel Signup
-        cancelSignupBtn.addEventListener('click', () => {
-            showAuthView(null); // Show main content (logged out)
-        });
-
-        // Cancel Password Reset
-        cancelResetBtn.addEventListener('click', () => {
-            showAuthView(null); // Show main content (logged out)
-        });
-
-        // Links to switch views
-        document.getElementById('show-signup-link-from-login').addEventListener('click', (e) => { e.preventDefault(); showAuthView('signup'); });
-        document.getElementById('show-login-link-from-signup').addEventListener('click', (e) => { e.preventDefault(); showAuthView('login'); });
-        document.getElementById('show-forgot-password-link').addEventListener('click', (e) => { e.preventDefault(); showAuthView('forgotPassword'); });
-
 
         // --- Initial Page Load Logic ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log("DOM Loaded. Checking for tokens and current user...");
-            await handleUrlTokens(); // Check for confirmation/recovery tokens first
-
-            // If a token wasn't handled (which updates the UI), check current user
-            if (authMessageDiv.style.display === 'none') { // Avoid re-checking if a token message is already shown
-                let user = auth.currentUser(); // Use 'let' to allow potential reassignment
-                console.log("GoTrue initial user check on load:", user);
-                if (user) {
-                    // *** Force refresh user data to get roles ***
-                    try {
-                        console.log("Attempting user.jwt(true) to refresh data...");
-                        await user.jwt(true); // Force refresh JWT and user data
-                        console.log("Token refresh attempt complete.");
-
-                        // *** Add a small delay before re-checking user ***
-                        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
-
-                        // Re-fetch the user object after potential update and delay
-                        user = auth.currentUser();
-                        console.log("GoTrue user after refresh attempt and delay:", user);
-                        console.log("GoTrue user app_metadata after refresh attempt:", user?.app_metadata); // *** Explicitly log metadata ***
-
-                        if (user) { // Check if user still exists after refresh
-                           updateUI(user); // Update UI with potentially updated user object (with roles)
-                        } else {
-                           // User became null after refresh (e.g., token truly invalid)
-                           console.log("User became null after token refresh.");
-                           showLoggedOutState();
-                        }
-
-                    } catch (err) {
-                        // If refresh fails (e.g., expired token), treat as logged out
-                        console.error("Token refresh failed on load:", err);
-                        try { await auth.logout(); } catch (logoutErr) { console.error("Error during logout after failed refresh:", logoutErr); } // Ensure GoTrue state is cleared
-                        showLoggedOutState();
-                    }
-                    // updateUI(user); // Update UI based on existing cookie/session - MOVED inside try block
-                } else {
-                    // No user logged in. Check if we should show the login form directly.
-                    if (location.hash === '#login') {
-                        showAuthView('login');
-                        location.hash = ''; // Clear the hash after processing
-                    } else {
-                        showLoggedOutState(); // Otherwise, show the default logged out state
-                    }
-                }
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial UI state before Netlify Identity initializes
+            // This prevents a flicker if elements are visible by default that shouldn't be.
+            showLoggedOutState();
+            // Netlify Identity's 'init' event will then update the UI based on actual login state.
         });
 
     </script>
