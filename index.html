@@ -200,10 +200,16 @@
 
                 // Update Menu Visibility (Admin takes precedence)
                 if (isAdmin) {
+                    console.log('Admin role detected. Attempting to show adminLinks.');
+                    console.log('adminLinks classList BEFORE remove:', adminLinks.classList.toString());
                     adminLinks.classList.remove('hidden');
+                    console.log('adminLinks classList AFTER remove:', adminLinks.classList.toString());
+                    console.log('adminLinks computed display style:', window.getComputedStyle(adminLinks).display);
                     mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
                 } else if (isMashgiach) {
+                    console.log('Mashgiach role detected (but not admin). Attempting to show mashgiachLinks.');
                     adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
+                    console.log('adminLinks classList (isMashgiach branch):', adminLinks.classList.toString());
                     mashgiachLinks.classList.remove('hidden');
                 } else {
                     // Hide both menus if user has neither role
