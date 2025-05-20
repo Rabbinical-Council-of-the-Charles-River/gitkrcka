@@ -146,8 +146,11 @@
         const mashgiachLinks = document.getElementById('mashgiach-links');
         const mainPortalContent = document.getElementById('main-portal-content');
 
+        let netlifyUser = null; // Store the user object globally
+
         function updateUI(user) {
             console.log("Netlify Identity User:", user);
+            netlifyUser = user; // Update the global user object
             const adminRoles = ['admin', 'manager'];
             const mashgiachRole = 'mashgiach';
 
@@ -214,7 +217,16 @@
                 console.error('Netlify Identity Error:', err);
             });
 
-            netlifyIdentity.init(); // Initialize Netlify Identity here
+            // --- Important: Initialize and check for user on load ---
+            netlifyIdentity.init();
+            // Check for an existing user immediately on page load
+            const currentUser = netlifyIdentity.currentUser();
+            if (currentUser) {
+                updateUI(currentUser);
+            } else {
+                showLoggedOutState(); // Ensure default state if no user is logged in
+            }
+
         } else {
             console.error("Netlify Identity widget script not loaded.");
             loginBtn.textContent = "Login Service Unavailable";
@@ -222,7 +234,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            showLoggedOutState();
+           //  showLoggedOutState(); // Removed to prevent overriding the user check
         });
     </script>
 </body>
