@@ -10,43 +10,41 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
     <style>
         body {
-            font-family: 'Varela Round', sans-serif; /* Example font */
-            background-color: #f8f9fa; /* Light gray background */
-            display: flex; /* Use flexbox */
-            flex-direction: column; /* Stack children vertically */
+            font-family: 'Varela Round', sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
         }
         .portal-card {
-            max-width: 550px; /* Wider card for better layout */
+            max-width: 550px;
             width: 100%;
         }
         .hidden {
-            display: none !important; /* Ensure hidden class overrides Bootstrap */
+            display: none !important;
         }
-        /* Style links within the list group to remove default underline */
         .list-group-item a {
             text-decoration: none;
-            color: inherit; /* Inherit color from list group item */
+            color: inherit;
         }
         .list-group-item a:hover {
-            text-decoration: underline; /* Add underline on hover */
+            text-decoration: underline;
         }
         .list-group-item i {
-            margin-right: 0.5rem; /* Space between icon and text */
-            width: 1.2em; /* Align text nicely */
+            margin-right: 0.5rem;
+            width: 1.2em;
             text-align: center;
         }
         .btn i {
             margin-right: 0.4rem;
         }
         .card-header {
-            background-color: #e9ecef; /* Light header background */
-            font-size: 1.5rem; /* Larger title */
+            background-color: #e9ecef;
+            font-size: 1.5rem;
             font-weight: 500;
         }
-        /* Custom Login Form Styles */
         #custom-login-form {
             border-top: 1px solid #dee2e6;
             padding-top: 1.5rem;
@@ -54,35 +52,25 @@
         #login-error-message {
             margin-bottom: 1rem;
         }
-        /* --- Logo Styles --- */
         .top-logo-container {
             text-align: center;
-            margin-bottom: 15px; /* Space below the top logo */
-            width: 100%; /* Ensure container spans width for centering */
+            margin-bottom: 15px;
+            width: 100%;
         }
         .header-logo {
-            /* --- Increased Size --- */
-            max-height: 150px; /* Increased size, adjust as needed */
-            /* Removed margin-right and vertical-align as it's now centered above */
-            display: inline-block; /* Ensure it respects text-align */
-           /* margin-right: 10px; */
-            /* vertical-align: middle; */
+            max-height: 150px;
+            display: inline-block;
         }
         .footer-logo-container {
             text-align: center;
-            margin-top: 20px; /* Space above the bottom logo */
-            /* Removed width: 100% to let text-align center the inline-block image */
+            margin-top: 20px;
         }
         .footer-logo {
-            /* Use max-height to control size, let width adjust */
-            /* --- Increased Size --- */
-            max-height: 80px; /* Increased size */
-            /* --- Made Less Opaque --- */
-            opacity: 0.9; /* Closer to 1 is less opaque */
-            display: inline-block; /* Ensure it respects text-align */
-            /* --- Increased Height --- */
-            height: 80px; /* Adjust this value as needed */
-            width: auto; /* Allow width to adjust based on height and aspect ratio */
+            max-height: 80px;
+            opacity: 0.9;
+            display: inline-block;
+            height: 80px;
+            width: auto;
         }
     </style>
 </head>
@@ -151,9 +139,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     <script>
-        // Initialize Netlify Identity
-        // netlifyIdentity.init(); // Initialization will be handled further down
-
         // --- DOM Elements ---
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
@@ -163,79 +148,61 @@
 
         function updateUI(user) {
             console.log("Netlify Identity User:", user);
-            const adminRoles = ['admin', 'manager']; // Roles that see the admin menu
-            const mashgiachRole = 'mashgiach'; // Specific role for the mashgiach menu
+            const adminRoles = ['admin', 'manager'];
+            const mashgiachRole = 'mashgiach';
 
-            // Safely access roles, default to empty array if properties don't exist
             const userRoles = user && user.app_metadata && user.app_metadata.roles ? user.app_metadata.roles : [];
             console.log("User roles found:", userRoles);
 
-            // Determine if user has admin-level access
             const isAdmin = userRoles.some(role => adminRoles.includes(role));
-            // Determine if user has mashgiach access
             const isMashgiach = userRoles.includes(mashgiachRole);
 
-            if (user) { // Logged in
+            if (user) {
                 loginBtn.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
-                mainPortalContent.classList.remove('hidden'); // Ensure main content is visible
+                mainPortalContent.classList.remove('hidden');
 
-                // Update Menu Visibility (Admin takes precedence)
                 if (isAdmin) {
-                    console.log('Admin role detected. Attempting to show adminLinks.');
-                    console.log('adminLinks classList BEFORE remove:', adminLinks.classList.toString());
                     adminLinks.classList.remove('hidden');
-                    console.log('adminLinks classList AFTER remove:', adminLinks.classList.toString());
-                    console.log('adminLinks computed display style:', window.getComputedStyle(adminLinks).display);
-                    mashgiachLinks.classList.add('hidden'); // Hide mashgiach menu if admin
+                    mashgiachLinks.classList.add('hidden');
                 } else if (isMashgiach) {
-                    console.log('Mashgiach role detected (but not admin). Attempting to show mashgiachLinks.');
-                    adminLinks.classList.add('hidden'); // Hide admin menu if only mashgiach
-                    console.log('adminLinks classList (isMashgiach branch):', adminLinks.classList.toString());
+                    adminLinks.classList.add('hidden');
                     mashgiachLinks.classList.remove('hidden');
                 } else {
-                    // Hide both menus if user has neither role
                     adminLinks.classList.add('hidden');
                     mashgiachLinks.classList.add('hidden');
                 }
-            } else { // Logged out
+            } else {
                 showLoggedOutState();
             }
         }
 
         function showLoggedOutState() {
-            // Reset to logged-out state
             adminLinks.classList.add('hidden');
             mashgiachLinks.classList.add('hidden');
             loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
-            mainPortalContent.classList.remove('hidden'); // Main content area is always visible, sections within are controlled
+            mainPortalContent.classList.remove('hidden');
         }
 
-        // --- Event Listeners for Login/Logout buttons ---
         loginBtn.addEventListener('click', () => {
-            netlifyIdentity.open(); // Opens the widget, default is login
+            netlifyIdentity.open();
         });
 
         logoutBtn.addEventListener('click', () => {
             netlifyIdentity.logout();
         });
 
-        // --- Netlify Identity Widget Event Handlers ---
         if (window.netlifyIdentity) {
             netlifyIdentity.on('init', user => {
                 console.log('Netlify Identity init event, user:', user);
-                if (user) {
-                    updateUI(user);
-                } else {
-                    showLoggedOutState();
-                }
+                updateUI(user);
             });
 
             netlifyIdentity.on('login', user => {
                 console.log('Netlify Identity login event, user:', user);
                 updateUI(user);
-                netlifyIdentity.close(); // Close the widget modal after login
+                netlifyIdentity.close();
             });
 
             netlifyIdentity.on('logout', () => {
@@ -245,28 +212,18 @@
 
             netlifyIdentity.on('error', err => {
                 console.error('Netlify Identity Error:', err);
-                // alert(`Error: ${err.message}`); // Optional: user-facing error
             });
 
-            // Initialize Netlify Identity
-            netlifyIdentity.init({
-                // container: '#netlify-modal-container', // Optional: if you want to embed it
-                // APIUrl: 'https://your-site.netlify.app/.netlify/identity' // Usually auto-detected
-            });
+            netlifyIdentity.init(); // Initialize Netlify Identity here
         } else {
             console.error("Netlify Identity widget script not loaded.");
             loginBtn.textContent = "Login Service Unavailable";
             loginBtn.disabled = true;
         }
 
-        // --- Initial Page Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Set initial UI state before Netlify Identity initializes
-            // This prevents a flicker if elements are visible by default that shouldn't be.
             showLoggedOutState();
-            // Netlify Identity's 'init' event will then update the UI based on actual login state.
         });
-
     </script>
 </body>
 </html>
