@@ -52,7 +52,7 @@ const displayEstablishments = async (doc) => {
 					<td class="establishment-location">${establishment.location}</td>
 					<td class="establishment-company">${establishment.company}</td>
 					<td class="establishment-kosher-status">${establishment.kosherStatus}</td>
-					<td class="establishment-certificate"><a href="${establishment.certificate}" target="_blank">View</a></td>
+					<td class="establishment-certificate"><a href="certificate.html?id=${doc.id}" target="_blank">View</a></td>
 					<td>
 							<a href="#" id="${doc.id}" class="edit js-edit-establishment"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
 							</a>
@@ -202,7 +202,7 @@ function addEstablishment(establishment) {
 					<td class="establishment-location">${establishment.location}</td>
 					<td class="establishment-company">${establishment.company}</td>
 					<td class="establishment-kosher-status">${establishment.kosherStatus}</td>
-					<td class="establishment-certificate"><a href="${establishment.certificate}" target="_blank">View</a></td>
+                    <td class="establishment-certificate"><a href="certificate.html?id=${docRef.id}" target="_blank">View</a></td>
                     <td>
 							<a href="#" id="${docRef.id}" class="edit js-edit-establishment"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
 							</a>
@@ -291,7 +291,7 @@ $(document).ready(function () {
 		$('tr[data-id=' + id + '] td.establishment-location').html(establishmentLocation);
 		$('tr[data-id=' + id + '] td.establishment-company').html(establishmentCompany);
 		$('tr[data-id=' + id + '] td.establishment-kosher-status').html(establishmentKosherStatus);
-		$('tr[data-id=' + id + '] td.establishment-certificate').html(`<a href="${establishmentCertificate}" target="_blank">View</a>`);
+		$('tr[data-id=' + id + '] td.establishment-certificate').html(`<a href="certificate.html?id=${id}" target="_blank">View</a>`);
 	});
 
 	// DELETE ESTABLISHMENT

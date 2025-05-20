@@ -70,18 +70,18 @@
                 .then((querySnapshot) => {
                     querySnapshot.forEach((doc) => {
                         const establishmentData = doc.data();
-                        const establishmentRow = createEstablishmentRow(establishmentData);
+                        const establishmentRow = createEstablishmentRow(establishmentData, doc.id); // Pass doc.id
                         establishmentsTableBody.appendChild(establishmentRow);
                     });
                 })
                 .catch((error) => {
                     console.error("Error getting documents: ", error);
-                    establishmentsTableBody.innerHTML = '<tr><td colspan="6" class="text-danger">Error loading establishments.</td></tr>';
+                    establishmentsTableBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading establishments.</td></tr>'; // Adjusted colspan
                 });
         }
 
         // Function to create an establishment row
-        function createEstablishmentRow(data) {
+        function createEstablishmentRow(data, docId) { // Added docId parameter
             const row = document.createElement('tr');
 
             const nameCell = document.createElement('td');
@@ -101,20 +101,16 @@
             row.appendChild(kosherStatusCell);
 
             const certificateCell = document.createElement('td');
-            if (data.certificate) {
-                const certificateLink = document.createElement('a');
-                certificateLink.href = data.certificate;
-                certificateLink.textContent = 'View Certificate';
-                certificateLink.target = '_blank'; // Open in a new tab
-                certificateCell.appendChild(certificateLink);
-            } else {
-                certificateCell.textContent = 'N/A';
-            }
+            const certificateLink = document.createElement('a');
+            // Link to certificate.html in the root, passing the document ID
+            certificateLink.href = `establishments/certificate.html?id=${docId}`;
+            certificateLink.textContent = 'View Certificate';
+            certificateLink.target = '_blank'; // Open in a new tab
+            certificateCell.appendChild(certificateLink);
             row.appendChild(certificateCell);
 
-            const actionsCell = document.createElement('td');
-            actionsCell.textContent = 'N/A'; // Placeholder for actions (e.g., edit, delete)
-            row.appendChild(actionsCell);
+            // Removed the "Actions" column as it's not typically part of a public client view
+            // and was just a placeholder. If you need it, you can re-add it.
 
             return row;
         }
