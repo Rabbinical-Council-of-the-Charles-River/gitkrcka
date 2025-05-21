@@ -5,7 +5,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <title>Kosher Certificate</title>
     <style>
         body {
@@ -36,17 +36,14 @@
             display: flex;
             background: white;
             border: 5px solid #1f2c4d;
-            box-sizing: border-box; /* Ensure padding and border are included in the width */
-
-            /* Make it as large as possible within 90-95% of viewport, maintaining aspect ratio */
-            width: auto; /* Let aspect ratio and max dimensions determine this */
-            height: auto; /* Let aspect ratio and max dimensions determine this */
-            max-width: 98vw;  /* Keep it wide */
-            max-height: 95vh; /* Allow it to be taller, thus larger overall */
-            aspect-ratio: 11 / 8.5; /* Enforce Letter landscape aspect ratio */
+            box-sizing: border-box;
+            
+            /* Fixed dimensions for non-responsive layout */
+            width: 1056px; /* Approx. 11 inches at 96 DPI */
+            height: 816px; /* Approx. 8.5 inches at 96 DPI */
 
             /* Centered by body's flex properties */
-            margin-top: 8vh; /* Increased to push it further down; adjust as needed */
+            /* margin-top: 8vh; */ /* Removed for pure flex centering, can be a fixed px value if offset needed */
         }
         /* Default (Blue Scheme) - applied via base styles of .left-panel and .validity */
         /* The .certificate itself has a default blue border set above */
@@ -321,6 +318,22 @@
                 return;
             }
 
+            // Check if html2canvas is loaded
+            if (typeof html2canvas === 'undefined') {
+                console.error('html2canvas library is not loaded correctly.');
+                alert('Error: PDF generation component (html2canvas) failed to load. Cannot download certificate.');
+                if (modalElement) modalElement.style.display = 'none';
+                return;
+            }
+
+            // Check if jsPDF is loaded
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
+                console.error('jsPDF library is not loaded correctly.');
+                alert('Error: PDF generation library (jsPDF) failed to load. Cannot download certificate.');
+                if (modalElement) modalElement.style.display = 'none';
+                return;
+            }
+
             if (modalElement) {
                 modalElement.style.display = 'flex'; // Show modal (use flex for centering its content)
             } else {
@@ -337,10 +350,11 @@
                 console.log('Canvas created, width:', canvas.width, 'height:', canvas.height);
                 const imgData = canvas.toDataURL('image/png');
                 
-                const pdf = new window.jspdf.jsPDF({
+                const { jsPDF } = window.jspdf; // Destructure for clarity and ensure it's available
+                const pdf = new jsPDF({
                     orientation: 'landscape', // Certificate design is landscape
                     unit: 'pt',             // Use points for page dimensions
-                    format: 'letter'        // Standard letter size
+                    format: 'letter'        // Standard letter size (landscape: 792pt x 612pt)
                 });
 
                 const pdfWidth = pdf.internal.pageSize.getWidth();    // Letter landscape width in points (e.g., 792pt)
