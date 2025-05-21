@@ -183,9 +183,23 @@
     </div>
 
     <!-- Firebase SDKs -->
-    <!-- TODO: Update these paths/versions to match your project's Firebase SDK setup -->
+    <!-- Modal for Downloading Message -->
+    <div id="downloadingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; text-align: center; color: white; font-size: 20px; font-family: Arial, sans-serif;">
+        <div style="background-color: #1f2c4d; padding: 25px 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <p>Generating Certificate PDF...</p>
+            <p style="font-size: 16px;">Your download will begin shortly.</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <!-- PDF Generation Libraries -->
+    <!-- html2canvas for rendering HTML element to canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF for creating PDF document -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         // TODO: Replace with your actual Firebase project configuration
@@ -204,6 +218,55 @@
         }
         const db = firebase.firestore();
 
+        function generateAndDownloadPDF(establishmentName) {
+            const certificateElement = document.querySelector('.certificate');
+            const modalElement = document.getElementById('downloadingModal');
+
+            if (!certificateElement) {
+                console.error('Certificate element not found for PDF generation!');
+                if (modalElement) modalElement.style.display = 'none'; // Hide modal if error before start
+                return;
+            }
+
+            if (modalElement) {
+                modalElement.style.display = 'flex'; // Show modal (use flex for centering its content)
+            } else {
+                console.warn('Downloading modal element not found. Proceeding without it.');
+            }
+
+            console.log('Starting PDF generation for:', establishmentName);
+
+            html2canvas(certificateElement, {
+                scale: 2, // Increase scale for better resolution in PDF
+                useCORS: true, // Important if images are from other domains (though local here)
+                logging: true // Enable logging for debugging html2canvas
+            }).then(canvas => {
+                console.log('Canvas created, width:', canvas.width, 'height:', canvas.height);
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Use window.jspdf.jsPDF as jsPDF is loaded as a UMD module
+                const pdf = new window.jspdf.jsPDF({
+                    orientation: canvas.width > canvas.height ? 'l' : 'p', // landscape or portrait
+                    unit: 'pt', // points
+                    format: [canvas.width, canvas.height] // set pdf page size to canvas size
+                });
+
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                const safeEstablishmentName = establishmentName ? establishmentName.replace(/[^a-z0-9_]+/gi, '_').toLowerCase() : 'kosher_certificate';
+                const fileName = `${safeEstablishmentName}_certificate.pdf`;
+                pdf.save(fileName);
+                console.log('PDF saved as:', fileName);
+
+                // Attempt to close the window after a short delay
+                setTimeout(() => {
+                    window.close();
+                }, 500); // 500ms delay, adjust if needed
+            }).catch(err => {
+                console.error('Error generating PDF:', err);
+                if (modalElement) modalElement.style.display = 'none'; // Hide modal on error
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const establishmentId = urlParams.get('id');
@@ -211,6 +274,7 @@
             const establishmentNameEl = document.getElementById('establishmentName');
             const kosherClassificationEl = document.getElementById('kosherClassification');
             const certificateDateEl = document.getElementById('certificateDate');
+            let pdfFileName = 'kosher_certificate'; // Default PDF filename
 
             // Set the current date
             const currentDate = new Date();
@@ -222,29 +286,37 @@
             if (establishmentId) {
                 db.collection('establishments').doc(establishmentId).get()
                     .then(doc => {
+                        let establishmentDataForPdf;
                         if (doc.exists) {
                             const establishment = doc.data();
+                            establishmentDataForPdf = establishment; // Store for PDF naming
                             establishmentNameEl.textContent = establishment.name;
-                            // You might want to format kosherStatus more elaborately here.
-                            // For now, it directly inserts the value.
-                            // e.g., if establishment.kosherStatus is "Cholov Yisroel",
-                            // you might want to display "KOSHER DAIRY<br>Cholov Yisroel"
                             kosherClassificationEl.innerHTML = establishment.kosherStatus;
+                            pdfFileName = establishment.name;
                         } else {
-                            console.error("No such document!");
+                            console.error("No such document for ID:", establishmentId);
                             establishmentNameEl.textContent = "Establishment not found";
                             kosherClassificationEl.textContent = "-";
+                            pdfFileName = "establishment_not_found";
                         }
+                        // Generate PDF after DOM is updated
+                        generateAndDownloadPDF(pdfFileName);
                     })
                     .catch(error => {
                         console.error("Error getting document:", error);
                         establishmentNameEl.textContent = "Error loading data";
-                        kosherClassificationEl.textContent = "-";
+                        kosherClassificationEl.textContent = "-"; // Ensure this is set on error
+                        pdfFileName = "error_loading_data";
+                        // Generate PDF of the error state
+                        generateAndDownloadPDF(pdfFileName);
                     });
             } else {
                 console.error("No establishment ID provided in URL.");
                 establishmentNameEl.textContent = "No ID provided";
                 kosherClassificationEl.textContent = "-";
+                pdfFileName = "no_id_provided";
+                // Generate PDF of the "no ID" state
+                generateAndDownloadPDF(pdfFileName);
             }
         });
     </script>
