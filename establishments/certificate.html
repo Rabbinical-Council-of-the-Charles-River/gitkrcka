@@ -34,16 +34,50 @@
 
         .certificate {
             display: flex;
-            width: 95vw; /* Make the certificate take up most of the viewport width */
-            max-width: 1000px;
             background: white;
             border: 5px solid #1f2c4d;
             box-sizing: border-box; /* Ensure padding and border are included in the width */
+
+            /* Make it as large as possible within 90-95% of viewport, maintaining aspect ratio */
+            width: auto; /* Let aspect ratio and max dimensions determine this */
+            height: auto; /* Let aspect ratio and max dimensions determine this */
+            max-width: 98vw;  /* Keep it wide */
+            max-height: 95vh; /* Allow it to be taller, thus larger overall */
+            aspect-ratio: 11 / 8.5; /* Enforce Letter landscape aspect ratio */
+
+            /* Centered by body's flex properties */
+            margin-top: 8vh; /* Increased to push it further down; adjust as needed */
         }
+        /* Default (Blue Scheme) - applied via base styles of .left-panel and .validity */
+        /* The .certificate itself has a default blue border set above */
+
+        /* Red Scheme */
+        .certificate.scheme-red { border-color: #8B0000; }
+        .certificate.scheme-red .left-panel,
+        .certificate.scheme-red .validity { background-color: #8B0000; color: white; }
+
+        /* Green Scheme */
+        .certificate.scheme-green { border-color: #006400; }
+        .certificate.scheme-green .left-panel,
+        .certificate.scheme-green .validity { background-color: #006400; color: white; }
+
+        /* Red-Blue Scheme */
+        .certificate.scheme-red-blue { border-color: #8B0000; } /* Main border red (matches left panel) */
+        .certificate.scheme-red-blue .left-panel { background-color: #8B0000; color: white; }
+        .certificate.scheme-red-blue .validity { background-color: #1f2c4d; color: white; }
+
+        /* Green-Red Scheme */
+        .certificate.scheme-green-red { border-color: #006400; } /* Main border green (matches left panel) */
+        .certificate.scheme-green-red .left-panel { background-color: #006400; color: white; } /* Green */
+        .certificate.scheme-green-red .validity { background-color: #8B0000; color: white; } /* Red */
+
+        /* Blue scheme (explicit for clarity, though defaults might match) */
+        .certificate.scheme-blue { border-color: #1f2c4d; }
+        .certificate.scheme-blue .left-panel, .certificate.scheme-blue .validity { background-color: #1f2c4d; color: white; }
 
         .left-panel {
-            width: 35%; /* Adjust width for better balance on full screen */
-            background-color: #1f2c4d;
+            width: 35%; /* Increased width to make sidebar bigger */
+            background-color: #1f2c4d; /* Default, overridden by schemes */
             color: white;
             padding: 20px;
             box-sizing: border-box;
@@ -55,62 +89,67 @@
 
         .left-panel img {
             max-width: 80%; /* Adjust image size within the panel */
-            margin: 20px 0;
+            margin: 15px 0 10px 0; /* Adjusted margins around image */
         }
 
         .left-panel h3, .left-panel p {
             text-align: center;
             margin-bottom: 10px; /* Add some spacing */
         }
+        .left-panel h3 { font-size: 2em; line-height: 1.3; margin-bottom: 15px;} /* Significantly larger heading size, adjusted line height & margin */
+        .left-panel p { font-size: 1.2em; line-height: 1.4; margin-bottom: 12px;} /* Significantly larger paragraph text, adjusted line height & margin */
 
         .right-panel {
-            width: 65%; /* Adjust width to complement the left panel */
+            width: 65%; /* Decreased width to accommodate larger left panel */
             padding: 40px;
             box-sizing: border-box;
+            display: flex; /* Added flex to help distribute space */
+            flex-direction: column; /* Stack content vertically */
+            justify-content: space-around; /* Distribute space more evenly */
         }
 
         .header-hebrew {
             text-align: right;
-            font-size: 14px;
+            font-size: 18px; /* Larger */
             margin-bottom: 10px;
         }
 
         .title {
             text-align: center;
-            font-size: 28px;
+            font-size: 40px; /* Significantly larger title */
             font-style: italic;
             margin-bottom: 10px;
         }
 
         .certify-text {
             text-align: center;
-            font-size: 18px;
-            margin-bottom: 30px;
+            font-size: 24px; /* Significantly larger main text */
+            margin-bottom: 20px; /* Adjust spacing */
         }
 
         .establishment {
-            font-size: 24px;
+            font-size: 34px; /* Significantly larger establishment name */
             font-weight: bold;
         }
 
         .classification {
             text-align: center;
-            font-size: 20px;
+            font-size: 28px; /* Significantly larger classification */
             font-weight: bold;
             margin: 20px 0;
         }
 
         .validity {
-            background-color: #1f2c4d;
+            background-color: #1f2c4d; /* Default, overridden by schemes */
             color: white;
-            font-size: 18px;
+            font-size: 24px; /* Significantly larger validity text */
             text-align: center;
             padding: 10px;
             margin-top: 20px;
         }
 
         .notes {
-            font-size: 14px;
+            font-size: 18px; /* Larger notes */
             margin-top: 30px;
             text-align: center;
         }
@@ -122,11 +161,11 @@
 
         .signature-name {
             font-family: Pinyon Script;
-            font-size: 20px;
+            font-size: 30px; /* Significantly larger signature name */
         }
 
         .footer-right {
-            font-size: 12px;
+            font-size: 15px; /* Larger footer */
             text-align: right;
             margin-top: 30px;
             color: #333;
@@ -218,6 +257,60 @@
         }
         const db = firebase.firestore();
 
+        /**
+         * Applies a color scheme to the certificate based on kosher statuses.
+         * Rules (evaluated in order of specificity):
+         * 1. CY + PY + Glatt + Parve: Green/Red scheme
+         * 2. Glatt + CY: Red/Blue scheme
+         * 3. CY + PY: Blue scheme
+         * 4. Glatt (alone or with PY/Parve, but not CY): Red scheme
+         * 5. Pas Yisroel (alone or with Parve, but not CY/Glatt): Green scheme
+         * 6. Cholov Yisroel (alone or with Parve): Blue scheme
+         * 7. Parve (alone): Green scheme
+         * 8. Default/Fallback: Blue scheme
+         */
+        function applyCertificateColorScheme(statuses) {
+            const certificateElement = document.querySelector('.certificate');
+            if (!certificateElement) return;
+
+            // Ensure .left-panel and .validity elements exist if they are to be styled directly
+            // For this approach, we add a class to .certificate and use CSS descendant selectors.
+
+            const has = (status) => Array.isArray(statuses) && statuses.includes(status);
+
+            const isCholovYisroel = has("Cholov Yisrael");
+            const isPasYisroel = has("Pas Yisroel");
+            const isGlatt = has("Glatt");
+            const isParve = has("Parve");
+
+            certificateElement.className = 'certificate'; // Reset to base class
+
+            if (isCholovYisroel && isPasYisroel && isGlatt && isParve) {
+                certificateElement.classList.add('scheme-green-red');
+            }
+            else if (isGlatt && isCholovYisroel) {
+                certificateElement.classList.add('scheme-red-blue');
+            }
+            else if (isCholovYisroel && isPasYisroel) { // Implies !isGlatt
+                certificateElement.classList.add('scheme-blue');
+            }
+            else if (isGlatt) { // Implies !isCholovYisroel
+                certificateElement.classList.add('scheme-red');
+            }
+            else if (isPasYisroel) { // Implies !isCholovYisroel and !isGlatt
+                certificateElement.classList.add('scheme-green');
+            }
+            else if (isCholovYisroel) { // Implies !isPasYisroel and !isGlatt
+                 certificateElement.classList.add('scheme-blue');
+            }
+            else if (isParve) { // Implies !isCholovYisroel, !isPasYisroel, !isGlatt
+                certificateElement.classList.add('scheme-green');
+            }
+            else { // Default
+                certificateElement.classList.add('scheme-blue');
+            }
+        }
+
         function generateAndDownloadPDF(establishmentName) {
             const certificateElement = document.querySelector('.certificate');
             const modalElement = document.getElementById('downloadingModal');
@@ -244,14 +337,33 @@
                 console.log('Canvas created, width:', canvas.width, 'height:', canvas.height);
                 const imgData = canvas.toDataURL('image/png');
                 
-                // Use window.jspdf.jsPDF as jsPDF is loaded as a UMD module
                 const pdf = new window.jspdf.jsPDF({
-                    orientation: canvas.width > canvas.height ? 'l' : 'p', // landscape or portrait
-                    unit: 'pt', // points
-                    format: [canvas.width, canvas.height] // set pdf page size to canvas size
+                    orientation: 'landscape', // Certificate design is landscape
+                    unit: 'pt',             // Use points for page dimensions
+                    format: 'letter'        // Standard letter size
                 });
 
-                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                const pdfWidth = pdf.internal.pageSize.getWidth();    // Letter landscape width in points (e.g., 792pt)
+                const pdfHeight = pdf.internal.pageSize.getHeight();  // Letter landscape height in points (e.g., 612pt)
+
+                const canvasAspectRatio = canvas.width / canvas.height;
+                
+                let imgFinalWidth, imgFinalHeight;
+
+                // Determine if image should be scaled by width or height to fit PDF page
+                // This ensures the image fits within the PDF page while maintaining aspect ratio.
+                if ((pdfWidth / pdfHeight) > canvasAspectRatio) {
+                    imgFinalHeight = pdfHeight;
+                    imgFinalWidth = pdfHeight * canvasAspectRatio;
+                } else {
+                    imgFinalWidth = pdfWidth;
+                    imgFinalHeight = pdfWidth / canvasAspectRatio;
+                }
+                
+                const xOffset = (pdfWidth - imgFinalWidth) / 2;
+                const yOffset = (pdfHeight - imgFinalHeight) / 2;
+
+                pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgFinalWidth, imgFinalHeight);
                 const safeEstablishmentName = establishmentName ? establishmentName.replace(/[^a-z0-9_]+/gi, '_').toLowerCase() : 'kosher_certificate';
                 const fileName = `${safeEstablishmentName}_certificate.pdf`;
                 pdf.save(fileName);
@@ -286,28 +398,36 @@
             if (establishmentId) {
                 db.collection('establishments').doc(establishmentId).get()
                     .then(doc => {
-                        let establishmentDataForPdf;
+                        // let establishmentDataForPdf; // Not strictly needed here if only name is used for PDF
                         if (doc.exists) {
                             const establishment = doc.data();
-                            establishmentDataForPdf = establishment; // Store for PDF naming
+                            // establishmentDataForPdf = establishment; // Store if more data needed for PDF generation step
                             establishmentNameEl.textContent = establishment.name;
-                            kosherClassificationEl.innerHTML = establishment.kosherStatus;
+                            const status = establishment.kosherStatus;
+                            if (Array.isArray(status) && status.length > 0) {
+                                kosherClassificationEl.innerHTML = status.join('<br>');
+                            } else if (typeof status === 'string' && status.trim() !== '') {
+                                kosherClassificationEl.innerHTML = status;
+                            } else {
+                                kosherClassificationEl.innerHTML = 'N/A';
+                            }
+                            applyCertificateColorScheme(establishment.kosherStatus);
                             pdfFileName = establishment.name;
                         } else {
                             console.error("No such document for ID:", establishmentId);
                             establishmentNameEl.textContent = "Establishment not found";
                             kosherClassificationEl.textContent = "-";
+                            applyCertificateColorScheme(null); // Apply default scheme
                             pdfFileName = "establishment_not_found";
                         }
-                        // Generate PDF after DOM is updated
                         generateAndDownloadPDF(pdfFileName);
                     })
                     .catch(error => {
                         console.error("Error getting document:", error);
                         establishmentNameEl.textContent = "Error loading data";
-                        kosherClassificationEl.textContent = "-"; // Ensure this is set on error
+                        kosherClassificationEl.textContent = "-";
+                        applyCertificateColorScheme(null); // Apply default scheme
                         pdfFileName = "error_loading_data";
-                        // Generate PDF of the error state
                         generateAndDownloadPDF(pdfFileName);
                     });
             } else {
@@ -315,7 +435,7 @@
                 establishmentNameEl.textContent = "No ID provided";
                 kosherClassificationEl.textContent = "-";
                 pdfFileName = "no_id_provided";
-                // Generate PDF of the "no ID" state
+                applyCertificateColorScheme(null); // Apply default scheme
                 generateAndDownloadPDF(pdfFileName);
             }
         });

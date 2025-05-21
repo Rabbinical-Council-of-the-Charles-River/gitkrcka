@@ -1,375 +1,284 @@
-// establishments/js/script.js
+$(document).ready(function() {
+    // Firebase refs (firebase is initialized in index.html)
+    const db = firebase.firestore();
+    const establishmentsCollection = db.collection('establishments');
 
-let establishmentRef = db.collection('establishments');
-let deleteIDs = [];
+    // DOM Elements
+    const establishmentTableBody = $('#establishment-table tbody');
+    const addEstablishmentForm = $('#add-establishment-form');
+    const addEstablishmentModal = $('#addEstablishmentModal');
+    const editEstablishmentForm = $('#edit-establishment-form');
+    const editEstablishmentModal = $('#editEstablishmentModal');
+    const deleteEstablishmentModal = $('#deleteEstablishmentModal');
+    const deleteEstablishmentForm = $('#delete-establishment-form');
+    const totalEntriesCount = $('.count'); // For displaying total entries
 
-// REAL TIME LISTENER
-establishmentRef.onSnapshot(snapshot => {
-	let changes = snapshot.docChanges();
-	changes.forEach(change => {
-		if (change.type == 'added') {
-			console.log('added');
-		} else if (change.type == 'modified') {
-			console.log('modified');
-		} else if (change.type == 'removed') {
-			$('tr[data-id=' + change.doc.id + ']').remove();
-			console.log('removed');
-		}
-	});
+    // --- Helper Functions for Kosher Status Checkboxes ---
+    function getSelectedKosherStatusesFromForm(modalTypePrefix) { // 'add' or 'edit'
+        const selectedStatuses = [];
+        $(`.${modalTypePrefix}-modal-checkbox:checked`).each(function() {
+            selectedStatuses.push($(this).val());
+        });
+        return selectedStatuses;
+    }
+
+    function populateKosherStatusCheckboxes(modalTypePrefix, statuses) {
+        // Uncheck all first
+        $(`.${modalTypePrefix}-modal-checkbox`).prop('checked', false);
+        if (Array.isArray(statuses)) {
+            statuses.forEach(status => {
+                // Ensure the value being matched is exactly what's in the checkbox value attribute
+                $(`.${modalTypePrefix}-modal-checkbox[value="${status}"]`).prop('checked', true);
+            });
+        } else if (typeof statuses === 'string' && statuses.trim() !== '') { // Handle old string data
+            $(`.${modalTypePrefix}-modal-checkbox[value="${statuses}"]`).prop('checked', true);
+        }
+    }
+
+    function resetKosherStatusCheckboxes(modalTypePrefix) {
+        $(`.${modalTypePrefix}-modal-checkbox`).prop('checked', false);
+    }
+
+    // --- Fetch and render establishments ---
+    function renderEstablishments() {
+        establishmentsCollection.orderBy("name").onSnapshot(snapshot => {
+            establishmentTableBody.empty();
+            let count = 0;
+            if (snapshot.empty) {
+                establishmentTableBody.append('<tr><td colspan="7" style="text-align:center;">No establishments found. Add one to get started!</td></tr>');
+            }
+            snapshot.forEach(doc => {
+                count++;
+                const establishment = doc.data();
+                let kosherStatusDisplay = '-'; // Default
+                if (Array.isArray(establishment.kosherStatus) && establishment.kosherStatus.length > 0) {
+                    kosherStatusDisplay = establishment.kosherStatus.join(', ');
+                } else if (typeof establishment.kosherStatus === 'string' && establishment.kosherStatus.trim() !== '') {
+                    kosherStatusDisplay = establishment.kosherStatus; // For backward compatibility
+                }
+
+                const row = `
+                    <tr>
+                        <td>
+                            <span class="custom-checkbox">
+                                <input type="checkbox" id="checkbox${count}" name="options[]" value="${doc.id}">
+                                <label for="checkbox${count}"></label>
+                            </span>
+                        </td>
+                        <td>${establishment.name || '-'}</td>
+                        <td>${establishment.location || '-'}</td>
+                        <td>${establishment.company || '-'}</td>
+                        <td>${kosherStatusDisplay}</td>
+                        <td><a href="certificate.html?id=${doc.id}" target="_blank" class="btn btn-sm btn-outline-primary">View Cert</a></td>
+                        <td>
+                            <a href="#editEstablishmentModal" class="edit" data-toggle="modal" data-id="${doc.id}"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i></a>
+                            <a href="#deleteEstablishmentModal" class="delete" data-toggle="modal" data-id="${doc.id}" data-name="${establishment.name || 'this establishment'}"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i></a>
+                        </td>
+                    </tr>
+                `;
+                establishmentTableBody.append(row);
+            });
+            totalEntriesCount.text(count);
+            // Reinitialize tooltips for dynamically added elements
+            $('[data-toggle="tooltip"]').tooltip();
+        }, error => {
+            console.error("Error fetching establishments: ", error);
+            establishmentTableBody.append('<tr><td colspan="7" style="text-align:center; color:red;">Error loading establishments.</td></tr>');
+        });
+    }
+
+    // --- Add Establishment ---
+    addEstablishmentForm.on('submit', function(e) {
+        e.preventDefault();
+        const establishmentName = $('#establishment-name').val().trim();
+        if (!establishmentName) {
+            alert('Establishment Name is required.');
+            return;
+        }
+        const newEstablishment = {
+            name: establishmentName,
+            location: $('#establishment-location').val().trim(),
+            company: $('#establishment-company').val().trim(),
+            kosherStatus: getSelectedKosherStatusesFromForm('add'),
+            certificateUrl: $('#establishment-certificate').val().trim() // This is the external link
+        };
+
+        establishmentsCollection.add(newEstablishment).then(() => {
+            addEstablishmentModal.modal('hide');
+            // Form reset is handled by 'hidden.bs.modal'
+        }).catch(error => {
+            console.error("Error adding document: ", error);
+            alert("Error adding establishment: " + error.message);
+        });
+    });
+
+    // --- Edit Establishment - Populate form ---
+    establishmentTableBody.on('click', '.edit', function() {
+        const id = $(this).data('id');
+        editEstablishmentForm.attr('data-id', id); // Store ID on the form
+
+        establishmentsCollection.doc(id).get().then(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                $('#edit-establishment-name').val(data.name || '');
+                $('#edit-establishment-location').val(data.location || '');
+                $('#edit-establishment-company').val(data.company || '');
+                populateKosherStatusCheckboxes('edit', data.kosherStatus);
+                $('#edit-establishment-certificate').val(data.certificateUrl || '');
+                // editEstablishmentModal.modal('show'); // Modal is shown by data-toggle attribute
+            } else {
+                console.error("No such document for editing!");
+                alert("Could not find the establishment to edit.");
+            }
+        }).catch(error => {
+            console.error("Error fetching document for edit: ", error);
+            alert("Error fetching establishment details: " + error.message);
+        });
+    });
+
+    // --- Edit Establishment - Submit form ---
+    editEstablishmentForm.on('submit', function(e) {
+        e.preventDefault();
+        const id = $(this).attr('data-id');
+        if (!id) {
+            console.error("No ID found for editing.");
+            alert("Cannot save changes, establishment ID is missing.");
+            return;
+        }
+        const establishmentName = $('#edit-establishment-name').val().trim();
+        if (!establishmentName) {
+            alert('Establishment Name is required.');
+            return;
+        }
+        const updatedData = {
+            name: establishmentName,
+            location: $('#edit-establishment-location').val().trim(),
+            company: $('#edit-establishment-company').val().trim(),
+            kosherStatus: getSelectedKosherStatusesFromForm('edit'),
+            certificateUrl: $('#edit-establishment-certificate').val().trim()
+        };
+
+        establishmentsCollection.doc(id).update(updatedData).then(() => {
+            editEstablishmentModal.modal('hide');
+            // Form reset is handled by 'hidden.bs.modal'
+        }).catch(error => {
+            console.error("Error updating document: ", error);
+            alert("Error saving changes: " + error.message);
+        });
+    });
+
+    // --- Delete Establishment ---
+    let idToDelete = null; // For single delete from row icon
+    let nameToDelete = '';
+
+    // Prepare for single deletion from row icon
+    establishmentTableBody.on('click', '.delete', function() {
+        idToDelete = $(this).data('id');
+        nameToDelete = $(this).data('name');
+        $('#deleteEstablishmentModal .modal-body p:first-child').html(`Are you sure you want to delete <b>${nameToDelete}</b>?`);
+    });
+
+    // Prepare for bulk deletion (triggered by main delete button)
+    $('a.btn-danger[data-target="#deleteEstablishmentModal"]').on('click', function() {
+        const selectedIds = [];
+        $('table tbody input[type="checkbox"]:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) {
+            idToDelete = null; // Clear single delete if nothing is selected
+            $('#deleteEstablishmentModal .modal-body p:first-child').text('Please select at least one establishment to delete.');
+            // Optionally, disable the delete button in the modal footer or hide the modal
+            // For now, we'll let the modal show with this message.
+            // To prevent submission, clear idToDelete or handle in submit.
+            return; // Or show modal with a message and prevent deletion
+        } else if (selectedIds.length === 1) {
+            idToDelete = selectedIds[0];
+            const rowName = $(`table tbody input[value="${idToDelete}"]`).closest('tr').find('td:nth-child(2)').text();
+            nameToDelete = rowName || 'the selected establishment';
+            $('#deleteEstablishmentModal .modal-body p:first-child').html(`Are you sure you want to delete <b>${nameToDelete}</b>?`);
+        } else {
+            idToDelete = selectedIds; // Store array for batch delete
+            nameToDelete = `${selectedIds.length} selected establishments`;
+            $('#deleteEstablishmentModal .modal-body p:first-child').html(`Are you sure you want to delete these <b>${selectedIds.length} establishments</b>?`);
+        }
+    });
+
+
+    // Confirm and delete
+    deleteEstablishmentForm.on('submit', function(e) {
+        e.preventDefault();
+        if (!idToDelete) {
+            alert("No establishment selected for deletion.");
+            deleteEstablishmentModal.modal('hide');
+            return;
+        }
+
+        const batch = db.batch();
+        if (Array.isArray(idToDelete)) { // Bulk delete
+            idToDelete.forEach(id => {
+                batch.delete(establishmentsCollection.doc(id));
+            });
+        } else { // Single delete
+            batch.delete(establishmentsCollection.doc(idToDelete));
+        }
+
+        batch.commit().then(() => {
+            deleteEstablishmentModal.modal('hide');
+            idToDelete = null; // Clear selection
+            nameToDelete = '';
+            $('#selectAll').prop('checked', false); // Uncheck selectAll
+            // Uncheck all individual checkboxes as well
+             $('table tbody input[type="checkbox"]').prop('checked', false);
+        }).catch(error => {
+            console.error("Error deleting document(s): ", error);
+            alert("Error deleting establishment(s): " + error.message);
+            deleteEstablishmentModal.modal('hide');
+        });
+    });
+
+
+    // --- Select/Deselect checkboxes ---
+    const selectAllCheckbox = $("#selectAll");
+    establishmentTableBody.on('change', 'input[type="checkbox"]', function() {
+        if (!this.checked) {
+            selectAllCheckbox.prop('checked', false);
+        } else {
+            // Check if all checkboxes in body are checked
+            if ($('table tbody input[type="checkbox"]:checked').length === $('table tbody input[type="checkbox"]').length) {
+                selectAllCheckbox.prop('checked', true);
+            }
+        }
+    });
+
+    selectAllCheckbox.on('click', function() {
+        $('table tbody input[type="checkbox"]').prop('checked', this.checked);
+    });
+
+    // --- Modal Cleanup on Hide ---
+    $('.modal').on('hidden.bs.modal', function () {
+        const form = $(this).find('form');
+        if (form.length) {
+            form[0].reset();
+        }
+        // Reset kosher status checkboxes specifically for add and edit modals
+        if ($(this).is(addEstablishmentModal)) {
+            resetKosherStatusCheckboxes('add');
+        }
+        if ($(this).is(editEstablishmentModal)) {
+            resetKosherStatusCheckboxes('edit');
+            editEstablishmentForm.removeAttr('data-id'); // Clear stored ID
+        }
+        if ($(this).is(deleteEstablishmentModal)) {
+            idToDelete = null; // Clear delete context
+            nameToDelete = '';
+            $('#deleteEstablishmentModal .modal-body p:first-child').text('Are you sure you want to delete?'); // Reset message
+        }
+    });
+
+    // Initial render
+    renderEstablishments();
+
+    // Activate Bootstrap tooltips
+    $('[data-toggle="tooltip"]').tooltip();
 });
-
-// GET TOTAL SIZE
-establishmentRef.onSnapshot(snapshot => {
-	let size = snapshot.size;
-	$('.count').text(size);
-	if (size == 0) {
-		$('#selectAll').attr('disabled', true);
-	} else {
-		$('#selectAll').attr('disabled', false);
-	}
-});
-
-
-const displayEstablishments = async (doc) => {
-	console.log('displayEstablishments');
-
-	let establishments = establishmentRef;
-	// .startAfter(doc || 0).limit(10000)
-
-	const data = await establishments.get();
-
-	data.docs.forEach(doc => {
-		const establishment = doc.data();
-		let item =
-			`<tr data-id="${doc.id}">
-					<td>
-							<span class="custom-checkbox">
-									<input type="checkbox" id="${doc.id}" name="options[]" value="${doc.id}">
-									<label for="${doc.id}"></label>
-							</span>
-					</td>
-					<td class="establishment-name">${establishment.name}</td>
-					<td class="establishment-location">${establishment.location}</td>
-					<td class="establishment-company">${establishment.company}</td>
-					<td class="establishment-kosher-status">${establishment.kosherStatus}</td>
-					<td class="establishment-certificate"><a href="certificate.html?id=${doc.id}" target="_blank">View</a></td>
-					<td>
-							<a href="#" id="${doc.id}" class="edit js-edit-establishment"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
-							</a>
-							<a href="#" id="${doc.id}" class="delete js-delete-establishment"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i>
-							</a>
-					</td>
-			</tr>`;
-
-		$('#establishment-table').append(item);
-
-		// ACTIVATE TOOLTIP
-		$('[data-toggle="tooltip"]').tooltip();
-
-		// SELECT/DESELECT CHECKBOXES
-		var checkbox = $('table tbody input[type="checkbox"]');
-		$("#selectAll").click(function () {
-			if (this.checked) {
-				checkbox.each(function () {
-					console.log(this.id);
-					deleteIDs.push(this.id);
-					this.checked = true;
-				});
-			} else {
-				checkbox.each(function () {
-					this.checked = false;
-				});
-			}
-		});
-		checkbox.click(function () {
-			if (!this.checked) {
-				$("#selectAll").prop("checked", false);
-			}
-		});
-	})
-
-	// UPDATE LATEST DOC
-	latestDoc = data.docs[data.docs.length - 1];
-
-	// UNATTACH EVENT LISTENERS IF NO MORE DOCS
-	if (data.empty) {
-		$('.js-loadmore').hide();
-	}
-}
-
-// ADD TEST DATA
-function addTestData() {
-	const establishmentsData = [
-		{
-			"name": "Miller's Bakery",
-			"location": "123 Main St, Brooklyn, NY",
-			"company": "Miller's Inc.",
-			"kosherStatus": "Cholov Yisroel",
-			"certificate": "https://www.example.com/millers-certificate.pdf"
-		},
-		{
-			"name": "Wonder Cafe",
-			"location": "456 Ocean Ave, Lakewood, NJ",
-			"company": "Wonder Foods",
-			"kosherStatus": "Pas Yisroel",
-			"certificate": "https://www.example.com/wonder-certificate.pdf"
-		},
-		{
-			"name": "Organic Delights",
-			"location": "789 Broad St, Monsey, NY",
-			"company": "Organic Co.",
-			"kosherStatus": "Cholov Yisroel",
-			"certificate": "https://www.example.com/organic-certificate.pdf"
-		},
-		{
-			"name": "General Grills",
-			"location": "101 Central Park, Queens, NY",
-			"company": "Grills Ltd.",
-			"kosherStatus": "Kosher",
-			"certificate": "https://www.example.com/grills-certificate.pdf"
-		},
-		{
-			"name": "Elite Sweets",
-			"location": "202 Liberty Ave, Manhattan, NY",
-			"company": "Elite Brands",
-			"kosherStatus": "Pareve",
-			"certificate": "https://www.example.com/elite-certificate.pdf"
-		},
-		{
-			"name": "Bartenura Bistro",
-			"location": "303 River Rd, Clifton, NJ",
-			"company": "Bartenura Group",
-			"kosherStatus": "Mevushal",
-			"certificate": "https://www.example.com/bartenura-certificate.pdf"
-		},
-		{
-			"name": "Stella D'oro Pizzeria",
-			"location": "404 Park Pl, Boro Park, NY",
-			"company": "Stella Inc.",
-			"kosherStatus": "Pareve",
-			"certificate": "https://www.example.com/stella-certificate.pdf"
-		},
-		{
-			"name": "Dagim Seafood",
-			"location": "505 Beach Ave, Deal, NJ",
-			"company": "Dagim Co.",
-			"kosherStatus": "Kosher",
-			"certificate": "https://www.example.com/dagim-certificate.pdf"
-		},
-		{
-			"name": "Agri Steakhouse",
-			"location": "606 Highland Blvd, Five Towns, NY",
-			"company": "Agri Steaks",
-			"kosherStatus": "Glatt Kosher",
-			"certificate": "https://www.example.com/agri-certificate.pdf"
-		},
-		{
-			"name": "Kedem Cafe",
-			"location": "707 Main St, Passaic, NJ",
-			"company": "Kedem Foods",
-			"kosherStatus": "Kosher",
-			"certificate": "https://www.example.com/kedem-certificate.pdf"
-		}
-	];
-
-	establishmentsData.forEach(establishment => {
-		addEstablishment(establishment);
-	});
-}
-
-// ADD ESTABLISHMENT
-function addEstablishment(establishment) {
-	establishmentRef.add({
-			name: establishment.name,
-			location: establishment.location,
-			company: establishment.company,
-			kosherStatus: establishment.kosherStatus,
-			certificate: establishment.certificate
-		})
-		.then(function (docRef) {
-			console.log("Document written with ID: ", docRef.id);
-			$("#addEstablishmentModal").modal('hide');
-
-			let newEstablishment =
-				`<tr data-id="${docRef.id}">
-					<td>
-							<span class="custom-checkbox">
-									<input type="checkbox" id="${docRef.id}" name="options[]" value="${docRef.id}">
-									<label for="${docRef.id}"></label>
-							</span>
-					</td>
-					<td class="establishment-name">${establishment.name}</td>
-					<td class="establishment-location">${establishment.location}</td>
-					<td class="establishment-company">${establishment.company}</td>
-					<td class="establishment-kosher-status">${establishment.kosherStatus}</td>
-                    <td class="establishment-certificate"><a href="certificate.html?id=${docRef.id}" target="_blank">View</a></td>
-                    <td>
-							<a href="#" id="${docRef.id}" class="edit js-edit-establishment"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
-							</a>
-							<a href="#" id="${docRef.id}" class="delete js-delete-establishment"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i>
-							</a>
-					</td>
-				</tr>`;
-
-			$('#establishment-table tbody').prepend(newEstablishment);
-			})
-			.catch(function (error) {
-				console.error("Error writing document: ", error);
-			});
-}
-
-// INITIALIZE MATERIALIZE COMPONENTS
-$(document).ready(function () {
-
-	// DISPLAY EMPLOYEES ON LOAD
-	displayEstablishments();
-   // addTestData()
-
-	$("#add-establishment-form").submit(function (event) {
-		event.preventDefault();
-		let establishmentName = $('#establishment-name').val();
-		let establishmentLocation = $('#establishment-location').val();
-		let establishmentCompany = $('#establishment-company').val();
-		let establishmentKosherStatus = $('#establishment-kosher-status').val();
-		let establishmentCertificate = $('#establishment-certificate').val();
-
-		let establishment = {
-			name: establishmentName,
-			location: establishmentLocation,
-			company: establishmentCompany,
-			kosherStatus: establishmentKosherStatus,
-			certificate: establishmentCertificate
-		};
-
-		addEstablishment(establishment);
-	});
-
-	// UPDATE ESTABLISHMENT
-	$(document).on('click', '.js-edit-establishment', function (e) {
-		e.preventDefault();
-		let id = $(this).attr('id');
-		$('#edit-establishment-form').attr('edit-id', id);
-		db.collection('establishments').doc(id).get().then(function (document) {
-			if (document.exists) {
-				$('#edit-establishment-form #edit-establishment-name').val(document.data().name);
-				$('#edit-establishment-form #edit-establishment-location').val(document.data().location);
-				$('#edit-establishment-form #edit-establishment-company').val(document.data().company);
-				$('#edit-establishment-form #edit-establishment-kosher-status').val(document.data().kosherStatus);
-				$('#edit-establishment-form #edit-establishment-certificate').val(document.data().certificate);
-
-				$('#editEstablishmentModal').modal('show');
-			} else {
-				console.log("No such document!");
-			}
-		}).catch(function (error) {
-			console.log("Error getting document:", error);
-		});
-	});
-
-	$("#edit-establishment-form").submit(function (event) {
-		event.preventDefault();
-		let id = $(this).attr('edit-id');
-		let establishmentName = $('#edit-establishment-form #edit-establishment-name').val();
-		let establishmentLocation = $('#edit-establishment-form #edit-establishment-location').val();
-		let establishmentCompany = $('#edit-establishment-form #edit-establishment-company').val();
-		let establishmentKosherStatus = $('#edit-establishment-form #edit-establishment-kosher-status').val();
-		let establishmentCertificate = $('#edit-establishment-form #edit-establishment-certificate').val();
-
-		db.collection('establishments').doc(id).update({
-			name: establishmentName,
-			location: establishmentLocation,
-			company: establishmentCompany,
-			kosherStatus: establishmentKosherStatus,
-			certificate: establishmentCertificate,
-			updatedAt : firebase.firestore.FieldValue.serverTimestamp()
-		});
-
-		$('#editEstablishmentModal').modal('hide');
-
-		// SHOW UPDATED DATA ON BROWSER
-		$('tr[data-id=' + id + '] td.establishment-name').html(establishmentName);
-		$('tr[data-id=' + id + '] td.establishment-location').html(establishmentLocation);
-		$('tr[data-id=' + id + '] td.establishment-company').html(establishmentCompany);
-		$('tr[data-id=' + id + '] td.establishment-kosher-status').html(establishmentKosherStatus);
-		$('tr[data-id=' + id + '] td.establishment-certificate').html(`<a href="certificate.html?id=${id}" target="_blank">View</a>`);
-	});
-
-	// DELETE ESTABLISHMENT
-	$(document).on('click', '.js-delete-establishment', function (e) {
-		e.preventDefault();
-		let id = $(this).attr('id');
-		$('#delete-establishment-form').attr('delete-id', id);
-		$('#deleteEstablishmentModal').modal('show');
-	});
-
-	$("#delete-establishment-form").submit(function (event) {
-		event.preventDefault();
-		let id = $(this).attr('delete-id');
-		if (id != undefined) {
-			db.collection('establishments').doc(id).delete()
-				.then(function () {
-					console.log("Document successfully delete!");
-					$("#deleteEstablishmentModal").modal('hide');
-				})
-				.catch(function (error) {
-					console.error("Error deleting document: ", error);
-				});
-		} else {
-			let checkbox = $('table tbody input:checked');
-			checkbox.each(function () {
-				db.collection('establishments').doc(this.value).delete()
-					.then(function () {
-						console.log("Document successfully delete!");
-						displayEstablishments();
-					})
-					.catch(function (error) {
-						console.error("Error deleting document: ", error);
-					});
-			});
-			$("#deleteEstablishmentModal").modal('hide');
-		}
-	});
-
-	// SEARCH
-	$("#search-name").keyup(function () {
-		$('#establishment-table tbody').html('');
-		let nameKeyword = $("#search-name").val();
-		console.log(nameKeyword);
-		establishmentRef.orderBy('name', 'asc').startAt(nameKeyword).endAt(nameKeyword + "\uf8ff").get()
-			.then(function (documentSnapshots) {
-				documentSnapshots.docs.forEach(doc => {
-					renderEstablishment(doc);
-				});
-			});
-	});
-
-	// RESET FORMS
-	$("#addEstablishmentModal").on('hidden.bs.modal', function () {
-		$('#add-establishment-form .form-control').val('');
-	});
-
-	$("#editEstablishmentModal").on('hidden.bs.modal', function () {
-		$('#edit-establishment-form .form-control').val('');
-	});
-});
-
-// CENTER MODAL
-(function ($) {
-	"use strict";
-
-	function centerModal() {
-		$(this).css('display', 'block');
-		var $dialog = $(this).find(".modal-dialog"),
-			offset = ($(window).height() - $dialog.height()) / 2,
-			bottomMargin = parseInt($dialog.css('marginBottom'), 10);
-
-		// Make sure you don't hide the top part of the modal w/ a negative margin if it's longer than the screen height, and keep the margin equal to the bottom margin of the modal
-		if (offset < bottomMargin) offset = bottomMargin;
-		$dialog.css("margin-top", offset);
-	}
-
-	$(document).on('show.bs.modal', '.modal', centerModal);
-	$(window).on("resize", function () {
-		$('.modal:visible').each(centerModal);
-	});
-}(jQuery));
