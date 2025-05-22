@@ -5,7 +5,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kosher Certificate</title>
     <style>
         body {
@@ -41,6 +41,7 @@
             /* Fixed dimensions for non-responsive layout */
             width: 1056px; /* Approx. 11 inches at 96 DPI */
             height: 816px; /* Approx. 8.5 inches at 96 DPI */
+            flex-shrink: 0; /* Prevent shrinking in flex container (body) */
 
             /* Centered by body's flex properties */
             /* margin-top: 8vh; */ /* Removed for pure flex centering, can be a fixed px value if offset needed */
@@ -219,11 +220,11 @@
     </div>
 
     <!-- Firebase SDKs -->
-    <!-- Modal for Downloading Message -->
-    <div id="downloadingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; text-align: center; color: white; font-size: 20px; font-family: Arial, sans-serif;">
-        <div style="background-color: #1f2c4d; padding: 25px 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <p>Generating Certificate PDF...</p>
-            <p style="font-size: 16px;">Your download will begin shortly.</p>
+    <!-- Modal for Status Messages - Now always visible -->
+    <div id="statusModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgb(255, 255, 255); z-index: 10000; justify-content: center; align-items: center; text-align: center; color: rgb(0, 0, 0); font-size: 20px; font-family: Arial, sans-serif;">
+        <div id="statusModalContent" style="background-color: #ffffff; padding: 25px 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);">
+            <!-- Content will be set by JavaScript -->
+            <p>Initializing Certificate...</p>
         </div>
     </div>
 
@@ -310,11 +311,18 @@
 
         function generateAndDownloadPDF(establishmentName) {
             const certificateElement = document.querySelector('.certificate');
-            const modalElement = document.getElementById('downloadingModal');
+            const statusModal = document.getElementById('statusModal');
+            const statusModalContent = document.getElementById('statusModalContent');
 
             if (!certificateElement) {
                 console.error('Certificate element not found for PDF generation!');
-                if (modalElement) modalElement.style.display = 'none'; // Hide modal if error before start
+                if (statusModal && statusModalContent) {
+                    statusModalContent.innerHTML = `
+                        <p>Page Error</p>
+                        <p style="font-size: 16px;">Certificate element not found. Cannot generate PDF.</p>
+                        <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Close Window</button>
+                    `;
+                }
                 return;
             }
 
@@ -322,7 +330,13 @@
             if (typeof html2canvas === 'undefined') {
                 console.error('html2canvas library is not loaded correctly.');
                 alert('Error: PDF generation component (html2canvas) failed to load. Cannot download certificate.');
-                if (modalElement) modalElement.style.display = 'none';
+                if (statusModal && statusModalContent) {
+                    statusModalContent.innerHTML = `
+                        <p>Critical Error</p>
+                        <p style="font-size: 16px;">PDF generation component (html2canvas) failed to load.</p>
+                        <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Close Window</button>
+                    `;
+                }
                 return;
             }
 
@@ -330,17 +344,29 @@
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
                 console.error('jsPDF library is not loaded correctly.');
                 alert('Error: PDF generation library (jsPDF) failed to load. Cannot download certificate.');
-                if (modalElement) modalElement.style.display = 'none';
+                if (statusModal && statusModalContent) {
+                    statusModalContent.innerHTML = `
+                        <p>Critical Error</p>
+                        <p style="font-size: 16px;">PDF generation library (jsPDF) failed to load.</p>
+                        <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Close Window</button>
+                    `;
+                }
                 return;
             }
 
-            if (modalElement) {
-                modalElement.style.display = 'flex'; // Show modal (use flex for centering its content)
+            if (statusModal && statusModalContent) {
+                // Modal is already visible due to CSS, this just updates content
+                statusModalContent.innerHTML = `
+                    <p>Generating Certificate PDF...</p>
+                    <p style="font-size: 16px;">Your download will begin shortly.</p>
+                `;
+                // statusModal.style.display = 'flex'; // This line is redundant as modal is always flex
             } else {
-                console.warn('Downloading modal element not found. Proceeding without it.');
+                console.warn('Status modal element not found. Proceeding without it.');
             }
 
             console.log('Starting PDF generation for:', establishmentName);
+
 
             html2canvas(certificateElement, {
                 scale: 2, // Increase scale for better resolution in PDF
@@ -383,13 +409,24 @@
                 pdf.save(fileName);
                 console.log('PDF saved as:', fileName);
 
-                // Attempt to close the window after a short delay
-                setTimeout(() => {
-                    window.close();
-                }, 500); // 500ms delay, adjust if needed
+                if (statusModal && statusModalContent) {
+                    statusModalContent.innerHTML = `
+                        <p>Download Completed!</p>
+                        <p style="font-size: 16px;">${fileName} has been downloaded.</p>
+                        <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;">Close Window</button>
+                    `;
+                } else {
+                    alert('Download completed. You may now close this window.');
+                }
             }).catch(err => {
                 console.error('Error generating PDF:', err);
-                if (modalElement) modalElement.style.display = 'none'; // Hide modal on error
+                if (statusModal && statusModalContent) {
+                     statusModalContent.innerHTML = `
+                        <p>Error Generating PDF</p>
+                        <p style="font-size: 16px;">An error occurred. Please try again or check the console.</p>
+                        <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Close Window</button>
+                    `;
+                }
             });
         }
 
