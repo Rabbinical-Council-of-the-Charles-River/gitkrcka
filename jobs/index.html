@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Board</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Firebase & Netlify Identity -->
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.6.1/firebase-app-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+  <style>
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Job Board</h1>
+      
+      <div>
+        <a href="../index.html" class="btn btn-secondary">Back</a>
+        <button id="login" class="btn btn-primary me-2">Login</button>
+        <button id="logout" class="btn btn-secondary hidden">Logout</button>
+      </div>
+    </div>
+
+    <div id="job-form" class="card mb-4 p-3 hidden">
+      <h5>Post a Job</h5>
+      <input type="text" id="job-title" class="form-control mb-2" placeholder="Job title" />
+      <textarea id="job-desc" class="form-control mb-2" placeholder="Job description"></textarea>
+      <button id="post-job" class="btn btn-success">Post Job</button>
+    </div>
+
+    <h4>Available Jobs</h4>
+    <ul id="jobs-list" class="list-group"></ul>
+  </div>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace if needed
+            authDomain: "richardrccr-10a9d.firebaseapp.com", // Replace if needed
+            projectId: "richardrccr-10a9d", // Replace if needed
+            storageBucket: "richardrccr-10a9d.firebasestorage.app", // Replace if needed
+            messagingSenderId: "867270362103", // Replace if needed
+            appId: "1:867270362103:web:7653459445810350b864f2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Netlify Identity
+    const identity = netlifyIdentity;
+    identity.init();
+
+    const loginBtn = document.getElementById("login");
+    const logoutBtn = document.getElementById("logout");
+    const jobForm = document.getElementById("job-form");
+    const postJobBtn = document.getElementById("post-job");
+    const jobTitle = document.getElementById("job-title");
+    const jobDesc = document.getElementById("job-desc");
+    const jobsList = document.getElementById("jobs-list");
+
+    let currentUser = null;
+    let userRole = "";
+
+    loginBtn.onclick = () => identity.open();
+    logoutBtn.onclick = () => identity.logout();
+
+    identity.on("login", user => {
+      currentUser = user;
+      userRole = user.app_metadata.roles?.[0] || "";
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("logout").classList.remove("hidden");
+      if (userRole === "admin") jobForm.classList.remove("hidden");
+      loadJobs();
+      identity.close();
+    });
+
+    identity.on("logout", () => {
+      currentUser = null;
+      userRole = "";
+      document.getElementById("login").classList.remove("hidden");
+      document.getElementById("logout").classList.add("hidden");
+      jobForm.classList.add("hidden");
+      jobsList.innerHTML = "";
+    });
+
+    postJobBtn.onclick = async () => {
+      const title = jobTitle.value.trim();
+      const desc = jobDesc.value.trim();
+      if (title && desc) {
+        await db.collection("jobs").add({
+          title,
+          description: desc,
+          claimedBy: null
+        });
+        jobTitle.value = "";
+        jobDesc.value = "";
+        loadJobs();
+      }
+    };
+
+    async function loadJobs() {
+      const snapshot = await db.collection("jobs").get();
+      jobsList.innerHTML = "";
+      snapshot.forEach(doc => {
+        const job = doc.data();
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-start";
+
+        const text = document.createElement("div");
+        text.innerHTML = `<strong>${job.title}</strong><br>${job.description}<br><small>${job.claimedBy ? "Claimed by: " + job.claimedBy : "Unclaimed"}</small>`;
+
+        const controls = document.createElement("div");
+
+        if (!job.claimedBy) {
+          controls.innerHTML = `<button class="btn btn-sm btn-primary">Claim</button>`;
+          controls.querySelector("button").onclick = async () => {
+            await db.collection("jobs").doc(doc.id).update({ claimedBy: currentUser.email });
+            loadJobs();
+          };
+        } else if (job.claimedBy === currentUser.email || userRole === "admin") {
+          controls.innerHTML = `
+            <button class="btn btn-sm btn-warning me-1">Cancel</button>
+            ${userRole === "admin" ? '<button class="btn btn-sm btn-danger">Delete</button>' : ""}
+          `;
+          controls.querySelector(".btn-warning").onclick = async () => {
+            await db.collection("jobs").doc(doc.id).update({ claimedBy: null });
+            loadJobs();
+          };
+          if (userRole === "admin") {
+            controls.querySelector(".btn-danger").onclick = async () => {
+              await db.collection("jobs").doc(doc.id).delete();
+              loadJobs();
+            };
+          }
+        }
+
+        li.appendChild(text);
+        li.appendChild(controls);
+        jobsList.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>

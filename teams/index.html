@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Client Messaging</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="max-w-7xl mx-auto flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white shadow-lg p-4 flex flex-col">
+      <h2 class="text-xl font-bold text-blue-700 mb-6">My Email</h2>
+      <div class="mb-6">
+        <div id="login-status" class="text-sm text-gray-600 mb-2">Checking login...</div>
+        <div id="auth-buttons" class="space-y-2">
+          <button onclick="login()" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Log In</button>
+          <button onclick="signup()" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Sign Up</button>
+          <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Log Out</button>
+        </div>
+      </div>
+      <nav class="flex-1 space-y-2">
+        <button class="w-full text-left px-4 py-2 rounded hover:bg-gray-100">📥 Inbox</button>
+        <button class="w-full text-left px-4 py-2 rounded hover:bg-gray-100">📤 Sent</button>
+        <button class="w-full text-left px-4 py-2 rounded hover:bg-gray-100">📝 Compose</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 overflow-y-auto">
+      <!-- Inbox -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Inbox</h2>
+        <div id="inbox" class="border border-gray-300 h-96 overflow-y-auto p-4 rounded-lg bg-gray-50 space-y-4"></div>
+      </section>
+
+      <!-- Compose -->
+      <section>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Compose New Message</h2>
+        <form id="message-form" class="space-y-4">
+          <input type="email" id="to-email" placeholder="Recipient's email" required class="w-full border border-gray-300 px-4 py-2 rounded-lg" />
+          <input type="text" id="subject" placeholder="Subject" required class="w-full border border-gray-300 px-4 py-2 rounded-lg" />
+          <textarea id="message-body" rows="6" placeholder="Type your message here..." required class="w-full border border-gray-300 px-4 py-2 rounded-lg"></textarea>
+          <div class="text-right">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">Send</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+  authDomain: "richardrccr-10a9d.firebaseapp.com",
+  databaseURL: "https://richardrccr-10a9d-default-rtdb.firebaseio.com",
+  projectId: "richardrccr-10a9d",
+  storageBucket: "richardrccr-10a9d.firebasestorage.app",
+  messagingSenderId: "867270362103",
+  appId: "1:867270362103:web:7653459445810350b864f2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const messagesRef = db.ref("messages");
+
+    const inbox = document.getElementById("inbox");
+    const loginStatus = document.getElementById("login-status");
+    const form = document.getElementById("message-form");
+    const toEmailInput = document.getElementById("to-email");
+    const subjectInput = document.getElementById("subject");
+    const bodyInput = document.getElementById("message-body");
+
+    netlifyIdentity.init();
+
+    let currentUser = null;
+
+    netlifyIdentity.on("init", user => updateUser(user));
+    netlifyIdentity.on("login", user => {
+      updateUser(user);
+      netlifyIdentity.close();
+    });
+    netlifyIdentity.on("logout", () => updateUser(null));
+
+    function updateUser(user) {
+      currentUser = user;
+      loginStatus.textContent = user && user.email ? `Logged in as ${user.email}` : "Not logged in";
+      form.style.display = user ? "block" : "none";
+    }
+
+    function login() {
+      netlifyIdentity.open("login");
+    }
+
+    function signup() {
+      netlifyIdentity.open("signup");
+    }
+
+    function logout() {
+      netlifyIdentity.logout();
+    }
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      if (!currentUser) {
+        alert("You must be logged in to send messages.");
+        return;
+      }
+      const to = toEmailInput.value.trim();
+      const subject = subjectInput.value.trim();
+      const body = bodyInput.value.trim();
+      if (to && subject && body) {
+        messagesRef.push({
+          to,
+          from: currentUser.email,
+          subject,
+          body,
+          timestamp: Date.now()
+        });
+        toEmailInput.value = "";
+        subjectInput.value = "";
+        bodyInput.value = "";
+      }
+    });
+
+    messagesRef.limitToLast(100).on("child_added", snap => {
+      const msg = snap.val();
+      if (currentUser && msg.to === currentUser.email) {
+        const div = document.createElement("div");
+        div.className = "border border-gray-200 p-4 rounded-lg bg-white shadow-sm";
+        div.innerHTML = `
+          <div class="font-semibold text-blue-700">From: ${msg.from}</div>
+          <div class="text-sm text-gray-600">Subject: ${msg.subject}</div>
+          <div class="mt-2 text-gray-800 whitespace-pre-wrap">${msg.body}</div>
+        `;
+        inbox.appendChild(div);
+        inbox.scrollTop = inbox.scrollHeight;
+      }
+    });
+  </script>
+</body>
+</html>
