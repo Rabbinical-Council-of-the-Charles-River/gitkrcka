@@ -167,6 +167,9 @@
                             </div>
                         </div>
 
+                        <!-- Placeholder for processing message -->
+                        <div id="processing-message-area" class="alert alert-info hidden mt-3" role="alert"></div>
+
                         <div class="table-responsive">
                             <table id="payroll-items-table" class="table table-sm table-bordered">
                                 <thead>
@@ -604,9 +607,6 @@
 
                  const bankingUrl = `${bankingBaseUrl}?${params.toString()}`;
 
-                 // Open the banking website in a new tab
-                 window.open(bankingUrl, '_blank');
-
                  // Update the status of the payroll run in THIS payroll system
                  await payrollsRef.doc(payrollId).update({
                      status: 'processing_bank', // Indicates data sent to bank
@@ -614,7 +614,13 @@
                  });
 
                  console.log(`Payroll run ${payrollId} data sent to banking site. URL: ${bankingUrl}`);
-                 alert("Payroll data has been sent to the banking site for processing. Please complete the deposits there.");
+
+                // Display success message with link instead of alert and window.open
+                const messageArea = document.getElementById('processing-message-area');
+                messageArea.innerHTML = `Payroll data prepared. <a href="${bankingUrl}" target="_blank" class="alert-link">Click here to proceed to the banking site</a> to complete deposits. The site will open in a new tab.`;
+                messageArea.classList.remove('hidden');
+                // Disable the process button after successful initiation
+                document.getElementById('process-payroll-btn').disabled = true;
 
                  // Refresh UI elements
                  const runDoc = await payrollsRef.doc(payrollId).get();
@@ -635,6 +641,8 @@
             document.getElementById('manage-items-payroll-id').value = payrollId;
             payrollItemsTableBody.innerHTML = '<tr><td colspan="6">Loading items...</td></tr>';
             document.getElementById('manage-items-total-net').textContent = formatCurrency(0);
+            document.getElementById('processing-message-area').classList.add('hidden'); // Clear previous messages
+            document.getElementById('processing-message-area').innerHTML = '';
 
             try {
                 const runDoc = await payrollsRef.doc(payrollId).get();
