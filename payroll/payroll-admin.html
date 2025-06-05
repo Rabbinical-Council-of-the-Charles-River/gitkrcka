@@ -30,8 +30,9 @@
         /* Added style for visibility icon */
         .action-icons a .material-icons { vertical-align: middle; }
         .status-draft { background-color: #6c757d; color: white; }
-        .status-processed { background-color: #0d6efd; color: white; }
-        .status-paid { background-color: #198754; color: white; }
+        .status-processed { background-color: #ffc107; color: black; } /* Yellow for processed by payroll admin */
+        .status-processing_bank { background-color: #0dcaf0; color: black; } /* Light blue for sent to bank */
+        .status-paid { background-color: #198754; color: white; } /* Green for fully paid */
         .badge { padding: 0.4em 0.6em; font-size: 0.8em; }
         .deduction-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .deduction-item input { flex-grow: 1; }
@@ -121,6 +122,29 @@
             </div>
         </div>
 
+        <!-- Edit Payroll Run Status Modal -->
+        <div id="editPayrollRunStatusModal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <form id="edit-payroll-run-status-form">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Payroll Run Status</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="edit-status-payroll-run-id">
+                            <label for="payroll-run-new-status" class="form-label">New Status</label>
+                            <select id="payroll-run-new-status" class="form-select" required></select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Status</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Manage Payroll Items Modal -->
         <div id="manageItemsModal" class="modal fade" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-xl"> <!-- Extra Large -->
@@ -138,7 +162,7 @@
                             <div>
                                 <strong>Status:</strong> <span id="manage-items-status-badge" class="badge"></span>
                                 <button id="process-payroll-btn" class="btn btn-primary btn-sm ms-2" onclick="processPayrollRun()">
-                                    <i class="material-icons">play_arrow</i> Process Payroll
+                                    <i class="material-icons">play_arrow</i> Process & Send to Bank
                                 </button>
                             </div>
                         </div>
@@ -244,8 +268,8 @@
                                 <label for="item-status" class="form-label">Payment Status</label>
                                 <select id="item-status" class="form-select">
                                     <option value="pending">Pending</option>
-                                    <option value="processed">Processed</option>
-                                    <option value="paid">Paid</option>
+                                    <option value="processed">Processed (Internal)</option>
+                                    <option value="paid">Paid (by Bank)</option>
                                     <option value="failed">Failed</option>
                                 </select>
                             </div>
@@ -272,6 +296,7 @@
 
     <script>
         // --- Firebase Configuration ---
+        // IMPORTANT: Replace with YOUR PAYROLL SYSTEM'S Firebase project config
         const firebaseConfig = {
             apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
             authDomain: "richardrccr-10a9d.firebaseapp.com",
@@ -297,12 +322,14 @@
         const payrollRunModalEl = document.getElementById('payrollRunModal');
         const manageItemsModalEl = document.getElementById('manageItemsModal');
         const payrollItemModalEl = document.getElementById('payrollItemModal');
+        const editPayrollRunStatusModalEl = document.getElementById('editPayrollRunStatusModal');
         const deductionsContainer = document.getElementById('deductions-container');
 
         // Modals Instances
         const payrollRunModal = new bootstrap.Modal(payrollRunModalEl);
         const manageItemsModal = new bootstrap.Modal(manageItemsModalEl);
         const payrollItemModal = new bootstrap.Modal(payrollItemModalEl);
+        const editPayrollRunStatusModal = new bootstrap.Modal(editPayrollRunStatusModalEl);
 
         // --- Netlify Identity ---
         const netlifyIdentity = window.netlifyIdentity;
@@ -314,9 +341,7 @@
         netlifyIdentity.on('login', user => { handleAuthChange(user); netlifyIdentity.close(); });
         netlifyIdentity.on('logout', () => handleAuthChange(null));
 
-        // --- MODIFIED: Role Check ---
         function handleAuthChange(user) {
-            // Check specifically for the 'payroll' role
             const hasPayrollRole = user?.app_metadata?.roles?.includes('payroll') ?? false;
             if (hasPayrollRole) {
                 loginSection.classList.add('hidden');
@@ -325,10 +350,9 @@
             } else {
                 loginSection.classList.remove('hidden');
                 adminContent.classList.add('hidden');
-                if (payrollsTableBody) payrollsTableBody.innerHTML = '<tr><td colspan="5">Payroll access required.</td></tr>'; // Updated message
+                if (payrollsTableBody) payrollsTableBody.innerHTML = '<tr><td colspan="5">Payroll access required.</td></tr>';
             }
         }
-        // --- END MODIFICATION ---
 
         // --- Helper Functions ---
         function formatTimestamp(timestamp, format = 'date') {
@@ -342,21 +366,31 @@
             return 'Invalid Format';
         }
 
+        const PAYROLL_RUN_STATUSES = {
+            draft: 'Draft',
+            processed: 'Processed (Internal)',
+            processing_bank: 'Sent to Bank',
+            paid: 'Paid'
+        };
+
         function formatCurrency(amount) {
             return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
         }
 
         function getStatusBadge(status) {
             const statusLower = (status || 'draft').toLowerCase();
-            const badgeClass = `status-${statusLower}`;
-            const statusText = statusLower.charAt(0).toUpperCase() + statusLower.slice(1);
+            let badgeClass = `status-${statusLower}`;
+            // Handle specific status text for display if needed
+            let statusText = statusLower.charAt(0).toUpperCase() + statusLower.slice(1);
+            if (statusLower === 'processing_bank') {
+                statusText = PAYROLL_RUN_STATUSES.processing_bank;
+            }
+
             return `<span class="badge ${badgeClass}">${statusText}</span>`;
         }
 
         function parseDateToTimestamp(dateString) {
             if (!dateString) return null;
-            // Assumes dateString is YYYY-MM-DD from input type="date"
-            // Important: Create date in UTC to avoid timezone issues with Firestore Timestamps
             const date = new Date(dateString + 'T00:00:00Z');
             return firebase.firestore.Timestamp.fromDate(date);
         }
@@ -383,6 +417,7 @@
                             <td class="action-icons">
                                 <a onclick="openManageItemsModal('${id}')" title="Manage Items"><i class="material-icons text-primary">list</i></a>
                                 <a onclick="prepareEditPayrollRun('${id}')" title="Edit Run Details"><i class="material-icons text-warning">&#xE254;</i></a>
+                                <a onclick="prepareEditPayrollRunStatus('${id}')" title="Edit Status"><i class="material-icons text-secondary">flag</i></a>
                                 <a onclick="deletePayrollRun('${id}')" title="Delete Run"><i class="material-icons text-danger">&#xE872;</i></a>
                             </td>
                         </tr>
@@ -399,7 +434,7 @@
             payrollRunForm.reset();
             document.getElementById('payroll-run-id').value = '';
             document.getElementById('payrollRunModalTitle').textContent = 'Create New Payroll Run';
-            payrollRunModal.show(); // Show the modal directly
+            payrollRunModal.show();
         }
 
         async function prepareEditPayrollRun(id) {
@@ -437,8 +472,8 @@
                 if (id) { // Editing existing
                     await payrollsRef.doc(id).update(runData);
                 } else { // Creating new
-                    runData.status = 'draft'; // Default status
-                    runData.totalAmount = 0; // Initial total
+                    runData.status = 'draft';
+                    runData.totalAmount = 0;
                     runData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     runData.createdBy = netlifyIdentity.currentUser()?.id || 'unknown';
                     await payrollsRef.add(runData);
@@ -451,21 +486,69 @@
             }
         });
 
+        function populateStatusDropdown(selectElementId, currentStatus) {
+            const select = document.getElementById(selectElementId);
+            select.innerHTML = ''; // Clear existing options
+            for (const [value, text] of Object.entries(PAYROLL_RUN_STATUSES)) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = text;
+                if (value === currentStatus) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+        }
+
+        async function prepareEditPayrollRunStatus(id) {
+            try {
+                const docSnap = await payrollsRef.doc(id).get();
+                if (docSnap.exists) {
+                    const run = docSnap.data();
+                    document.getElementById('edit-status-payroll-run-id').value = id;
+                    populateStatusDropdown('payroll-run-new-status', run.status || 'draft');
+                    editPayrollRunStatusModal.show();
+                } else {
+                    alert("Payroll run not found.");
+                }
+            } catch (error) {
+                console.error("Error preparing status edit:", error);
+                alert("Error loading payroll run details for status edit.");
+            }
+        }
+
+        document.getElementById('edit-payroll-run-status-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-status-payroll-run-id').value;
+            const newStatus = document.getElementById('payroll-run-new-status').value;
+
+            if (!id || !newStatus) {
+                alert("Missing payroll run ID or new status.");
+                return;
+            }
+            try {
+                await payrollsRef.doc(id).update({
+                    status: newStatus,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                editPayrollRunStatusModal.hide();
+                loadPayrollRuns(); // Refresh the main table
+            } catch (error) {
+                console.error("Error updating payroll run status:", error);
+                alert(`Error updating status: ${error.message}`);
+            }
+        });
+
         async function deletePayrollRun(id) {
             if (!confirm("Are you sure you want to delete this entire payroll run and all its items? This cannot be undone.")) {
                 return;
             }
             try {
-                // Optional: Delete associated items first (more robust)
                 const itemsSnapshot = await payrollItemsRef.where('payrollId', '==', id).get();
                 const batch = db.batch();
                 itemsSnapshot.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
-                console.log(`Deleted ${itemsSnapshot.size} items for payroll ${id}`);
-
-                // Delete the payroll run itself
                 await payrollsRef.doc(id).delete();
-                console.log(`Deleted payroll run ${id}`);
                 loadPayrollRuns();
             } catch (error) {
                 console.error("Error deleting payroll run:", error);
@@ -479,51 +562,86 @@
                  alert("Cannot process payroll: No Payroll ID found.");
                  return;
              }
-             if (!confirm("Are you sure you want to mark this payroll run as 'Processed'? This usually signifies finalization before actual payment.")) {
-                 return;
-             }
 
              try {
+                 const itemsSnapshot = await payrollItemsRef
+                                             .where('payrollId', '==', payrollId)
+                                             // Consider filtering for items in 'pending' or 'processed (internal)' status
+                                             // .where('paymentStatus', 'in', ['pending', 'processed'])
+                                             .get();
+
+                 if (itemsSnapshot.empty) {
+                     alert("No payment items found for this payroll run to process.");
+                     return;
+                 }
+
+                 const payments = [];
+                 itemsSnapshot.forEach(doc => {
+                     const item = doc.data();
+                     // Ensure item has email, name, and positive net pay
+                     if (item.employeeEmail && item.employeeName && item.netPay > 0) {
+                         payments.push({
+                             email: item.employeeEmail,
+                             name: item.employeeName, // Include name for bank site if needed
+                             amount: item.netPay.toFixed(2)
+                         });
+                     }
+                 });
+
+                 if (payments.length === 0) {
+                     alert("No valid payment items (with email, name, and positive net pay) found to process.");
+                     return;
+                 }
+
+                 // IMPORTANT: Replace with the ACTUAL URL of your BOOPKA banking site's payroll deposit page
+                 const bankingBaseUrl = 'https://boopka.netlify.app/payroll_deposit.html';
+                 // For local testing, it might be like: 'http://127.0.0.1:5500/boopka/payroll_deposit.html'
+                 // or whatever your local server for the BOOPKA project uses.
+
+                 const params = new URLSearchParams();
+                 params.append('payrollData', JSON.stringify(payments));
+                 params.append('payrollRunId', payrollId);
+
+                 const bankingUrl = `${bankingBaseUrl}?${params.toString()}`;
+
+                 // Open the banking website in a new tab
+                 window.open(bankingUrl, '_blank');
+
+                 // Update the status of the payroll run in THIS payroll system
                  await payrollsRef.doc(payrollId).update({
-                     status: 'processed',
+                     status: 'processing_bank', // Indicates data sent to bank
                      processedAt: firebase.firestore.FieldValue.serverTimestamp()
                  });
-                 // Optionally update all items to 'processed' if they are 'pending'
-                 const itemsSnapshot = await payrollItemsRef.where('payrollId', '==', payrollId).where('paymentStatus', '==', 'pending').get();
-                 const batch = db.batch();
-                 itemsSnapshot.forEach(doc => {
-                     batch.update(doc.ref, { paymentStatus: 'processed' });
-                 });
-                 await batch.commit();
 
-                 console.log(`Payroll run ${payrollId} marked as processed.`);
+                 console.log(`Payroll run ${payrollId} data sent to banking site. URL: ${bankingUrl}`);
+                 alert("Payroll data has been sent to the banking site for processing. Please complete the deposits there.");
+
                  // Refresh UI elements
                  const runDoc = await payrollsRef.doc(payrollId).get();
                  if (runDoc.exists) {
-                     updateManageItemsUI(runDoc.data(), payrollId); // Update status badge etc.
+                     updateManageItemsUI(runDoc.data(), payrollId);
                  }
-                 loadPayrollRuns(); // Refresh main table
-                 loadPayrollItems(payrollId); // Refresh items table in modal
+                 loadPayrollRuns();
+                 loadPayrollItems(payrollId);
 
              } catch (error) {
-                 console.error("Error processing payroll run:", error);
-                 alert(`Error processing payroll run: ${error.message}`);
+                 console.error("Error preparing payroll data for banking site:", error);
+                 alert(`Error preparing payroll data: ${error.message}`);
              }
         }
-
 
         // --- Manage Payroll Items Modal ---
         async function openManageItemsModal(payrollId) {
             document.getElementById('manage-items-payroll-id').value = payrollId;
             payrollItemsTableBody.innerHTML = '<tr><td colspan="6">Loading items...</td></tr>';
-            document.getElementById('manage-items-total-net').textContent = formatCurrency(0); // Reset total
+            document.getElementById('manage-items-total-net').textContent = formatCurrency(0);
 
             try {
                 const runDoc = await payrollsRef.doc(payrollId).get();
                 if (runDoc.exists) {
                     const runData = runDoc.data();
                     updateManageItemsUI(runData, payrollId);
-                    loadPayrollItems(payrollId); // Load items after setting up the modal
+                    loadPayrollItems(payrollId);
                     manageItemsModal.show();
                 } else {
                     alert("Payroll run not found.");
@@ -534,37 +652,29 @@
             }
         }
 
-        // --- Includes null checks ---
         function updateManageItemsUI(runData, payrollId) {
              document.getElementById('manage-items-title').textContent =
                 `${formatTimestamp(runData.payPeriodStart)} - ${formatTimestamp(runData.payPeriodEnd)}`;
 
-             // Find the status badge element
              const statusBadgeElement = document.getElementById('manage-items-status-badge');
-             // Check if the element exists before trying to update it
              if (statusBadgeElement) {
-                 statusBadgeElement.outerHTML = getStatusBadge(runData.status); // Replace badge
-             } else {
-                 console.warn("Could not find 'manage-items-status-badge' element to update.");
+                 statusBadgeElement.outerHTML = getStatusBadge(runData.status);
              }
 
             const processBtn = document.getElementById('process-payroll-btn');
-            // Check if processBtn exists too, just in case
             if (processBtn) {
-                if (runData.status === 'draft') {
+                // Allow processing if status is 'draft' or 'processed' (internal)
+                // Disable if 'processing_bank' or 'paid'
+                if (runData.status === 'draft' || runData.status === 'processed') {
                     processBtn.disabled = false;
-                    processBtn.onclick = () => processPayrollRun(payrollId); // Ensure correct ID is passed
+                    processBtn.onclick = () => processPayrollRun(payrollId);
                 } else {
                     processBtn.disabled = true;
-                    processBtn.onclick = null; // Remove handler
+                    processBtn.onclick = null;
                 }
-            } else {
-                 console.warn("Could not find 'process-payroll-btn' element.");
             }
         }
-        // --- END MODIFICATION ---
 
-        // *** MODIFIED loadPayrollItems function ***
         async function loadPayrollItems(payrollId) {
             payrollItemsTableBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
             let totalNetPay = 0;
@@ -588,7 +698,6 @@
                             <td>${formatCurrency(item.netPay)}</td>
                             <td>${getStatusBadge(item.paymentStatus)}</td>
                             <td class="action-icons">
-                                <!-- Added View Stub Action -->
                                 <a onclick="viewPayStubAdmin('${id}')" title="View Stub"><i class="material-icons text-info">visibility</i></a>
                                 <a onclick="prepareEditPayrollItem('${id}')" title="Edit Item"><i class="material-icons text-warning">&#xE254;</i></a>
                                 <a onclick="deletePayrollItem('${id}', '${payrollId}')" title="Delete Item"><i class="material-icons text-danger">&#xE872;</i></a>
@@ -604,31 +713,29 @@
                  document.getElementById('manage-items-total-net').textContent = formatCurrency(0);
             }
         }
-        // *** END MODIFICATION ***
 
         // --- Payroll Item Functions (Add/Edit Employee Payment) ---
         function prepareAddPayrollItem() {
             payrollItemForm.reset();
             document.getElementById('payroll-item-id').value = '';
             document.getElementById('payrollItemModalTitle').textContent = 'Add Employee Payment';
-            // Get parent payroll ID from the manage items modal
             document.getElementById('payroll-item-parent-id').value = document.getElementById('manage-items-payroll-id').value;
-            deductionsContainer.innerHTML = ''; // Clear deductions
-            addDeductionRow(); // Add one blank deduction row
-            calculateItemTotals(); // Reset calculations
-            document.getElementById('item-status').value = 'pending'; // Default status
+            deductionsContainer.innerHTML = '';
+            addDeductionRow();
+            calculateItemTotals();
+            document.getElementById('item-status').value = 'pending';
             payrollItemModal.show();
         }
 
         async function prepareEditPayrollItem(itemId) {
             payrollItemForm.reset();
-            deductionsContainer.innerHTML = ''; // Clear deductions
+            deductionsContainer.innerHTML = '';
             try {
                 const docSnap = await payrollItemsRef.doc(itemId).get();
                 if (docSnap.exists) {
                     const item = docSnap.data();
                     document.getElementById('payroll-item-id').value = itemId;
-                    document.getElementById('payroll-item-parent-id').value = item.payrollId; // Store parent ID
+                    document.getElementById('payroll-item-parent-id').value = item.payrollId;
                     document.getElementById('employee-email').value = item.employeeEmail || '';
                     document.getElementById('employee-name').value = item.employeeName || '';
                     document.getElementById('pay-rate').value = item.payRate || 0;
@@ -636,14 +743,13 @@
                     document.getElementById('item-notes').value = item.notes || '';
                     document.getElementById('item-status').value = item.paymentStatus || 'pending';
 
-                    // Populate deductions
                     if (item.deductions && Array.isArray(item.deductions)) {
                         item.deductions.forEach(ded => addDeductionRow(ded.description, ded.amount));
                     } else {
-                        addDeductionRow(); // Add a blank one if none exist
+                        addDeductionRow();
                     }
 
-                    calculateItemTotals(); // Recalculate based on loaded data
+                    calculateItemTotals();
                     document.getElementById('payrollItemModalTitle').textContent = 'Edit Employee Payment';
                     payrollItemModal.show();
                 } else {
@@ -665,10 +771,7 @@
                 return;
             }
 
-            // Recalculate totals one last time before saving
             const totals = calculateItemTotals();
-
-            // Collect deductions
             const deductions = [];
             deductionsContainer.querySelectorAll('.deduction-item').forEach(row => {
                 const desc = row.querySelector('.deduction-desc').value.trim();
@@ -678,10 +781,7 @@
                 }
             });
 
-            // Get parent dates (fetch once before saving)
-            let parentIssueDate = null;
-            let parentStartDate = null;
-            let parentEndDate = null;
+            let parentIssueDate = null, parentStartDate = null, parentEndDate = null;
             try {
                 const parentDoc = await payrollsRef.doc(parentPayrollId).get();
                 if (parentDoc.exists) {
@@ -690,10 +790,7 @@
                     parentStartDate = parentData.payPeriodStart || null;
                     parentEndDate = parentData.payPeriodEnd || null;
                 }
-            } catch (fetchError) {
-                console.error("Error fetching parent payroll dates:", fetchError);
-                // Decide if you want to proceed without dates or show an error
-            }
+            } catch (fetchError) { console.error("Error fetching parent payroll dates:", fetchError); }
 
             const itemData = {
                 payrollId: parentPayrollId,
@@ -706,25 +803,23 @@
                 netPay: totals.net,
                 notes: document.getElementById('item-notes').value.trim(),
                 paymentStatus: document.getElementById('item-status').value,
-                // Keep existing log IDs if editing, or initialize if new
-                importedLogIds: itemId ? (await payrollItemsRef.doc(itemId).get()).data()?.importedLogIds || [] : [], // Consider updating this if log import logic changes
-                // Copy parent dates for easier querying by employee later
+                importedLogIds: itemId ? (await payrollItemsRef.doc(itemId).get()).data()?.importedLogIds || [] : [],
                 issueDate: parentIssueDate,
                 payPeriodStart: parentStartDate,
                 payPeriodEnd: parentEndDate,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Add update timestamp
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             try {
-                if (itemId) { // Editing
+                if (itemId) {
                     await payrollItemsRef.doc(itemId).update(itemData);
-                } else { // Adding
-                    itemData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); // Add create timestamp for new items
+                } else {
+                    itemData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     await payrollItemsRef.add(itemData);
                 }
                 payrollItemModal.hide();
-                loadPayrollItems(parentPayrollId); // Refresh list in manage items modal
-                updatePayrollRunTotal(parentPayrollId); // Update total on parent run
+                loadPayrollItems(parentPayrollId);
+                updatePayrollRunTotal(parentPayrollId);
             } catch (error) {
                 console.error("Error saving payroll item:", error);
                 alert(`Error saving item: ${error.message}`);
@@ -732,13 +827,11 @@
         });
 
         async function deletePayrollItem(itemId, parentPayrollId) {
-            if (!confirm("Are you sure you want to delete this payment item?")) {
-                return;
-            }
+            if (!confirm("Are you sure you want to delete this payment item?")) return;
             try {
                 await payrollItemsRef.doc(itemId).delete();
-                loadPayrollItems(parentPayrollId); // Refresh list
-                updatePayrollRunTotal(parentPayrollId); // Update total
+                loadPayrollItems(parentPayrollId);
+                updatePayrollRunTotal(parentPayrollId);
             } catch (error) {
                 console.error("Error deleting item:", error);
                 alert(`Error deleting item: ${error.message}`);
@@ -765,7 +858,6 @@
             return { gross, totalDeductions, net };
         }
 
-        // Add listeners to recalculate on input change
         ['pay-rate', 'hours-worked'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateItemTotals);
@@ -779,25 +871,15 @@
                 <input type="number" class="form-control form-control-sm deduction-amount" placeholder="Amount" value="${amount}" step="0.01" min="0">
                 <button type="button" class="btn btn-danger btn-sm" onclick="removeDeductionRow(this)">&times;</button>
             `;
-            // Add listener to amount input for recalculation
             row.querySelector('.deduction-amount').addEventListener('input', calculateItemTotals);
             deductionsContainer.appendChild(row);
         }
 
         function removeDeductionRow(button) {
             button.closest('.deduction-item').remove();
-            calculateItemTotals(); // Recalculate after removal
+            calculateItemTotals();
         }
 
-        // --- Mashgiach Log Import (Placeholder - Removed button) ---
-        // Function remains but button is removed from form
-        async function importMashgiachLogs() {
-            // ... (existing log import logic - no changes needed here unless you re-add the button)
-            console.log("Import Mashgiach Logs function called (button removed from UI).");
-        }
-
-
-         // --- Update Payroll Run Total ---
          async function updatePayrollRunTotal(payrollId) {
              if (!payrollId) return;
              try {
@@ -807,50 +889,42 @@
                      totalNetPay += Number(doc.data().netPay) || 0;
                  });
 
-                 await payrollsRef.doc(payrollId).update({
-                     totalAmount: totalNetPay
-                 });
-                 console.log(`Updated total for payroll run ${payrollId} to ${formatCurrency(totalNetPay)}`);
-                 // Refresh total in manage items modal if open
+                 await payrollsRef.doc(payrollId).update({ totalAmount: totalNetPay });
                  if (manageItemsModalEl.classList.contains('show') && document.getElementById('manage-items-payroll-id').value === payrollId) {
                      document.getElementById('manage-items-total-net').textContent = formatCurrency(totalNetPay);
                  }
-                 // Optionally refresh the main payrolls table if needed immediately
-                 // loadPayrollRuns();
              } catch (error) {
                  console.error("Error updating payroll run total:", error);
-                 // Don't alert user for this background update unless critical
              }
          }
 
-        // *** NEW Function: View Pay Stub (Admin) ***
         function viewPayStubAdmin(itemId) {
             if (!itemId) {
                 console.error("No item ID provided for viewing stub.");
                 return;
             }
-            // Construct the URL and open in a new tab
-            // Ensure the path to payroll-stub.html is correct relative to payroll-admin.html
+            // Ensure the path to payroll-stub.html is correct relative to this admin page
             const stubUrl = `payroll-stub.html?id=${itemId}`;
             window.open(stubUrl, '_blank');
         }
-        // *** END NEW Function ***
-
 
         // --- Modal Cleanup ---
-        payrollItemModalEl.addEventListener('hidden.bs.modal', () => {
-            payrollItemForm.reset();
-            deductionsContainer.innerHTML = '';
+        [payrollItemModalEl, payrollRunModalEl, editPayrollRunStatusModalEl].forEach(modalEl => {
+            if (modalEl) {
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    const form = modalEl.querySelector('form');
+                    if (form) form.reset();
+                    if (modalEl === payrollItemModalEl) deductionsContainer.innerHTML = '';
+                    if (modalEl === editPayrollRunStatusModalEl) {
+                        document.getElementById('edit-status-payroll-run-id').value = '';
+                    }
+                });
+            }
         });
-        payrollRunModalEl.addEventListener('hidden.bs.modal', () => {
-            payrollRunForm.reset();
-        });
+
          manageItemsModalEl.addEventListener('hidden.bs.modal', () => {
-            // Refresh main table when closing manage items modal to reflect potential status changes or total updates
             loadPayrollRuns();
         });
-
-
     </script>
 
 </body>
