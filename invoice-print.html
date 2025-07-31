@@ -315,12 +315,13 @@
             if (inv.items && Array.isArray(inv.items)) {
                 inv.items.forEach(item => {
                     const quantity = Number(item.quantity) || 0;
-                    const unitPrice = Number(item.unitPrice) || 0;
+                    // Support both old (unitPrice) and new (rate) field names
+                    const unitPrice = Number(item.unitPrice || item.rate) || 0;
                     // Ensure item.total exists or calculate it defensively
                     const itemTotal = item.total != null ? Number(item.total) : quantity * unitPrice;
                     itemsHtml += `
                         <tr>
-                            <td>${item.description || ''}</td>
+                            <td style="white-space: pre-wrap;">${item.description || ''}</td>
                             <td class="text-right">${quantity}</td>
                             <td class="text-right">${formatCurrency(unitPrice)}</td>
                             <td class="text-right">${formatCurrency(itemTotal)}</td>

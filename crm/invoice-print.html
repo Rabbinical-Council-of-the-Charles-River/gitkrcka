@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KRCKA Invoice</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { font-size: 12px; }
+            .container { max-width: none; }
+        }
+        
+        .invoice-header {
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .invoice-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .establishment-badge {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .invoice-table th {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+        }
+        
+        .total-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .company-logo {
+            max-height: 80px;
+        }
+        
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        
+        .status-draft { background-color: #6c757d; color: white; }
+        .status-sent { background-color: #0d6efd; color: white; }
+        .status-paid { background-color: #198754; color: white; }
+        .status-overdue { background-color: #dc3545; color: white; }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <!-- Print Controls -->
+        <div class="no-print mb-3">
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer"></i> Print Invoice
+            </button>
+            <button onclick="window.close()" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Close
+            </button>
+        </div>
+
+        <!-- Invoice Content -->
+        <div class="invoice-content">
+            <!-- Header -->
+            <div class="invoice-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <img src="../images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png" alt="KRCKA Logo" class="company-logo">
+                        <h2 class="mt-2">KRCKA</h2>
+                        <p class="text-muted mb-0">Kosher Certification Agency</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <h1 class="display-6">INVOICE</h1>
+                        <p class="mb-1"><strong>Invoice #:</strong> <span id="invoice-number">Loading...</span></p>
+                        <p class="mb-1"><strong>Date:</strong> <span id="invoice-date">Loading...</span></p>
+                        <p class="mb-1"><strong>Due Date:</strong> <span id="due-date">Loading...</span></p>
+                        <span id="invoice-status" class="status-badge">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details -->
+            <div class="invoice-details">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Bill To:</h5>
+                        <div id="client-info">
+                            <p class="mb-1"><strong id="client-name">Loading...</strong></p>
+                            <p class="mb-1" id="client-contact">Loading...</p>
+                            <p class="mb-1" id="client-email">Loading...</p>
+                            <p class="mb-1" id="client-phone">Loading...</p>
+                            <div id="client-address">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Establishments:</h5>
+                        <div id="establishments-list">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Items -->
+            <div class="table-responsive mb-4">
+                <table class="table table-striped invoice-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-end">Rate</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items">
+                        <tr>
+                            <td colspan="4" class="text-center">Loading items...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals -->
+            <div class="row">
+                <div class="col-md-8"></div>
+                <div class="col-md-4">
+                    <div class="total-section">
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Subtotal:</strong></div>
+                            <div class="col-6 text-end" id="subtotal">$0.00</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">Tax (<span id="tax-rate">0</span>%):</div>
+                            <div class="col-6 text-end" id="tax-amount">$0.00</div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-6"><h5>Total:</h5></div>
+                            <div class="col-6 text-end"><h5 id="total-amount">$0.00</h5></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-5 pt-4 border-top">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Payment Information:</h6>
+                        <p class="small text-muted">
+                            Please make payments to KRCKA.<br>
+                            For questions about this invoice, please contact us.
+                        </p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p class="small text-muted">
+                            Thank you for choosing KRCKA for your kosher certification needs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
+        }
+
+        function formatDate(date) {
+            if (date && typeof date.toDate === 'function') {
+                return date.toDate().toLocaleDateString('en-US');
+            } else if (date instanceof Date) {
+                return date.toLocaleDateString('en-US');
+            } else if (typeof date === 'string') {
+                return new Date(date).toLocaleDateString('en-US');
+            }
+            return 'N/A';
+        }
+
+        // Get invoice ID from URL parameters
+        function getInvoiceId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // Load and display invoice
+        async function loadInvoice() {
+            const invoiceId = getInvoiceId();
+            if (!invoiceId) {
+                document.body.innerHTML = '<div class="container mt-5"><div class="alert alert-danger">No invoice ID provided</div></div>';
+                return;
+            }
+
+            try {
+                // Load invoice
+                const invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
+                if (!invoiceDoc.exists) {
+                    document.body.innerHTML = '<div class="container mt-5"><div class="alert alert-danger">Invoice not found</div></div>';
+                    return;
+                }
+
+                const invoice = invoiceDoc.data();
+
+                // Load client data
+                let client = null;
+                if (invoice.clientId) {
+                    const clientDoc = await db.collection('clients').doc(invoice.clientId).get();
+                    if (clientDoc.exists) {
+                        client = clientDoc.data();
+                    }
+                }
+
+                // Load establishments
+                let establishments = [];
+                if (invoice.establishments && invoice.establishments.length > 0) {
+                    const establishmentPromises = invoice.establishments.map(estId => 
+                        db.collection('establishments').doc(estId).get()
+                    );
+                    const establishmentDocs = await Promise.all(establishmentPromises);
+                    establishments = establishmentDocs
+                        .filter(doc => doc.exists)
+                        .map(doc => ({ id: doc.id, ...doc.data() }));
+                }
+
+                // Display invoice data
+                displayInvoice(invoice, client, establishments);
+
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                document.body.innerHTML = '<div class="container mt-5"><div class="alert alert-danger">Error loading invoice</div></div>';
+            }
+        }
+
+        function displayInvoice(invoice, client, establishments) {
+            // Basic invoice info
+            document.getElementById('invoice-number').textContent = invoice.invoiceNumber || 'N/A';
+            document.getElementById('invoice-date').textContent = formatDate(invoice.issueDate);
+            document.getElementById('due-date').textContent = formatDate(invoice.dueDate);
+            
+            // Status
+            const statusElement = document.getElementById('invoice-status');
+            statusElement.textContent = (invoice.status || 'draft').toUpperCase();
+            statusElement.className = `status-badge status-${invoice.status || 'draft'}`;
+
+            // Client information
+            if (client) {
+                document.getElementById('client-name').textContent = client.companyName || 'N/A';
+                document.getElementById('client-contact').textContent = client.contactPerson || '';
+                document.getElementById('client-email').textContent = client.email || '';
+                document.getElementById('client-phone').textContent = client.phone || '';
+                document.getElementById('client-address').innerHTML = (client.address || '').replace(/\n/g, '<br>');
+            } else {
+                // Fallback to invoice client data
+                document.getElementById('client-name').textContent = invoice.clientName || 'N/A';
+                document.getElementById('client-contact').textContent = '';
+                document.getElementById('client-email').textContent = invoice.clientEmail || '';
+                document.getElementById('client-phone').textContent = '';
+                document.getElementById('client-address').textContent = '';
+            }
+
+            // Establishments
+            const establishmentsContainer = document.getElementById('establishments-list');
+            if (establishments.length > 0) {
+                establishmentsContainer.innerHTML = establishments.map(est => 
+                    `<span class="establishment-badge">${est.name} - ${est.location}</span>`
+                ).join('');
+            } else {
+                establishmentsContainer.innerHTML = '<span class="text-muted">No establishments specified</span>';
+            }
+
+            // Invoice items
+            const itemsContainer = document.getElementById('invoice-items');
+            if (invoice.items && invoice.items.length > 0) {
+                itemsContainer.innerHTML = invoice.items.map(item => `
+                    <tr>
+                        <td>${item.description}</td>
+                        <td class="text-center">${item.quantity}</td>
+                        <td class="text-end">${formatCurrency(item.rate)}</td>
+                        <td class="text-end">${formatCurrency(item.total)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                itemsContainer.innerHTML = '<tr><td colspan="4" class="text-center">No items</td></tr>';
+            }
+
+            // Totals
+            document.getElementById('subtotal').textContent = formatCurrency(invoice.subtotal);
+            document.getElementById('tax-rate').textContent = (invoice.taxRate || 0).toFixed(2);
+            document.getElementById('tax-amount').textContent = formatCurrency(invoice.taxAmount);
+            document.getElementById('total-amount').textContent = formatCurrency(invoice.totalAmount);
+
+            // Update page title
+            document.title = `KRCKA Invoice ${invoice.invoiceNumber}`;
+        }
+
+        // Load invoice when page loads
+        document.addEventListener('DOMContentLoaded', loadInvoice);
+    </script>
+</body>
+</html>

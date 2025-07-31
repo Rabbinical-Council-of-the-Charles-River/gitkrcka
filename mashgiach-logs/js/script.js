@@ -32,6 +32,7 @@ async function addMashgiachLog(logData) {
             dateTime: firebase.firestore.FieldValue.serverTimestamp(), // Server timestamp
             description: logData.description,
             timeSpent: logData.timeSpent,
+            billingStatus: 'unbilled', // Default billing status
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt : firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -55,7 +56,7 @@ async function displayMashgiachLogs() {
         // Get the logs from the "mashgiach-logs" collection
         const querySnapshot = await mashgiachLogRef.orderBy('dateTime', 'desc').get();
         if (querySnapshot.empty) {
-            $('#mashgiach-log-table tbody').append('<tr><td colspan="6">No logs found.</td></tr>');
+            $('#mashgiach-log-table tbody').append('<tr><td colspan="8">No logs found.</td></tr>');
             return;
         }
 
@@ -63,14 +64,29 @@ async function displayMashgiachLogs() {
         querySnapshot.forEach(doc => {
             const log = doc.data();
             const formattedDate = log.dateTime ? log.dateTime.toDate().toLocaleString() : 'N/A'; // Format timestamp
+            const billingStatus = log.billingStatus || 'unbilled';
+            const timeInHours = Math.floor(log.timeSpent / 60);
+            const timeInMinutes = log.timeSpent % 60;
+            const timeDisplay = timeInHours > 0 ? `${timeInHours}h ${timeInMinutes}m` : `${timeInMinutes}m`;
+            
+            // Determine if checkbox should be disabled (for billed items)
+            const checkboxDisabled = billingStatus === 'billed' ? 'disabled' : '';
+            const rowClass = billingStatus === 'billed' ? 'table-secondary' : '';
 
             const logEntry = `
-                <tr data-id="${doc.id}">
+                <tr data-id="${doc.id}" class="${rowClass}">
+                    <td class="select-checkbox-cell">
+                        <input type="checkbox" class="log-select-checkbox" value="${doc.id}" 
+                               data-time-spent="${log.timeSpent}" ${checkboxDisabled}>
+                    </td>
                     <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
                     <td>${log.venue}</td>
                     <td>${formattedDate}</td>
                     <td>${log.description}</td>
-                    <td>${log.timeSpent}</td>
+                    <td>${timeDisplay} (${log.timeSpent} min)</td>
+                    <td>
+                        <span class="badge status-${billingStatus}">${billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}</span>
+                    </td>
                     <td>
                         <a href="#" id="${doc.id}" class="edit js-edit-log"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i></a>
                         <a href="#" id="${doc.id}" class="delete js-delete-log"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i></a>
@@ -83,6 +99,12 @@ async function displayMashgiachLogs() {
 
         // Re-initialize tooltips
         $('[data-toggle="tooltip"]').tooltip();
+        
+        // Update selected time display
+        updateSelectedTime();
+        
+        // Show/hide admin functionality based on user role
+        updateAdminUI();
     } catch (error) {
         console.error("Error fetching Mashgiach logs: ", error);
     }
@@ -121,6 +143,7 @@ $(document).on('click', '.js-edit-log', async function (e) {
             $('#edit-log-form #edit-log-venue').val(logData.venue);
             $('#edit-log-form #edit-log-description').val(logData.description);
             $('#edit-log-form #edit-log-time-spent').val(logData.timeSpent);
+            $('#edit-log-form #edit-billing-status').val(logData.billingStatus || 'unbilled');
             $('#editLogModal').modal('show');
         } else {
             console.log("No such document!");
@@ -136,12 +159,14 @@ $("#edit-log-form").submit(async function (event) {
     const venue = $('#edit-log-form #edit-log-venue').val();
     const description = $('#edit-log-form #edit-log-description').val();
     const timeSpent = $('#edit-log-form #edit-log-time-spent').val();
+    const billingStatus = $('#edit-log-form #edit-billing-status').val();
 
     try {
         await mashgiachLogRef.doc(id).update({
             venue: venue,
             description: description,
             timeSpent: timeSpent,
+            billingStatus: billingStatus,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
@@ -239,17 +264,165 @@ netlifyIdentity.on('logout', () => {
 netlifyIdentity.on('init', user => {
     if (user) {
         console.log('User is already logged in:', user);
-        if (user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
+        if (user.app_metadata && user.app_metadata.roles && (user.app_metadata.roles.includes('admin') || user.app_metadata.roles.includes('mashgiach'))) {
             loginSection.classList.add('hidden');
-            adminContent.classList.remove('hidden');
+            document.getElementById('logs-content').classList.remove('hidden');
+            updateAdminUI();
         } else {
-            showMessage('error', 'Admin access required.');
+            showMessage('error', 'Access required.');
             loginSection.classList.remove('hidden');
-            adminContent.classList.add('hidden');
+            document.getElementById('logs-content').classList.add('hidden');
         }
     } else {
         console.log('No user logged in.');
         loginSection.classList.remove('hidden');
-        adminContent.classList.add('hidden');
+        document.getElementById('logs-content').classList.add('hidden');
     }
+});
+
+// Function to update admin UI visibility
+function updateAdminUI() {
+    const user = window.netlifyIdentity.currentUser();
+    const isAdmin = user && user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin');
+    
+    // Show/hide admin-only functionality
+    const adminElements = document.querySelectorAll('.admin-only-func');
+    adminElements.forEach(element => {
+        if (isAdmin) {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    });
+    
+    // Show/hide admin-only fields
+    const adminFields = document.querySelectorAll('.admin-only-field');
+    adminFields.forEach(field => {
+        if (isAdmin) {
+            field.style.display = 'block';
+        } else {
+            field.style.display = 'none';
+        }
+    });
+    
+    // Show/hide select all checkbox and individual checkboxes for non-admins
+    const selectAllCheckbox = document.getElementById('select-all-logs');
+    const logCheckboxes = document.querySelectorAll('.log-select-checkbox');
+    
+    if (!isAdmin) {
+        if (selectAllCheckbox) selectAllCheckbox.style.display = 'none';
+        logCheckboxes.forEach(checkbox => {
+            checkbox.style.display = 'none';
+        });
+    } else {
+        if (selectAllCheckbox) selectAllCheckbox.style.display = 'block';
+        logCheckboxes.forEach(checkbox => {
+            checkbox.style.display = 'block';
+        });
+    }
+}
+
+// Function to update selected time display
+function updateSelectedTime() {
+    let totalMinutes = 0;
+    const selectedCheckboxes = document.querySelectorAll('.log-select-checkbox:checked');
+    
+    selectedCheckboxes.forEach(checkbox => {
+        const timeSpent = parseInt(checkbox.getAttribute('data-time-spent')) || 0;
+        totalMinutes += timeSpent;
+    });
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    const timeDisplay = hours > 0 ? `${hours} hours ${minutes} minutes` : `${minutes} minutes`;
+    const timeElement = document.getElementById('selected-total-time');
+    if (timeElement) {
+        timeElement.textContent = timeDisplay;
+    }
+    
+    // Show/hide the "Add Selected to Invoice" button
+    const addToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
+    if (addToInvoiceBtn) {
+        if (selectedCheckboxes.length > 0) {
+            addToInvoiceBtn.style.display = 'inline-block';
+        } else {
+            addToInvoiceBtn.style.display = 'none';
+        }
+    }
+}
+
+// Event listeners for checkbox changes
+$(document).on('change', '.log-select-checkbox', function() {
+    updateSelectedTime();
+});
+
+// Select all functionality
+$(document).on('change', '#select-all-logs', function() {
+    const isChecked = $(this).is(':checked');
+    $('.log-select-checkbox:not(:disabled)').prop('checked', isChecked);
+    updateSelectedTime();
+});
+
+// Add selected logs to invoice functionality
+$(document).on('click', '#add-selected-to-invoice-btn', function(e) {
+    e.preventDefault();
+    
+    const selectedCheckboxes = document.querySelectorAll('.log-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one log entry to add to invoice.');
+        return;
+    }
+    
+    // Collect selected log data
+    const selectedLogs = [];
+    let totalMinutes = 0;
+    
+    selectedCheckboxes.forEach(checkbox => {
+        const logId = checkbox.value;
+        const timeSpent = parseInt(checkbox.getAttribute('data-time-spent')) || 0;
+        const row = checkbox.closest('tr');
+        const mashgiach = row.cells[1].textContent;
+        const venue = row.cells[2].textContent;
+        const description = row.cells[4].textContent;
+        
+        selectedLogs.push({
+            id: logId,
+            mashgiach: mashgiach,
+            venue: venue,
+            description: description,
+            timeSpent: timeSpent
+        });
+        
+        totalMinutes += timeSpent;
+    });
+    
+    // Store selected logs in sessionStorage for the CRM system
+    sessionStorage.setItem('selectedMashgiachLogs', JSON.stringify(selectedLogs));
+    sessionStorage.setItem('mashgiachLogsTotalTime', totalMinutes.toString());
+    
+    // Open CRM invoice creation with pre-populated data
+    const crmUrl = '../crm/index.html?tab=billing&action=create&source=mashgiach-logs';
+    window.open(crmUrl, '_blank');
+});
+
+// Update login event handlers
+netlifyIdentity.on('login', user => {
+    console.log('Login event triggered:', user);
+    if (user && user.app_metadata && user.app_metadata.roles && (user.app_metadata.roles.includes('admin') || user.app_metadata.roles.includes('mashgiach'))) {
+        loginSection.classList.add('hidden');
+        document.getElementById('logs-content').classList.remove('hidden');
+        displayMashgiachLogs(); // Refresh logs after login
+    } else {
+        showMessage('error', 'Access required.');
+        loginSection.classList.remove('hidden');
+        document.getElementById('logs-content').classList.add('hidden');
+    }
+});
+
+netlifyIdentity.on('logout', () => {
+    console.log('Logout event triggered');
+    loginSection.classList.remove('hidden');
+    document.getElementById('logs-content').classList.add('hidden');
+    clearMessage();
 });
