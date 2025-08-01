@@ -578,24 +578,18 @@ async function handleEditClient(e) {
 function populateClientEstablishments(clientId) {
     const client = clients.find(c => c.id === clientId);
     const container = document.getElementById('add-invoice-establishments');
-    
-    // Always clear previous establishments first
-    container.innerHTML = ''; 
+    container.innerHTML = '';
 
     if (!client || !client.establishments || client.establishments.length === 0) {
         container.innerHTML = '<p class="text-muted">No establishments assigned to this client.</p>';
-        console.log(`Client ${clientId} has no establishments assigned.`); // Debugging
         return;
     }
 
-    console.log(`Populating establishments for client: ${client.companyName}`); // Debugging
     client.establishments.forEach(estId => {
         const est = establishments.find(e => e.id === estId);
         if (est) {
             const div = document.createElement('div');
             div.className = 'form-check';
-            // FIX: Removed 'checked' attribute here. Checkboxes should be unchecked by default
-            // when populating for a new invoice. They will be checked explicitly in editInvoice.
             div.innerHTML = `
                 <input class="form-check-input" type="checkbox" value="${est.id}" id="est-${est.id}">
                 <label class="form-check-label" for="est-${est.id}">
@@ -603,8 +597,6 @@ function populateClientEstablishments(clientId) {
                 </label>
             `;
             container.appendChild(div);
-        } else {
-            console.warn(`Establishment with ID ${estId} not found.`); // Debugging for missing establishments
         }
     });
 }
@@ -1164,4 +1156,36 @@ async function markLogsAsBilled(logIds) {
     } catch (error) {
         console.error('Error marking logs as billed:', error);
     }
+}
+
+function filterClients() {
+    const searchTerm = document.getElementById('client-search').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+    const establishmentFilter = document.getElementById('establishment-filter').value;
+    
+    let filteredClients = clients;
+    
+    if (searchTerm) {
+        filteredClients = filteredClients.filter(client => 
+            client.companyName.toLowerCase().includes(searchTerm) ||
+            client.contactPerson.toLowerCase().includes(searchTerm) ||
+            client.email.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (statusFilter) {
+        filteredClients = filteredClients.filter(client => client.status === statusFilter);
+    }
+    
+    if (establishmentFilter) {
+        filteredClients = filteredClients.filter(client => 
+            client.establishments && client.establishments.includes(establishmentFilter)
+        );
+    }
+    
+    // Temporarily update clients array for display
+    const originalClients = clients;
+    clients = filteredClients;
+    displayClients();
+    clients = originalClients;
 }
