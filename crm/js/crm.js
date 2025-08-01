@@ -859,7 +859,6 @@ async function editInvoice(invoiceId) {
     // Populate establishments
     if (invoice.clientId) {
         populateClientEstablishments(invoice.clientId);
-        // Wait a bit for establishments to populate, then select the ones from invoice
         setTimeout(() => {
             if (invoice.establishments) {
                 invoice.establishments.forEach(estId => {
@@ -995,7 +994,7 @@ async function handleAddInvoice(e) {
         
         // Reset form and close modal
         resetInvoiceForm();
-        bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide(); // Close the modal here
         
         // Reload data
         await loadInvoices();
