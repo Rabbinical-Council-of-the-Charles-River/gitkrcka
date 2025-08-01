@@ -31,6 +31,7 @@ const crmContent = document.getElementById('crm-content');
 const netlifyLoginButton = document.getElementById('netlify-login-button');
 const logoutButton = document.getElementById('logout-button');
 const messageDiv = document.getElementById('message');
+const addInvoiceModalElement = document.getElementById('addInvoiceModal'); // Get modal element once
 
 // Initialize Netlify Identity
 const netlifyIdentity = window.netlifyIdentity;
@@ -90,11 +91,12 @@ function updateUI(user) {
     const isAdmin = user && user.app_metadata && user.app_metadata.roles && 
                    (user.app_metadata.roles.includes('admin') || user.app_metadata.roles.includes('manager'));
 
+    console.log('updateUI called with user:', user, 'isAdmin:', isAdmin); // Debugging
     if (user && isAdmin) {
         loginSection.classList.add('hidden');
         crmContent.classList.remove('hidden');
         clearMessage();
-        initializeCRM();
+        initializeCRM(); // Initialize CRM only for admins
     } else if (user) {
         showMessage('error', 'Admin access required for CRM system.');
         loginSection.classList.remove('hidden');
@@ -138,13 +140,15 @@ netlifyIdentity.on('init', user => {
 
 // CRM Initialization
 async function initializeCRM() {
+    console.log('Initializing CRM...'); // Debugging
     try {
         await loadEstablishments();
-        await loadClients();
+        await loadClients(); // Ensure clients are loaded BEFORE dropdowns are populated
         await loadInvoices();
         updateQuickStats();
-        setupEventListeners();
         populateDropdowns();
+        setupEventListeners();
+        console.log('CRM initialized successfully.'); // Debugging
     } catch (error) {
         console.error('Error initializing CRM:', error);
         showMessage('error', 'Failed to initialize CRM system.');
@@ -162,9 +166,10 @@ async function loadEstablishments() {
                 ...doc.data()
             });
         });
-        console.log('Loaded establishments:', establishments.length);
+        console.log('Loaded establishments:', establishments.length, establishments); // Debugging
     } catch (error) {
         console.error('Error loading establishments:', error);
+        showMessage('error', 'Failed to load establishments.'); // User feedback
     }
 }
 
@@ -178,10 +183,11 @@ async function loadClients() {
                 ...doc.data()
             });
         });
-        displayClients();
-        console.log('Loaded clients:', clients.length);
+        console.log('Loaded clients:', clients.length, clients); // Debugging: Check if clients array has data
+        displayClients(); // Display clients in table
     } catch (error) {
         console.error('Error loading clients:', error);
+        showMessage('error', 'Failed to load clients.'); // User feedback
     }
 }
 
@@ -195,10 +201,11 @@ async function loadInvoices() {
                 ...doc.data()
             });
         });
-        displayInvoices();
-        console.log('Loaded invoices:', invoices.length);
+        console.log('Loaded invoices:', invoices.length); // Debugging
+        displayInvoices(); // Display invoices in table
     } catch (error) {
         console.error('Error loading invoices:', error);
+        showMessage('error', 'Failed to load invoices.'); // User feedback
     }
 }
 
@@ -379,11 +386,13 @@ function removeEstablishmentSelection(mode, estId) {
 
 // Populate Dropdowns
 function populateDropdowns() {
+    console.log('populateDropdowns called. Clients available:', clients.length); // Debugging: Confirm clients array size
     // Populate establishment filter
     const establishmentFilter = document.getElementById('establishment-filter');
     if (establishmentFilter) {
         establishmentFilter.innerHTML = '<option value="">All Establishments</option>' +
             establishments.map(est => `<option value="${est.id}">${est.name}</option>`).join('');
+        console.log('Establishment filter populated.'); // Debugging
     }
 
     // Populate client dropdowns
@@ -391,10 +400,14 @@ function populateDropdowns() {
     clientSelects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (select) {
+            console.log(`Populating client select: ${selectId}`); // Debugging
             const currentValue = select.value;
             select.innerHTML = '<option value="">Choose a client...</option>' +
                 clients.map(client => `<option value="${client.id}">${client.companyName}</option>`).join('');
-            if (currentValue) select.value = currentValue;
+            if (currentValue) select.value = currentValue; // Retain selection if applicable
+            console.log(`Client select ${selectId} populated with ${clients.length} options.`); // Debugging
+        } else {
+            console.warn(`Client select element not found: ${selectId}`); // Debugging: Important for missing elements
         }
     });
 }
@@ -424,6 +437,8 @@ function setupEventListeners() {
     document.getElementById('add-invoice-client').addEventListener('change', function() {
         const clientId = this.value;
         if (clientId) {
+            // Debugging: Check if this is being called
+            console.log('Client selected:', clientId); 
             populateClientEstablishments(clientId);
             const client = clients.find(c => c.id === clientId);
             if (client && client.billingTerms) {
@@ -432,6 +447,15 @@ function setupEventListeners() {
                 dueDate.setDate(dueDate.getDate() + client.billingTerms);
                 document.getElementById('add-invoice-due-date').value = dueDate.toISOString().split('T')[0];
             }
+        } else {
+            // Clear establishments if "Choose a client..." is selected
+            document.getElementById('add-invoice-establishments').innerHTML = '';
+            // Reset due date if client is unselected
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('add-invoice-issue-date').value = today;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('add-invoice-due-date').value = dueDate.toISOString().split('T')[0];
         }
     });
 
@@ -555,22 +579,34 @@ function populateClientEstablishments(clientId) {
     const client = clients.find(c => c.id === clientId);
     const container = document.getElementById('add-invoice-establishments');
     
+    // Always clear previous establishments first
+    container.innerHTML = ''; 
+
     if (!client || !client.establishments || client.establishments.length === 0) {
         container.innerHTML = '<p class="text-muted">No establishments assigned to this client.</p>';
+        console.log(`Client ${clientId} has no establishments assigned.`); // Debugging
         return;
     }
 
-    container.innerHTML = client.establishments.map(estId => {
+    console.log(`Populating establishments for client: ${client.companyName}`); // Debugging
+    client.establishments.forEach(estId => {
         const est = establishments.find(e => e.id === estId);
-        return est ? `
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="${estId}" id="est-${estId}" checked>
-                <label class="form-check-label" for="est-${estId}">
+        if (est) {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            // FIX: Removed 'checked' attribute here. Checkboxes should be unchecked by default
+            // when populating for a new invoice. They will be checked explicitly in editInvoice.
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${est.id}" id="est-${est.id}">
+                <label class="form-check-label" for="est-${est.id}">
                     ${est.name} - ${est.location}
                 </label>
-            </div>
-        ` : '';
-    }).join('');
+            `;
+            container.appendChild(div);
+        } else {
+            console.warn(`Establishment with ID ${estId} not found.`); // Debugging for missing establishments
+        }
+    });
 }
 
 function addInvoiceItem() {
@@ -597,6 +633,12 @@ function addInvoiceItem() {
         </div>
     `;
     container.appendChild(itemRow);
+
+    // Attach input listeners for real-time calculation
+    itemRow.querySelector('.item-quantity').addEventListener('input', calculateInvoiceTotal);
+    itemRow.querySelector('.item-rate').addEventListener('input', calculateInvoiceTotal);
+
+    calculateInvoiceTotal();
 }
 
 function removeInvoiceItem(button) {
@@ -625,301 +667,6 @@ function calculateInvoiceTotal() {
     document.getElementById('add-invoice-total').textContent = formatCurrency(total);
 }
 
-async function handleAddInvoice(e) {
-    e.preventDefault();
-    
-    const clientId = document.getElementById('add-invoice-client').value;
-    const selectedEstablishments = Array.from(document.querySelectorAll('#add-invoice-establishments input:checked'))
-        .map(cb => cb.value);
-    
-    // Collect invoice items
-    const items = [];
-    document.querySelectorAll('.invoice-item-row').forEach(row => {
-        const description = row.querySelector('.item-description').value;
-        const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
-        const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
-        
-        if (description && quantity > 0 && rate >= 0) {
-            items.push({
-                description,
-                quantity,
-                rate,
-                total: quantity * rate
-            });
-        }
-    });
-    
-    if (items.length === 0) {
-        showMessage('error', 'Please add at least one invoice item.');
-        return;
-    }
-    
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const taxRate = parseFloat(document.getElementById('add-invoice-tax-rate').value) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const totalAmount = subtotal + taxAmount;
-    
-    const invoiceData = {
-        invoiceNumber: document.getElementById('add-invoice-number').value,
-        clientId: clientId,
-        clientEmail: clients.find(c => c.id === clientId)?.email,
-        establishments: selectedEstablishments,
-        issueDate: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById('add-invoice-issue-date').value)),
-        dueDate: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById('add-invoice-due-date').value)),
-        status: document.getElementById('add-invoice-status').value,
-        items: items,
-        subtotal: subtotal,
-        taxRate: taxRate,
-        taxAmount: taxAmount,
-        totalAmount: totalAmount,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdBy: currentUser.email
-    };
-
-    try {
-        await db.collection('invoices').add(invoiceData);
-        showMessage('success', 'Invoice created successfully!');
-        
-        // Reset form and close modal
-        document.getElementById('add-invoice-form').reset();
-        document.getElementById('add-invoice-items').innerHTML = `
-            <div class="row mb-2 invoice-item-row">
-                <div class="col-md-4">
-                    <input type="text" class="form-control item-description" placeholder="Description">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" min="1">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0">
-                </div>
-                <div class="col-md-2">
-                    <input type="text" class="form-control item-total" placeholder="Total" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-item">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-        calculateInvoiceTotal();
-        bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide();
-        
-        // Reload data
-        await loadInvoices();
-        updateQuickStats();
-    } catch (error) {
-        console.error('Error creating invoice:', error);
-        showMessage('error', 'Failed to create invoice. Please try again.');
-    }
-}
-
-// Filter Functions
-function filterClients() {
-    const searchTerm = document.getElementById('client-search').value.toLowerCase();
-    const statusFilter = document.getElementById('status-filter').value;
-    const establishmentFilter = document.getElementById('establishment-filter').value;
-    
-    let filteredClients = clients;
-    
-    if (searchTerm) {
-        filteredClients = filteredClients.filter(client => 
-            client.companyName.toLowerCase().includes(searchTerm) ||
-            client.contactPerson.toLowerCase().includes(searchTerm) ||
-            client.email.toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    if (statusFilter) {
-        filteredClients = filteredClients.filter(client => client.status === statusFilter);
-    }
-    
-    if (establishmentFilter) {
-        filteredClients = filteredClients.filter(client => 
-            client.establishments && client.establishments.includes(establishmentFilter)
-        );
-    }
-    
-    // Temporarily update clients array for display
-    const originalClients = clients;
-    clients = filteredClients;
-    displayClients();
-    clients = originalClients;
-}
-
-function filterInvoices() {
-    const clientFilter = document.getElementById('invoice-client-filter').value;
-    const statusFilter = document.getElementById('invoice-status-filter').value;
-    const dateFrom = document.getElementById('invoice-date-from').value;
-    const dateTo = document.getElementById('invoice-date-to').value;
-    
-    let filteredInvoices = invoices;
-    
-    if (clientFilter) {
-        filteredInvoices = filteredInvoices.filter(invoice => invoice.clientId === clientFilter);
-    }
-    
-    if (statusFilter) {
-        filteredInvoices = filteredInvoices.filter(invoice => invoice.status === statusFilter);
-    }
-    
-    if (dateFrom) {
-        const fromDate = new Date(dateFrom);
-        filteredInvoices = filteredInvoices.filter(invoice => {
-            const invoiceDate = invoice.issueDate.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate);
-            return invoiceDate >= fromDate;
-        });
-    }
-    
-    if (dateTo) {
-        const toDate = new Date(dateTo);
-        filteredInvoices = filteredInvoices.filter(invoice => {
-            const invoiceDate = invoice.issueDate.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate);
-            return invoiceDate <= toDate;
-        });
-    }
-    
-    // Temporarily update invoices array for display
-    const originalInvoices = invoices;
-    invoices = filteredInvoices;
-    displayInvoices();
-    invoices = originalInvoices;
-}
-
-// Client Deletion Function
-async function deleteClient(clientId) {
-    const client = clients.find(c => c.id === clientId);
-    if (!client) return;
-
-    // Check if client has invoices
-    const clientInvoices = invoices.filter(inv => inv.clientId === clientId);
-    
-    let confirmMessage = `Are you sure you want to delete "${client.companyName}"?`;
-    if (clientInvoices.length > 0) {
-        confirmMessage += `\n\nWarning: This client has ${clientInvoices.length} associated invoice(s). Deleting the client will not delete the invoices, but they will lose their client reference.`;
-    }
-    
-    if (!confirm(confirmMessage)) return;
-
-    try {
-        await db.collection('clients').doc(clientId).delete();
-        showMessage('success', 'Client deleted successfully!');
-        
-        // Reload data
-        await loadClients();
-        updateQuickStats();
-        populateDropdowns();
-        
-        log(`Client deleted: ${client.companyName}`);
-    } catch (error) {
-        console.error('Error deleting client:', error);
-        showMessage('error', 'Failed to delete client. Please try again.');
-    }
-}
-
-// Invoice Deletion Function
-async function deleteInvoice(invoiceId) {
-    const invoice = invoices.find(inv => inv.id === invoiceId);
-    if (!invoice) return;
-
-    if (!confirm(`Are you sure you want to delete invoice "${invoice.invoiceNumber}"?\n\nThis action cannot be undone.`)) return;
-
-    try {
-        await db.collection('invoices').doc(invoiceId).delete();
-        showMessage('success', 'Invoice deleted successfully!');
-        
-        // Reload data
-        await loadInvoices();
-        updateQuickStats();
-        
-        log(`Invoice deleted: ${invoice.invoiceNumber}`);
-    } catch (error) {
-        console.error('Error deleting invoice:', error);
-        showMessage('error', 'Failed to delete invoice. Please try again.');
-    }
-}
-
-// Enhanced Invoice Editing Function
-async function editInvoice(invoiceId) {
-    const invoice = invoices.find(inv => inv.id === invoiceId);
-    if (!invoice) return;
-
-    // Populate edit invoice form (reuse add invoice modal)
-    document.getElementById('add-invoice-client').value = invoice.clientId || '';
-    document.getElementById('add-invoice-number').value = invoice.invoiceNumber || '';
-    document.getElementById('add-invoice-issue-date').value = invoice.issueDate ? 
-        (invoice.issueDate.toDate ? invoice.issueDate.toDate().toISOString().split('T')[0] : 
-         new Date(invoice.issueDate).toISOString().split('T')[0]) : '';
-    document.getElementById('add-invoice-due-date').value = invoice.dueDate ? 
-        (invoice.dueDate.toDate ? invoice.dueDate.toDate().toISOString().split('T')[0] : 
-         new Date(invoice.dueDate).toISOString().split('T')[0]) : '';
-    document.getElementById('add-invoice-status').value = invoice.status || 'draft';
-
-    // Populate establishments
-    if (invoice.clientId) {
-        populateClientEstablishments(invoice.clientId);
-        setTimeout(() => {
-            if (invoice.establishments) {
-                invoice.establishments.forEach(estId => {
-                    const checkbox = document.querySelector(`#add-invoice-establishments input[value="${estId}"]`);
-                    if (checkbox) checkbox.checked = true;
-                });
-            }
-        }, 100);
-    }
-
-    // Populate items
-    const itemsContainer = document.getElementById('add-invoice-items');
-    itemsContainer.innerHTML = '';
-    
-    if (invoice.items && invoice.items.length > 0) {
-        invoice.items.forEach(item => {
-            const itemRow = document.createElement('div');
-            itemRow.className = 'row mb-2 invoice-item-row';
-            itemRow.innerHTML = `
-                <div class="col-md-4">
-                    <input type="text" class="form-control item-description" placeholder="Description" value="${item.description || ''}">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity || 1}" min="1">
-                </div>
-                <div class="col-md-2">
-                    <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0" value="${item.rate || 0}">
-                </div>
-                <div class="col-md-2">
-                    <input type="text" class="form-control item-total" placeholder="Total" readonly value="${formatCurrency(item.total || 0)}">
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-item" onclick="removeInvoiceItem(this)">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            `;
-            itemsContainer.appendChild(itemRow);
-        });
-    } else {
-        // Add default empty row
-        addInvoiceItem();
-    }
-
-    // Set tax rate and calculate totals
-    document.getElementById('add-invoice-tax-rate').value = invoice.taxRate || 0;
-    calculateInvoiceTotal();
-
-    // Change modal title and button text for editing
-    document.getElementById('addInvoiceModalLabel').textContent = 'Edit Invoice';
-    const submitButton = document.querySelector('#add-invoice-form button[type="submit"]');
-    submitButton.textContent = 'Update Invoice';
-    submitButton.className = 'btn btn-primary';
-
-    // Store invoice ID for update
-    document.getElementById('add-invoice-form').setAttribute('data-invoice-id', invoiceId);
-
-    new bootstrap.Modal(document.getElementById('addInvoiceModal')).show();
-}
-
-// Update handleAddInvoice to handle both create and update
 async function handleAddInvoice(e) {
     e.preventDefault();
     
@@ -985,16 +732,16 @@ async function handleAddInvoice(e) {
         if (isEditing) {
             await db.collection('invoices').doc(invoiceId).update(invoiceData);
             showMessage('success', 'Invoice updated successfully!');
-            log(`Invoice updated: ${invoiceData.invoiceNumber}`);
+            console.log(`Invoice updated: ${invoiceData.invoiceNumber}`); // Changed to console.log as 'log' is not defined
         } else {
             await db.collection('invoices').add(invoiceData);
             showMessage('success', 'Invoice created successfully!');
-            log(`Invoice created: ${invoiceData.invoiceNumber}`);
+            console.log(`Invoice created: ${invoiceData.invoiceNumber}`); // Changed to console.log as 'log' is not defined
         }
         
         // Reset form and close modal
         resetInvoiceForm();
-        bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide(); // Close the modal here
+        bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide();
         
         // Reload data
         await loadInvoices();
@@ -1014,7 +761,7 @@ function resetInvoiceForm() {
     submitButton.textContent = 'Create Invoice';
     submitButton.className = 'btn btn-success';
     
-    // Reset items container
+    // Reset items container to a single empty row
     document.getElementById('add-invoice-items').innerHTML = `
         <div class="row mb-2 invoice-item-row">
             <div class="col-md-4">
@@ -1039,58 +786,127 @@ function resetInvoiceForm() {
     
     calculateInvoiceTotal();
     
-    // Set default values
+    // Set default values for new invoice
     document.getElementById('add-invoice-number').value = generateInvoiceNumber();
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('add-invoice-issue-date').value = today;
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
     document.getElementById('add-invoice-due-date').value = dueDate.toISOString().split('T')[0];
+    document.getElementById('add-invoice-status').value = 'draft'; // Ensure status defaults
+    document.getElementById('add-invoice-client').value = ''; // Ensure client dropdown resets
+    document.getElementById('add-invoice-establishments').innerHTML = ''; // Clear client establishments
+    document.getElementById('add-invoice-tax-rate').value = '0'; // Reset tax rate
 }
 
-// Additional Action Functions
-function viewClientDetails(clientId) {
-    const client = clients.find(c => c.id === clientId);
-    if (!client) return;
-    
-    const clientInvoices = invoices.filter(inv => inv.clientId === clientId);
-    const totalInvoiced = clientInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-    const pendingAmount = clientInvoices
-        .filter(inv => inv.status === 'sent' || inv.status === 'overdue')
-        .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-    
-    const establishmentNames = client.establishments ? 
-        client.establishments.map(estId => {
-            const est = establishments.find(e => e.id === estId);
-            return est ? est.name : 'Unknown';
-        }).join(', ') : 'None assigned';
-    
-    const details = `
-Client Details:
+// Event listener for the "Create Invoice" button
+document.addEventListener('DOMContentLoaded', function() {
+    const createNewInvoiceButton = document.getElementById('create-new-invoice-btn');
+    if (createNewInvoiceButton) {
+        createNewInvoiceButton.addEventListener('click', function() {
+            resetInvoiceForm(); // Reset the form explicitly when the button is clicked
+            // Bootstrap's data-bs-toggle="modal" handles showing the modal,
+            // so we don't need new bootstrap.Modal().show() here for this button.
+            // If the button didn't have data-bs-toggle, we would.
+        });
+    }
+});
 
-Company: ${client.companyName}
-Contact: ${client.contactPerson}
-Email: ${client.email}
-Phone: ${client.phone || 'N/A'}
-Status: ${client.status}
-Billing Terms: ${client.billingTerms} days
+// Event listener for modal hidden event - IMPORTANT for clearing state after edit/close
+document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function () {
+    resetInvoiceForm(); // Reset the form when the modal is closed (e.g., via X button or clicking outside)
+});
 
-Establishments: ${establishmentNames}
+// Enhanced Invoice Editing Function
+async function editInvoice(invoiceId) {
+    // It's important NOT to call resetInvoiceForm() here as we want to populate with existing data
+    // However, we should still clear itemsContainer before populating
+    const invoice = invoices.find(inv => inv.id === invoiceId);
+    if (!invoice) return;
 
-Financial Summary:
-• Total Invoices: ${clientInvoices.length}
-• Total Invoiced: ${formatCurrency(totalInvoiced)}
-• Pending Payments: ${formatCurrency(pendingAmount)}
+    // Populate edit invoice form (reuse add invoice modal)
+    document.getElementById('add-invoice-client').value = invoice.clientId || '';
+    document.getElementById('add-invoice-number').value = invoice.invoiceNumber || '';
+    document.getElementById('add-invoice-issue-date').value = invoice.issueDate ? 
+        (invoice.issueDate.toDate ? invoice.issueDate.toDate().toISOString().split('T')[0] : 
+         new Date(invoice.issueDate).toISOString().split('T')[0]) : '';
+    document.getElementById('add-invoice-due-date').value = invoice.dueDate ? 
+        (invoice.dueDate.toDate ? invoice.dueDate.toDate().toISOString().split('T')[0] : 
+         new Date(invoice.dueDate).toISOString().split('T')[0]) : '';
+    document.getElementById('add-invoice-status').value = invoice.status || 'draft';
 
-Notes: ${client.notes || 'None'}
-    `;
-    
-    alert(details);
+    // Populate establishments related to the client, then mark invoice-specific ones
+    if (invoice.clientId) {
+        populateClientEstablishments(invoice.clientId);
+        // This timeout ensures DOM is updated before trying to check checkboxes
+        // This is where establishments from the specific invoice are marked 'checked'
+        setTimeout(() => {
+            if (invoice.establishments) {
+                invoice.establishments.forEach(estId => {
+                    const checkbox = document.querySelector(`#add-invoice-establishments input[value="${estId}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log(`Checked establishment: ${estId}`); // Debugging
+                    } else {
+                        console.warn(`Checkbox for establishment ID ${estId} not found during edit.`); // Debugging
+                    }
+                });
+            }
+        }, 100); // Small delay to ensure DOM update
+    }
+
+    // Populate items
+    const itemsContainer = document.getElementById('add-invoice-items');
+    itemsContainer.innerHTML = ''; // Clear existing items BEFORE populating with invoice items
+
+    if (invoice.items && invoice.items.length > 0) {
+        invoice.items.forEach(item => {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'row mb-2 invoice-item-row';
+            itemRow.innerHTML = `
+                <div class="col-md-4">
+                    <input type="text" class="form-control item-description" placeholder="Description" value="${item.description || ''}">
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity || 1}" min="1">
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0" value="${item.rate || 0}">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control item-total" placeholder="Total" readonly value="${formatCurrency(item.total || 0)}">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-item" onclick="removeInvoiceItem(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            itemsContainer.appendChild(itemRow);
+        });
+    } else {
+        addInvoiceItem(); // Add a default empty row if no items in the invoice
+    }
+
+    // Set tax rate and calculate totals
+    document.getElementById('add-invoice-tax-rate').value = invoice.taxRate || 0;
+    calculateInvoiceTotal();
+
+    // Change modal title and button text for editing
+    document.getElementById('addInvoiceModalLabel').textContent = 'Edit Invoice';
+    const submitButton = document.querySelector('#add-invoice-form button[type="submit"]');
+    submitButton.textContent = 'Update Invoice';
+    submitButton.className = 'btn btn-primary';
+
+    // Store invoice ID for update
+    document.getElementById('add-invoice-form').setAttribute('data-invoice-id', invoiceId);
+
+    new bootstrap.Modal(document.getElementById('addInvoiceModal')).show(); // Show the modal
 }
 
+// Function to call when "Create Invoice For Client" is clicked from client table
 function createInvoiceForClient(clientId) {
-    // Reset form first
-    resetInvoiceForm();
+    resetInvoiceForm(); // Reset form first for a clean slate
     
     // Pre-select the client in the invoice modal
     document.getElementById('add-invoice-client').value = clientId;
@@ -1182,6 +998,27 @@ function duplicateInvoice(invoiceId) {
     }, 100);
     
     new bootstrap.Modal(document.getElementById('addInvoiceModal')).show();
+}
+
+async function deleteInvoice(invoiceId) {
+    const invoice = invoices.find(inv => inv.id === invoiceId);
+    if (!invoice) return;
+
+    if (!confirm(`Are you sure you want to delete invoice "${invoice.invoiceNumber}"?\n\nThis action cannot be undone.`)) return;
+
+    try {
+        await db.collection('invoices').doc(invoiceId).delete();
+        showMessage('success', 'Invoice deleted successfully!');
+        
+        // Reload data
+        await loadInvoices();
+        updateQuickStats();
+        
+        console.log(`Invoice deleted: ${invoice.invoiceNumber}`);
+    } catch (error) {
+        console.error('Error deleting invoice:', error);
+        showMessage('error', 'Failed to delete invoice. Please try again.');
+    }
 }
 
 // Initialize when page loads
