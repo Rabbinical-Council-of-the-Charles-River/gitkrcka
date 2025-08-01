@@ -232,7 +232,7 @@ function displayClients() {
         return `
             <tr>
                 <td>
-                    <strong>${client.companyName}</strong><br>
+                    <strong><a href="client-overview.html?id=${client.id}" style="text-decoration:underline;cursor:pointer">${client.companyName}</a></strong><br>
                     <small class="text-muted">${client.contactPerson}</small>
                 </td>
                 <td>
@@ -247,7 +247,7 @@ function displayClients() {
                         <button class="btn btn-outline-primary btn-sm" onclick="editClient('${client.id}')">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-outline-info btn-sm" onclick="viewClientDetails('${client.id}')">
+                        <button class="btn btn-outline-info btn-sm" onclick="window.location='client-overview.html?id=${client.id}'">
                             <i class="bi bi-eye"></i>
                         </button>
                         <button class="btn btn-outline-success btn-sm" onclick="createInvoiceForClient('${client.id}')">
@@ -1010,6 +1010,26 @@ async function deleteInvoice(invoiceId) {
     } catch (error) {
         console.error('Error deleting invoice:', error);
         showMessage('error', 'Failed to delete invoice. Please try again.');
+    }
+}
+
+async function deleteClient(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    if (!confirm(`Are you sure you want to delete client "${client.companyName}"?\n\nThis action cannot be undone.`)) return;
+
+    try {
+        await db.collection('clients').doc(clientId).delete();
+        showMessage('success', 'Client deleted successfully!');
+
+        // Reload data
+        await loadClients();
+        updateQuickStats();
+        populateDropdowns();
+    } catch (error) {
+        console.error('Error deleting client:', error);
+        showMessage('error', 'Failed to delete client. Please try again.');
     }
 }
 

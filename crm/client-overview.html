@@ -1,0 +1,360 @@
+<!-- crm/client-overview.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Client Overview</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Roboto', sans-serif;
+        }
+        .crm-wrapper {
+            background: #fff;
+            padding: 0 0 30px 0;
+            margin: 30px auto;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(0,0,0,.10);
+            max-width: 1100px;
+        }
+        .crm-header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-radius: 14px 14px 0 0;
+            padding: 36px 36px 24px 36px;
+            margin-bottom: 0;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+        }
+        .crm-header .avatar {
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            color: #764ba2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-right: 24px;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.10);
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+            border-radius: 12px;
+            padding: 26px 18px 18px 18px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.08);
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+        .stat-box:hover {
+            box-shadow: 0 4px 16px rgba(102,126,234,0.13);
+        }
+        .stat-box .stat-icon {
+            font-size: 2.1rem;
+            margin-bottom: 10px;
+            color: #1976d2;
+            display: block;
+        }
+        .stat-number {
+            font-size: 2.1rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .stat-label {
+            font-size: 1.05rem;
+            opacity: 0.85;
+        }
+        .client-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 26px 28px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.07);
+        }
+        .client-card strong {
+            color: #2c3e50;
+        }
+        .invoice-link {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+        .invoice-link:hover {
+            text-decoration: none;
+        }
+        .table-invoices {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.07);
+            overflow: hidden;
+        }
+        .table-invoices th, .table-invoices td {
+            vertical-align: middle;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status-active { background-color: #d4edda; color: #155724; }
+        .status-inactive { background-color: #f8d7da; color: #721c24; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-draft { background-color: #e3f2fd; color: #1976d2; }
+        .status-sent { background-color: #fff3cd; color: #856404; }
+        .status-paid { background-color: #d4edda; color: #155724; }
+        .status-overdue { background-color: #f8d7da; color: #721c24; }
+        .establishment-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-size: 0.9em;
+            margin: 4px;
+        }
+        @media (max-width: 767px) {
+            .crm-header { flex-direction: column; align-items: flex-start; padding: 24px 12px 16px 12px; }
+            .crm-header .avatar { margin-bottom: 12px; }
+            .stat-box { margin-bottom: 16px; }
+            .client-card { padding: 16px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="crm-wrapper">
+            <div class="crm-header d-flex align-items-center justify-content-between flex-wrap">
+                <div class="d-flex align-items-center">
+                    <div class="avatar">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0" id="client-name"></h2>
+                        <div id="client-status" class="mt-1"></div>
+                    </div>
+                </div>
+                <a href="index.html" class="btn btn-outline-light mt-3 mt-md-0">
+                    <i class="bi bi-arrow-left"></i> Back to CRM
+                </a>
+            </div>
+            <div class="container" style="max-width: 1000px;">
+                <div class="row mt-4 mb-2 g-3">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-cash-stack"></i></span>
+                            <span id="total-invoiced" class="stat-number">$0.00</span>
+                            <span class="stat-label">Total Invoiced</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-exclamation-circle"></i></span>
+                            <span id="amount-due" class="stat-number">$0.00</span>
+                            <span class="stat-label">Amount Due</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-hourglass-split"></i></span>
+                            <span id="unbilled" class="stat-number">$0.00</span>
+                            <span class="stat-label">Unbilled</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-receipt"></i></span>
+                            <span id="invoice-count" class="stat-number">0</span>
+                            <span class="stat-label">Total Invoices</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="client-card mb-4">
+                    <h5 class="mb-3"><i class="bi bi-info-circle"></i> Client Details</h5>
+                    <div id="client-contact"></div>
+                    <div id="client-billing"></div>
+                    <div id="client-notes" class="mt-2"></div>
+                    <h6 class="mt-4 mb-2"><i class="bi bi-geo-alt"></i> Associated Establishments</h6>
+                    <div id="client-establishments-display" class="d-flex flex-wrap gap-2">
+                        <!-- Establishments will load here -->
+                    </div>
+                </div>
+                <h4 class="mb-3">Invoices</h4>
+                <div class="table-responsive table-invoices">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-list">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+        // Firebase config (copy from crm.js)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function formatCurrency(amount) {
+            return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
+        }
+        function formatDate(date) {
+            if (!date) return '';
+            if (date.toDate) return date.toDate().toLocaleDateString();
+            return new Date(date).toLocaleDateString();
+        }
+
+        // Get clientId from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('id');
+        if (!clientId) {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">No client selected.</div></div>';
+            throw new Error('No client id');
+        }
+
+        // Netlify Identity setup
+        const netlifyIdentity = window.netlifyIdentity;
+        if (!netlifyIdentity) {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">Authentication service not loaded.</div></div>';
+            throw new Error("Netlify Identity widget not loaded.");
+        }
+        netlifyIdentity.init();
+
+        // Function to check user role and load content
+        function checkUserRoleAndLoad() {
+            const user = netlifyIdentity.currentUser();
+            if (user && user.app_metadata && user.app_metadata.roles && 
+                (user.app_metadata.roles.includes('admin') || user.app_metadata.roles.includes('manager'))) {
+                loadAllEstablishments().then(loadClientOverview); // Proceed if admin
+            } else {
+                document.body.innerHTML = '<div class="container my-5"><div class="alert alert-warning">Access Denied: Admin privileges required.</div><button class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button></div>';
+            }
+        }
+
+        let clientData = null;
+        let allEstablishments = []; // New global variable for establishments on this page
+        let invoices = [];
+        console.log("Client Overview Page: Script loaded.");
+
+        async function loadClientOverview() {
+            // Load client
+            const clientDoc = await db.collection('clients').doc(clientId).get();
+            if (!clientDoc.exists) {
+                document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">Client not found.</div></div>';
+                return;
+            }
+            clientData = clientDoc.data();
+            document.getElementById('client-name').textContent = clientData.companyName;
+            console.log("Client Data Loaded:", clientData); // Log client data
+            console.log("Client Establishments (from clientData):", clientData.establishments); // Log client's establishments array
+            document.getElementById('client-status').innerHTML = `<span class="status-badge status-${clientData.status}">${clientData.status.charAt(0).toUpperCase() + clientData.status.slice(1)}</span>`;
+            document.getElementById('client-contact').innerHTML = `
+                <strong>Contact:</strong> ${clientData.contactPerson} (<a href="mailto:${clientData.email}">${clientData.email}</a>)<br>
+                <strong>Phone:</strong> ${clientData.phone || 'N/A'}
+            `;
+            document.getElementById('client-billing').innerHTML = `
+                <strong>Billing Terms:</strong> ${clientData.billingTerms || 30} days
+            `;
+            document.getElementById('client-notes').innerHTML = ` 
+                <strong>Notes:</strong> ${clientData.notes || '<span class="text-muted">None</span>'} 
+            `;
+ 
+            // Display establishments for this client, using the dedicated container 
+            const clientEstDisplay = document.getElementById('client-establishments-display'); 
+            clientEstDisplay.innerHTML = (clientData.establishments && clientData.establishments.length > 0) 
+                ? clientData.establishments.map(estId => { 
+                    const est = allEstablishments.find(e => e.id === estId); 
+                    console.log(`Matching estId: ${estId}, Found:`, est); // Log each establishment match attempt
+                    return est ? `<span class="establishment-badge">${est.name} - ${est.location}</span>` : `<span class="establishment-badge badge-warning">Unknown Est: ${estId}</span>`; // Added warning for unknown
+                  }).join('') 
+                : '<span class="text-muted">None assigned</span>'; // Corrected original span text for clarity
+
+            // Load invoices for this client
+            const snapshot = await db.collection('invoices').where('clientId', '==', clientId).get();
+            invoices = [];
+            let totalInvoiced = 0, amountDue = 0, unbilled = 0;
+            snapshot.forEach(doc => {
+                const inv = doc.data();
+                inv.id = doc.id;
+                invoices.push(inv);
+                totalInvoiced += inv.totalAmount || 0;
+                if (inv.status === 'sent' || inv.status === 'overdue') amountDue += inv.totalAmount || 0;
+                if (inv.status === 'draft') unbilled += inv.totalAmount || 0;
+            });
+
+            document.getElementById('total-invoiced').textContent = formatCurrency(totalInvoiced);
+            document.getElementById('amount-due').textContent = formatCurrency(amountDue);
+            document.getElementById('unbilled').textContent = formatCurrency(unbilled);
+            document.getElementById('invoice-count').textContent = invoices.length;
+
+            // List invoices
+            const tbody = document.getElementById('invoice-list');
+            if (invoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No invoices found for this client.</td></tr>';
+            } else {
+                tbody.innerHTML = invoices.map(inv => `
+                    <tr>
+                        <td><span class="invoice-link" onclick="window.open('invoice-print.html?id=${inv.id}', '_blank')">${inv.invoiceNumber}</span></td>
+                        <td>${formatDate(inv.issueDate)}</td>
+                        <td>${formatDate(inv.dueDate)}</td>
+                        <td><span class="status-badge status-${inv.status}">${inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}</span></td>
+                        <td>${formatCurrency(inv.totalAmount)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function loadAllEstablishments() {
+            try {
+                const snapshot = await db.collection('establishments').get();
+                allEstablishments = [];
+                snapshot.forEach(doc => {
+                    allEstablishments.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                console.log('Loaded all establishments for overview page:', allEstablishments.length, allEstablishments); // Log full array
+            } catch (error) {
+                console.error('Error loading all establishments for overview page:', error);
+            }
+        }
+
+        // Make sure these listeners are set up before the init call might fire
+        netlifyIdentity.on('init', checkUserRoleAndLoad); 
+        netlifyIdentity.on('login', checkUserRoleAndLoad);
+        netlifyIdentity.on('logout', function() {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-warning">Logged out. Admin privileges required.</div><button class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button></div>';
+        });
+
+        // Also call immediately in case user is already logged in (init might have fired before listeners were ready)
+        checkUserRoleAndLoad();
+    </script>
+</body>
+</html>
