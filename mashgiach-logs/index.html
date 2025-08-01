@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Choices.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <!-- Your Custom CSS (Adjust path if needed) -->
     
     <style>
@@ -136,9 +138,6 @@
                         </div>
                         <div class="col-sm-6 text-right">
                              <!-- MODIFIED: Added admin-only-func class -->
-                             <a href="#" class="btn btn-primary admin-only-func" id="add-selected-to-invoice-btn" style="display: none;">
-                                <i class="material-icons">&#xE145;</i> <span>Add Selected to Invoice</span>
-                            </a>
                             <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLogModal">
                                 <i class="material-icons">&#xE147;</i> <span>Add New Log</span>
                             </a>
@@ -150,7 +149,6 @@
                         <thead>
                             <tr>
                                 <!-- Columns are always visible -->
-                                <th class="select-checkbox-header"><input type="checkbox" id="select-all-logs" title="Select All (Admin)"></th>
                                 <th>Mashgiach</th>
                                 <th>Venue</th>
                                 <th>Time/Date</th>
@@ -182,7 +180,7 @@
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label for="log-venue" class="form-label">Venue</label>
-                                <input type="text" id="log-venue" class="form-control" required>
+                                <select id="log-venue" class="form-control" required></select>
                             </div>
                             <div class="mb-3">
                                 <label for="log-description" class="form-label">Description</label>
@@ -217,7 +215,7 @@
                                     <div class="modal-body">
                                         <div class="mb-3">
                                             <label for="edit-log-venue" class="form-label">Venue</label>
-                                            <input type="text" id="edit-log-venue" class="form-control" required>
+                                            <select id="edit-log-venue" class="form-control" required></select>
                                         </div>
                                         <div class="mb-3">
                                             <label for="edit-log-description" class="form-label">Description</label>
@@ -283,6 +281,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
     <!-- Netlify Identity Widget -->
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <!-- Choices.js JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
     <script>
         // --- Firebase Configuration ---
@@ -314,9 +314,8 @@
         const addLogForm = document.getElementById('add-log-form');
         const editLogForm = document.getElementById('edit-log-form');
         const deleteLogForm = document.getElementById('delete-log-form');
-        const addSelectedToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
-        const selectAllCheckbox = document.getElementById('select-all-logs');
-        const selectedTotalTimeDisplay = document.getElementById('selected-total-time');
+        const logVenueSelect = document.getElementById('log-venue');
+        const editLogVenueSelect = document.getElementById('edit-log-venue');
 
         // --- Netlify Identity Initialization ---
         const netlifyIdentity = window.netlifyIdentity;
@@ -328,9 +327,12 @@
         }
 
         // --- State Variables ---
-        let selectedLogIds = new Set();
         let currentUser = null; // Store current user info
         let currentUserIsAdmin = false; // Flag for admin status
+        let establishments = []; // Store fetched establishments
+
+        let addVenueChoices;
+        let editVenueChoices;
 
         // --- Configuration ---
         const MASHGIACH_HOURLY_RATE = 50.00; // ADJUST AS NEEDED!
@@ -366,78 +368,6 @@
             return `<span class="badge ${badgeClass}">${statusText}</span>`;
         }
 
-                           // --- UI Update Logic ---
-        function updateAccessUI(user) {
-            console.log("updateAccessUI called. User:", user); // Log user object
-            currentUser = user; // Store user globally
-            const userRoles = user?.app_metadata?.roles || [];
-            console.log("User Roles:", userRoles); // Log detected roles
-
-            currentUserIsAdmin = userRoles.includes('admin');
-            console.log("Is Admin?", currentUserIsAdmin); // Log admin status determination
-
-            const isMashgiach = userRoles.includes('mashgiach');
-            const canAccess = currentUserIsAdmin || isMashgiach;
-            console.log("Can Access?", canAccess); // Log access status
-
-            // Select admin-specific elements *once*
-            const adminOnlyFuncElements = logsContent.querySelectorAll('.admin-only-func');
-            const adminOnlyFieldElements = logsContent.querySelectorAll('.admin-only-field'); // Includes the billing status div
-            console.log("Found admin-only-field elements:", adminOnlyFieldElements.length); // Log how many elements were found
-
-            // Toggle visibility based on access
-            if (canAccess) {
-                loginSection.classList.add('hidden');
-                logsContent.classList.remove('hidden');
-                clearMessage();
-                displayMashgiachLogs(); // Load logs based on role
-                initializeTooltips();
-
-                // Explicitly set display based on admin status
-                const adminDisplayValue = currentUserIsAdmin ? '' : 'none';
-                const adminDisplayImportance = currentUserIsAdmin ? 'important' : ''; // Add !important only if admin
-
-                console.log(`Setting admin elements display to: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log the display value being set
-
-                adminOnlyFuncElements.forEach(el => {
-                    // Use setProperty for !important
-                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
-                });
-                adminOnlyFieldElements.forEach((el, index) => {
-                    console.log(`Setting display for admin-only-field element ${index}: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log for each specific element
-                    // Use setProperty for !important
-                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
-                });
-
-                // Disable admin checkboxes for non-admins
-                if (selectAllCheckbox) selectAllCheckbox.disabled = !currentUserIsAdmin;
-
-            } else {
-                // Logged out or no access
-                console.log("User cannot access. Hiding content.");
-                loginSection.classList.remove('hidden');
-                logsContent.classList.add('hidden');
-
-                // Ensure admin elements are hidden when logged out (no !important needed here)
-                adminOnlyFuncElements.forEach(el => { el.style.display = 'none'; });
-                adminOnlyFieldElements.forEach(el => { el.style.display = 'none'; });
-
-                if (user) { // If logged in but no access
-                     if(showMessage) showMessage('error', 'Access Denied. Required roles: admin or mashgiach.');
-                } else { // Not logged in
-                     clearMessage();
-                }
-                if (logsTableBody) logsTableBody.innerHTML = '';
-                selectedLogIds.clear();
-                updateAddToInvoiceButtonVisibility(); // This will hide the button if not admin
-                if (selectedTotalTimeDisplay) selectedTotalTimeDisplay.textContent = '0 hours 0 minutes';
-            }
-            console.log("updateAccessUI finished."); // Log end of function
-        }
-
-
-
-
         function initializeTooltips() {
             try {
                 const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -453,211 +383,61 @@
             }
         }
 
-        function updateAddToInvoiceButtonVisibility() {
-            // Only show if admin and items are selected
-            if (addSelectedToInvoiceBtn) {
-                const hasSelectable = selectedLogIds.size > 0;
-                // Button visibility is initially controlled by .admin-only-func class in updateAccessUI
-                // Now, we also control display based on selection for admins.
-                if (currentUserIsAdmin) {
-                    addSelectedToInvoiceBtn.disabled = !hasSelectable;
-                    addSelectedToInvoiceBtn.querySelector('span').textContent = 'Add Selected to Invoice';
-                    // *** ADD THIS LINE BACK ***
-                    // Show the button if items are selected, hide it otherwise.
-                    addSelectedToInvoiceBtn.style.display = hasSelectable ? 'inline-block' : 'none';
-                } else {
-                    // Ensure it's hidden if not admin (redundant due to admin-only-func, but safe)
-                    addSelectedToInvoiceBtn.style.display = 'none';
-                }
-            }
-        }
-
-
-
-        function calculateSelectedTime() {
-            // Only calculate if admin
-            if (!currentUserIsAdmin || !logsTableBody || !selectedTotalTimeDisplay) {
-                 // Visibility controlled by .admin-only-func, just clear text if not admin
-                 if (selectedTotalTimeDisplay) selectedTotalTimeDisplay.textContent = '0 hours 0 minutes';
-                 return;
-            }
-
-            let totalMinutes = 0;
-            const checkedCheckboxes = logsTableBody.querySelectorAll('.log-select-checkbox:checked');
-
-            checkedCheckboxes.forEach(checkbox => {
-                const duration = parseInt(checkbox.dataset.durationMinutes || '0', 10);
-                if (!isNaN(duration)) {
-                    totalMinutes += duration;
-                }
-            });
-
-            const hours = Math.floor(totalMinutes / 60);
-            const minutes = totalMinutes % 60;
-            selectedTotalTimeDisplay.textContent = `${hours} hours ${minutes} minutes`;
-        }
-
-        function handleCheckboxChange(event) {
-            const checkbox = event.target;
-            if (!checkbox.classList.contains('log-select-checkbox')) return;
-
-            // Only admins can use checkboxes for invoicing
-            if (!currentUserIsAdmin) {
-                checkbox.checked = false; // Prevent checking for non-admins
-                checkbox.disabled = true; // Ensure it's disabled
-                return;
-            }
-
-            // --- Admin Checkbox Logic ---
-            const logId = checkbox.dataset.id;
-            const status = checkbox.dataset.status;
-
-            if (status !== 'billed') {
-                if (checkbox.checked) {
-                    selectedLogIds.add(logId);
-                } else {
-                    selectedLogIds.delete(logId);
-                }
-
-                const unbilledCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox[data-status="unbilled"]:not(:disabled)');
-                const checkedUnbilledCount = logsTableBody?.querySelectorAll('.log-select-checkbox[data-status="unbilled"]:checked').length || 0;
-
-                if (selectAllCheckbox) {
-                    if (unbilledCheckboxes && checkedUnbilledCount === unbilledCheckboxes.length && unbilledCheckboxes.length > 0) {
-                        selectAllCheckbox.checked = true;
-                        selectAllCheckbox.indeterminate = false;
-                    } else if (checkedUnbilledCount > 0) {
-                        selectAllCheckbox.checked = false;
-                        selectAllCheckbox.indeterminate = true;
-                    } else {
-                        selectAllCheckbox.checked = false;
-                        selectAllCheckbox.indeterminate = false;
-                    }
-                }
-            } else {
-                 // If it's billed, don't allow selection for invoicing, but allow for time calc
-                 if (checkbox.checked) {
-                     // Don't add to selectedLogIds for invoicing
-                 }
-            }
-
-            updateAddToInvoiceButtonVisibility();
-            calculateSelectedTime();
-        }
-
-        function handleSelectAllChange(event) {
-            // Only admins can use select-all
-            if (!currentUserIsAdmin) {
-                event.target.checked = false;
-                event.target.disabled = true; // Ensure disabled
-                return;
-            }
-
-            // --- Admin Select All Logic ---
-            const isChecked = event.target.checked;
-            const allCheckboxes = logsTableBody?.querySelectorAll('.log-select-checkbox');
-            if (!allCheckboxes) return;
-
-            selectedLogIds.clear();
-
-            allCheckboxes.forEach(checkbox => {
-                const status = checkbox.dataset.status;
-                // Only check unbilled items for invoicing purposes
-                if (status !== 'billed') {
-                    checkbox.checked = isChecked;
-                    if (isChecked) {
-                        selectedLogIds.add(checkbox.dataset.id);
-                    }
-                } else {
-                    // Keep billed items unchecked by select-all for invoicing
-                    checkbox.checked = false;
-                }
-            });
-
-            updateAddToInvoiceButtonVisibility();
-            calculateSelectedTime();
-             if(selectAllCheckbox) selectAllCheckbox.indeterminate = false;
-        }
-
-        async function prepareAndRedirectToInvoice() {
-            // Only admins can perform this action
-            if (!currentUserIsAdmin) return;
-
-            const unbilledSelectedIds = Array.from(selectedLogIds);
-            if (unbilledSelectedIds.length === 0) {
-                alert("Please select at least one 'Unbilled' log entry to add to the invoice.");
-                return;
-            }
-
-            console.log("Processing Unbilled Log IDs:", unbilledSelectedIds);
-            addSelectedToInvoiceBtn.disabled = true;
-            addSelectedToInvoiceBtn.querySelector('span').textContent = 'Processing...';
-
-            let invoiceItems = [];
-            let successfullyProcessedLogIds = [];
-
+        async function loadEstablishmentsAndPopulateDropdowns() {
             try {
-                const fetchPromises = unbilledSelectedIds.map(id => mashgiachLogRef.doc(id).get());
-                const logDocs = await Promise.all(fetchPromises);
+                const snapshot = await db.collection('establishments').orderBy('name').get();
+                establishments = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    name: doc.data().name
+                }));
+                console.log('Loaded establishments:', establishments.length, establishments);
 
-                invoiceItems = logDocs
-                    .filter(doc => {
-                        const data = doc.data();
-                        // Double check it's unbilled before adding
-                        return doc.exists && data && data.billingStatus !== 'billed';
-                    })
-                    .map(doc => {
-                        const logData = doc.data();
-                        const minutes = logData.timeSpentMinutes || 0;
-                        const hours = minutes > 0 ? (minutes / 60).toFixed(2) : 0;
-                        const description = `Mashgiach Visit: ${logData.venue || 'N/A'} (${formatFirestoreTimestamp(logData.dateTime)}) - ${logData.description || ''}`;
-                        successfullyProcessedLogIds.push(doc.id);
-                        return {
-                            description: description.substring(0, 200),
-                            quantity: parseFloat(hours),
-                            unitPrice: MASHGIACH_HOURLY_RATE,
-                        };
+                // Initialize Choices.js dropdowns after fetching establishments
+                // For add log modal
+                if (logVenueSelect && !addVenueChoices) {
+                    addVenueChoices = new Choices(logVenueSelect, {
+                        searchEnabled: true,
+                        itemSelectText: '',
+                        placeholder: true,
+                        placeholderValue: 'Select a venue',
+                        choices: establishments.map(est => ({ value: est.name, label: est.name })),
+                        removeItemButton: true,
                     });
-
-                if (invoiceItems.length === 0) {
-                     alert("No valid 'Unbilled' logs found among the selection. Please refresh and try again.");
-                     updateAddToInvoiceButtonVisibility(); // Re-enable button
-                     // No need to change text, updateAddToInvoiceButtonVisibility handles it
-                     return;
+                } else if (addVenueChoices) {
+                    addVenueChoices.setChoices(establishments.map(est => ({ value: est.name, label: est.name })), 'value', 'label', true);
                 }
 
-                const batch = db.batch();
-                successfullyProcessedLogIds.forEach(logId => {
-                    const docRef = mashgiachLogRef.doc(logId);
-                    batch.update(docRef, {
-                        billingStatus: 'billed',
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                // For edit log modal
+                if (editLogVenueSelect && !editVenueChoices) {
+                    editVenueChoices = new Choices(editLogVenueSelect, {
+                        searchEnabled: true,
+                        itemSelectText: '',
+                        placeholder: true,
+                        placeholderValue: 'Select a venue',
+                        choices: establishments.map(est => ({ value: est.name, label: est.name })),
+                        removeItemButton: true,
                     });
-                });
-                await batch.commit();
-                console.log(`Successfully marked ${successfullyProcessedLogIds.length} logs as billed.`);
-
-                sessionStorage.setItem('pendingInvoiceItems', JSON.stringify(invoiceItems));
-                console.log("Items stored in sessionStorage:", invoiceItems);
-                window.location.href = '../invoice.html';
+                } else if (editVenueChoices) {
+                    editVenueChoices.setChoices(establishments.map(est => ({ value: est.name, label: est.name })), 'value', 'label', true);
+                }
 
             } catch (error) {
-                console.error("Error processing logs for invoice:", error);
-                alert(`An error occurred: ${error.message}. Some logs might not have been marked as billed.`);
-                updateAddToInvoiceButtonVisibility(); // Re-enable button on error
+                console.error('Error loading establishments for dropdown:', error);
+                showMessage('error', 'Failed to load establishment list for venue dropdown.');
             }
         }
 
         // --- Firestore Operations ---
 
         async function addMashgiachLogSubmit(event) {
-            event.preventDefault();
+            event.preventDefault(); // Ensure default form submission is prevented
             // User check happens in updateAccessUI, currentUser is set
             if (!currentUser) {
                 if(showMessage) showMessage('error', "You must be logged in to add a log.");
                 return;
             }
-            const venue = document.getElementById('log-venue').value.trim();
+            // Get value from Choices.js dropdown
+            const venue = addVenueChoices ? addVenueChoices.getValue(true) : document.getElementById('log-venue').value.trim();
             const description = document.getElementById('log-description').value.trim();
             const timeSpent = parseInt(document.getElementById('log-time-spent').value, 10);
             if (!venue || !description || isNaN(timeSpent) || timeSpent <= 0) {
@@ -688,95 +468,6 @@
             }
         }
 
-                // MODIFIED: displayMashgiachLogs - Filters by user if not admin, but shows all columns
-                async function displayMashgiachLogs() {
-            if (!logsTableBody || !currentUser) return; // Need user info
-
-            const colspan = 8; // Always 8 columns now
-            logsTableBody.innerHTML = `<tr><td colspan="${colspan}">Loading logs...</td></tr>`;
-
-            selectedLogIds.clear();
-            updateAddToInvoiceButtonVisibility();
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.disabled = !currentUserIsAdmin; // Ensure state is correct on load
-            }
-
-            try {
-                let query = mashgiachLogRef;
-
-                // Filter by mashgiachId if the user is NOT an admin
-                if (!currentUserIsAdmin) {
-                    query = query.where('mashgiachId', '==', currentUser.id);
-                }
-
-                // Always order by date
-                query = query.orderBy('dateTime', 'desc');
-
-                const querySnapshot = await query.get();
-
-                if (querySnapshot.empty) {
-                    logsTableBody.innerHTML = `<tr><td colspan="${colspan}">No logs found${!currentUserIsAdmin ? ' for your user' : ''}.</td></tr>`;
-                    calculateSelectedTime();
-                    return;
-                }
-
-                let tableContent = '';
-                querySnapshot.forEach(doc => {
-                    const log = doc.data();
-                    const logId = doc.id;
-                    const timeInMinutes = log.timeSpentMinutes || 0;
-                    const timeDisplay = timeInMinutes ? `${timeInMinutes} min` : 'N/A';
-                    const billingStatus = log.billingStatus || 'unbilled';
-                    const isBilled = billingStatus === 'billed';
-                    // Checkbox is disabled if not admin OR if item is billed (for invoicing)
-                    const checkboxDisabled = !currentUserIsAdmin; // Simplified: Only admins can interact
-
-                    // *** ADDED id attribute to checkbox ***
-                    const checkboxId = `log-checkbox-${logId}`;
-
-                    tableContent += `
-                        <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}">
-                            <td class="select-checkbox-cell">
-                                <input type="checkbox" class="log-select-checkbox" id="${checkboxId}"
-                                       data-id="${logId}"
-                                       data-duration-minutes="${timeInMinutes}"
-                                       data-status="${billingStatus}"
-                                       title="${currentUserIsAdmin ? (isBilled ? 'Already Billed' : 'Select Log') : 'Admin Only'}"
-                                       ${checkboxDisabled ? 'disabled' : ''}>
-                            </td>
-                            <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
-                            <td>${log.venue || 'N/A'}</td>
-                            <td>${formatFirestoreTimestamp(log.dateTime)}</td>
-                            <td>${log.description || ''}</td>
-                            <td>${timeDisplay}</td>
-                            <td>${getBillingStatusBadge(billingStatus)}</td>
-                            <td>
-                                <a href="#" class="edit js-edit-log" data-id="${logId}" title="Edit Log">
-                                    <i class="material-icons">&#xE254;</i>
-                                </a>
-                                <a href="#" class="delete js-delete-log" data-id="${logId}" title="Delete Log">
-                                    <i class="material-icons">&#xE872;</i>
-                                </a>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                logsTableBody.innerHTML = tableContent;
-                initializeTooltips();
-                calculateSelectedTime(); // Calculate time for admin if applicable
-
-            } catch (error) {
-                console.error("Error fetching Mashgiach logs: ", error);
-                logsTableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-danger">Error loading logs: ${error.message}</td></tr>`;
-                calculateSelectedTime(); // Reset time display on error
-            }
-        }
-
-
-        // MODIFIED: openEditLogModal - Added ownership check
         async function openEditLogModal(logId) {
             if (!currentUser) return; // Should not happen if UI is correct
             editLogForm.setAttribute('data-edit-id', logId);
@@ -792,7 +483,14 @@
                     }
                     // *** End Ownership Check ***
 
-                    document.getElementById('edit-log-venue').value = logData.venue || '';
+                    // Set the value for Choices.js dropdown
+                    if (editVenueChoices) {
+                        editVenueChoices.setChoiceByValue(logData.venue || '');
+                    } else {
+                        // Fallback if Choices.js not initialized (shouldn't happen with proper flow)
+                        editLogVenueSelect.value = logData.venue || '';
+                    }
+
                     document.getElementById('edit-log-description').value = logData.description || '';
                     document.getElementById('edit-log-time-spent').value = logData.timeSpentMinutes || '';
 
@@ -814,13 +512,14 @@
             }
         }
 
-                // MODIFIED: editLogSubmit - Added ownership check
-                async function editLogSubmit(event) {
+        async function editLogSubmit(event) {
             event.preventDefault();
             const logId = editLogForm.getAttribute('data-edit-id');
             if (!logId || !currentUser) return;
 
-            const venue = document.getElementById('edit-log-venue').value.trim();
+            // Get value from Choices.js dropdown
+            const venue = editVenueChoices ? editVenueChoices.getValue(true) : document.getElementById('edit-log-venue').value.trim();
+
             const description = document.getElementById('edit-log-description').value.trim();
             const timeSpent = parseInt(document.getElementById('edit-log-time-spent').value, 10);
             // Get status only if admin, otherwise keep it unchanged
@@ -870,8 +569,6 @@
             }
         }
 
-
-         // MODIFIED: openDeleteLogModal - Added ownership check (pre-check)
         async function openDeleteLogModal(logId) {
             if (!currentUser) return;
             // *** Ownership Pre-Check ***
@@ -902,7 +599,6 @@
             modal.show();
         }
 
-        // MODIFIED: deleteLogSubmit - Added ownership check
         async function deleteLogSubmit(event) {
             event.preventDefault();
             const logId = deleteLogForm.getAttribute('data-delete-id');
@@ -940,6 +636,134 @@
             }
         }
 
+        // MODIFIED: displayMashgiachLogs - Filters by user if not admin, but shows all columns
+        async function displayMashgiachLogs() {
+            if (!logsTableBody || !currentUser) return; // Need user info
+
+            const colspan = 7; // Always 7 columns now
+            logsTableBody.innerHTML = `<tr><td colspan="${colspan}">Loading logs...</td></tr>`;
+
+            try {
+                let query = mashgiachLogRef;
+
+                // Filter by mashgiachId if the user is NOT an admin
+                if (!currentUserIsAdmin) {
+                    query = query.where('mashgiachId', '==', currentUser.id);
+                }
+
+                // Always order by date
+                query = query.orderBy('dateTime', 'desc');
+
+                const querySnapshot = await query.get();
+
+                if (querySnapshot.empty) {
+                    logsTableBody.innerHTML = `<tr><td colspan="${colspan}">No logs found${!currentUserIsAdmin ? ' for your user' : ''}.</td></tr>`;
+                    return;
+                }
+
+                let tableContent = '';
+                querySnapshot.forEach(doc => {
+                    const log = doc.data();
+                    const logId = doc.id;
+                    const timeInMinutes = log.timeSpentMinutes || 0;
+                    const timeDisplay = timeInMinutes ? `${timeInMinutes} min` : 'N/A';
+                    const billingStatus = log.billingStatus || 'unbilled';
+                    const isBilled = billingStatus === 'billed';
+                    // Checkbox is disabled if not admin OR if item is billed (for invoicing)
+
+                    tableContent += `
+                        <tr data-id="${logId}" class="${isBilled ? 'table-secondary' : ''}">
+                            <td>${log.mashgiachName || log.mashgiachId || 'Unknown'}</td>
+                            <td>${log.venue || 'N/A'}</td>
+                            <td>${formatFirestoreTimestamp(log.dateTime)}</td>
+                            <td>${log.description || ''}</td>
+                            <td>${timeDisplay}</td>
+                            <td>${getBillingStatusBadge(billingStatus)}</td>
+                            <td>
+                                <a href="#" class="edit js-edit-log" data-id="${logId}" title="Edit Log">
+                                    <i class="material-icons">&#xE254;</i>
+                                </a>
+                                <a href="#" class="delete js-delete-log" data-id="${logId}" title="Delete Log">
+                                    <i class="material-icons">&#xE872;</i>
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                logsTableBody.innerHTML = tableContent;
+                initializeTooltips();
+
+            } catch (error) {
+                console.error("Error fetching Mashgiach logs: ", error);
+                logsTableBody.innerHTML = `<tr><td colspan="${colspan}" class="text-danger">Error loading logs: ${error.message}</td></tr>`;
+            }
+        }
+
+        // --- UI Update Logic ---
+        function updateAccessUI(user) {
+            console.log("updateAccessUI called. User:", user); // Log user object
+            currentUser = user; // Store user globally
+            const userRoles = user?.app_metadata?.roles || [];
+            console.log("User Roles:", userRoles); // Log detected roles
+
+            currentUserIsAdmin = userRoles.includes('admin');
+            console.log("Is Admin?", currentUserIsAdmin); // Log admin status determination
+
+            const isMashgiach = userRoles.includes('mashgiach');
+            const canAccess = currentUserIsAdmin || isMashgiach;
+            console.log("Can Access?", canAccess); // Log access status
+
+            // Select admin-specific elements *once*
+            const adminOnlyFuncElements = logsContent.querySelectorAll('.admin-only-func');
+            const adminOnlyFieldElements = logsContent.querySelectorAll('.admin-only-field'); // Includes the billing status div
+            console.log("Found admin-only-field elements:", adminOnlyFieldElements.length); // Log how many elements were found
+
+            // Toggle visibility based on access
+            if (canAccess) {
+                loginSection.classList.add('hidden');
+                logsContent.classList.remove('hidden');
+                clearMessage();
+                displayMashgiachLogs(); // Load logs based on role
+                initializeTooltips();
+                loadEstablishmentsAndPopulateDropdowns(); // Load and populate establishments
+
+                // Explicitly set display based on admin status
+                const adminDisplayValue = currentUserIsAdmin ? '' : 'none';
+                const adminDisplayImportance = currentUserIsAdmin ? 'important' : ''; // Add !important only if admin
+
+                console.log(`Setting admin elements display to: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log the display value being set
+
+                adminOnlyFuncElements.forEach(el => {
+                    // Use setProperty for !important
+                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
+                });
+                adminOnlyFieldElements.forEach((el, index) => {
+                    console.log(`Setting display for admin-only-field element ${index}: ${adminDisplayValue || '""'} ${adminDisplayImportance}`); // Log for each specific element
+                    // Use setProperty for !important
+                    el.style.setProperty('display', adminDisplayValue, adminDisplayImportance);
+                });
+
+            } else {
+                // Logged out or no access
+                console.log("User cannot access. Hiding content.");
+                loginSection.classList.remove('hidden');
+                logsContent.classList.add('hidden');
+
+                // Ensure admin elements are hidden when logged out (no !important needed here)
+                adminOnlyFuncElements.forEach(el => { el.style.display = 'none'; });
+                adminOnlyFieldElements.forEach(el => { el.style.display = 'none'; });
+
+                if (user) { // If logged in but no access
+                     if(showMessage) showMessage('error', 'Access Denied. Required roles: admin or mashgiach.');
+                } else { // Not logged in
+                     clearMessage();
+                }
+                if (logsTableBody) logsTableBody.innerHTML = '';
+            }
+            console.log("updateAccessUI finished."); // Log end of function
+        }
+
         // --- Event Listeners ---
 
         if (netlifyLoginButton) {
@@ -964,52 +788,46 @@
         if (logsTableBody) {
             logsTableBody.addEventListener('click', (event) => {
                 const target = event.target;
-
-                // Handle Checkbox clicks
-                if (target.classList.contains('log-select-checkbox')) {
-                     handleCheckboxChange(event); // Function handles admin check internally
-                     return;
-                }
+                console.log("Clicked on:", target); // Debugging
 
                 // Handle Edit/Delete link clicks
                 const targetLink = target.closest('a'); // Find nearest link ancestor
+                console.log("Closest link:", targetLink); // Debugging
+
                 if (!targetLink) return; // Exit if click wasn't on or inside a link
 
                 const logId = targetLink.getAttribute('data-id');
+                console.log("Log ID from link:", logId); // Debugging
+
                 if (!logId) return; // Exit if link has no data-id
 
                 if (targetLink.classList.contains('js-edit-log')) {
-                    event.preventDefault();
+                    event.preventDefault(); // Prevent default link behavior
+                    console.log("Edit link clicked for ID:", logId); // Debugging
                     openEditLogModal(logId); // Function handles ownership check
                 } else if (targetLink.classList.contains('js-delete-log')) {
-                     event.preventDefault();
+                     event.preventDefault(); // Prevent default link behavior
+                    console.log("Delete link clicked for ID:", logId); // Debugging
                     openDeleteLogModal(logId); // Function handles ownership check
                 }
             });
         }
 
-        // Select All Checkbox listener
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', handleSelectAllChange); // Function handles admin check
-        }
-
-        // Add Selected to Invoice Button listener
-        if (addSelectedToInvoiceBtn) {
-            addSelectedToInvoiceBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                prepareAndRedirectToInvoice(); // Function handles admin check
-            });
-        }
-
         // Modal cleanup listeners
         const addModalEl = document.getElementById('addLogModal');
-        if(addModalEl) addModalEl.addEventListener('hidden.bs.modal', () => addLogForm.reset());
+        if(addModalEl) {
+            addModalEl.addEventListener('hidden.bs.modal', () => {
+                addLogForm.reset();
+                if (addVenueChoices) addVenueChoices.setChoiceByValue(''); // Reset Choices.js dropdown
+            });
+        }
 
         const editModalEl = document.getElementById('editLogModal');
         if(editModalEl) {
             editModalEl.addEventListener('hidden.bs.modal', () => {
                 editLogForm.reset();
                 editLogForm.removeAttribute('data-edit-id');
+                if (editVenueChoices) editVenueChoices.setChoiceByValue(''); // Reset Choices.js dropdown
             });
         }
 

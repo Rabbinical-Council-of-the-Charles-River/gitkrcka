@@ -118,6 +118,23 @@
             font-size: 0.9em;
             margin: 4px;
         }
+        /* New styles for mashgiach logs selection */
+        .log-select-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .table-secondary {
+             --bs-table-bg: #e9ecef; /* Lighter gray for billed rows */
+             --bs-table-striped-bg: #e1e5e9;
+        }
+        .select-checkbox-cell, .select-checkbox-header {
+            width: 1%;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .status-billed { background-color: #198754; color: white; } /* Success */
+        .status-unbilled { background-color: #ffc107; color: black; } /* Warning */
+        /* END New styles */
         @media (max-width: 767px) {
             .crm-header { flex-direction: column; align-items: flex-start; padding: 24px 12px 16px 12px; }
             .crm-header .avatar { margin-bottom: 12px; }
@@ -201,6 +218,38 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- New Section for Mashgiach Logs -->
+                <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+                    <h4>Mashgiach Logs</h4>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <strong>Selected Total Time:</strong> <span id="selected-total-time">0 hours 0 minutes</span>
+                        </div>
+                        <button class="btn btn-primary" id="add-selected-to-invoice-btn" style="display: none;">
+                            <i class="bi bi-receipt"></i> Add Selected to Invoice
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive table-mashgiach-logs">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="select-checkbox-header">
+                                    <input type="checkbox" id="select-all-mashgiach-logs" title="Select All Unbilled Logs">
+                                </th>
+                                <th>Mashgiach</th>
+                                <th>Venue</th>
+                                <th>Time/Date</th>
+                                <th>Description</th>
+                                <th>Time Spent</th>
+                                <th>Billing Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mashgiach-log-list">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -230,6 +279,14 @@
             return new Date(date).toLocaleDateString();
         }
 
+        // Function to format Firestore Timestamp objects for display
+        function formatFirestoreTimestamp(timestamp) {
+            if (timestamp && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate().toLocaleString(); // Consider locale options
+            }
+            return 'N/A';
+        }
+
         // Get clientId from URL
         const urlParams = new URLSearchParams(window.location.search);
         const clientId = urlParams.get('id');
@@ -245,6 +302,129 @@
             throw new Error("Netlify Identity widget not loaded.");
         }
         netlifyIdentity.init();
+
+        // State variables for mashgiach logs invoicing
+        const MASHGIACH_HOURLY_RATE = 50.00; // ADJUST AS NEEDED!
+        let selectedMashgiachLogIds = new Set();
+        let allClientMashgiachLogs = []; // Store logs fetched for this client
+
+        // DOM references for mashgiach logs section
+        const mashgiachLogListTbody = document.getElementById('mashgiach-log-list');
+        const selectAllMashgiachLogsCheckbox = document.getElementById('select-all-mashgiach-logs');
+        const addSelectedToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
+        const selectedTotalTimeDisplay = document.getElementById('selected-total-time');
+
+        // Helper function for updating the Add to Invoice button state
+        function updateAddToInvoiceButtonVisibility() {
+            if (addSelectedToInvoiceBtn) {
+                // Only enable if there are unbilled selected logs
+                const hasUnbilledSelected = Array.from(selectedMashgiachLogIds).some(logId => {
+                    const log = allClientMashgiachLogs.find(l => l.id === logId);
+                    return log && log.billingStatus !== 'billed';
+                });
+                addSelectedToInvoiceBtn.disabled = !hasUnbilledSelected;
+                addSelectedToInvoiceBtn.style.display = hasUnbilledSelected ? 'inline-block' : 'none';
+            }
+        }
+
+        function calculateSelectedTime() {
+            let totalMinutes = 0;
+            selectedMashgiachLogIds.forEach(logId => {
+                const log = allClientMashgiachLogs.find(l => l.id === logId);
+                if (log && log.billingStatus !== 'billed' && !isNaN(log.timeSpentMinutes)) {
+                    totalMinutes += log.timeSpentMinutes;
+                }
+            });
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (selectedTotalTimeDisplay) {
+                selectedTotalTimeDisplay.textContent = `${hours} hours ${minutes} minutes`;
+            }
+        }
+
+        function handleMashgiachCheckboxChange(event) {
+            const checkbox = event.target;
+            const logId = checkbox.dataset.id;
+            const logStatus = checkbox.dataset.status;
+
+            if (logStatus === 'billed') {
+                checkbox.checked = false; // Prevent selection of billed items for invoicing
+                return;
+            }
+
+            if (checkbox.checked) {
+                selectedMashgiachLogIds.add(logId);
+            } else {
+                selectedMashgiachLogIds.delete(logId);
+            }
+
+            // Update "Select All" checkbox state
+            const unbilledCheckboxes = Array.from(mashgiachLogListTbody.querySelectorAll('.log-select-checkbox:not([data-status="billed"])'));
+            const checkedUnbilledCount = Array.from(mashgiachLogListTbody.querySelectorAll('.log-select-checkbox:checked:not([data-status="billed"])')).length;
+
+            if (selectAllMashgiachLogsCheckbox) {
+                if (unbilledCheckboxes.length > 0 && checkedUnbilledCount === unbilledCheckboxes.length) {
+                    selectAllMashgiachLogsCheckbox.checked = true;
+                    selectAllMashgiachLogsCheckbox.indeterminate = false;
+                } else if (checkedUnbilledCount > 0) {
+                    selectAllMashgiachLogsCheckbox.checked = false;
+                    selectAllMashgiachLogsCheckbox.indeterminate = true;
+                } else {
+                    selectAllMashgiachLogsCheckbox.checked = false;
+                    selectAllMashgiachLogsCheckbox.indeterminate = false;
+                }
+            }
+            updateAddToInvoiceButtonVisibility();
+            calculateSelectedTime();
+        }
+
+        function handleSelectAllMashgiachChange(event) {
+            const isChecked = event.target.checked;
+            selectedMashgiachLogIds.clear();
+
+            mashgiachLogListTbody.querySelectorAll('.log-select-checkbox').forEach(checkbox => {
+                if (checkbox.dataset.status !== 'billed') {
+                    checkbox.checked = isChecked;
+                    if (isChecked) {
+                        selectedMashgiachLogIds.add(checkbox.dataset.id);
+                    }
+                } else {
+                    checkbox.checked = false; // Keep billed items unchecked by select-all
+                }
+            });
+            if(selectAllMashgiachLogsCheckbox) selectAllMashgiachLogsCheckbox.indeterminate = false;
+            updateAddToInvoiceButtonVisibility();
+            calculateSelectedTime();
+        }
+
+        async function prepareAndRedirectToCRMForInvoice() {
+            const unbilledSelectedLogEntries = allClientMashgiachLogs.filter(log =>
+                selectedMashgiachLogIds.has(log.id) && log.billingStatus !== 'billed'
+            );
+
+            if (unbilledSelectedLogEntries.length === 0) {
+                alert("Please select at least one 'Unbilled' mashgiach log entry to add to the invoice.");
+                return;
+            }
+
+            const invoiceItems = unbilledSelectedLogEntries.map(log => {
+                const minutes = log.timeSpentMinutes || 0;
+                const hours = minutes > 0 ? (minutes / 60).toFixed(2) : 0;
+                const description = `Mashgiach Visit: ${log.venue || 'N/A'} (${formatFirestoreTimestamp(log.dateTime)}) - ${log.description || ''}`;
+                return {
+                    description: description.substring(0, 200), // Truncate if too long
+                    quantity: parseFloat(hours),
+                    unitPrice: MASHGIACH_HOURLY_RATE,
+                    mashgiachLogId: log.id // Store original log ID to mark as billed later
+                };
+            });
+
+            sessionStorage.setItem('pendingInvoiceItems', JSON.stringify(invoiceItems));
+            sessionStorage.setItem('pendingInvoiceClientId', clientId); // Pass current client ID
+
+            // Redirect to CRM index page with instruction to open invoice modal
+            window.location.href = `index.html?openInvoiceModal=true&tab=billing`;
+        }
 
         // Function to check user role and load content
         function checkUserRoleAndLoad() {
@@ -296,6 +476,7 @@
                 : '<span class="text-muted">None assigned</span>'; // Corrected original span text for clarity
 
             // Load invoices for this client
+            const tbody = document.getElementById('invoice-list');
             const snapshot = await db.collection('invoices').where('clientId', '==', clientId).get();
             invoices = [];
             let totalInvoiced = 0, amountDue = 0, unbilled = 0;
@@ -314,7 +495,6 @@
             document.getElementById('invoice-count').textContent = invoices.length;
 
             // List invoices
-            const tbody = document.getElementById('invoice-list');
             if (invoices.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center">No invoices found for this client.</td></tr>';
             } else {
@@ -327,6 +507,75 @@
                         <td>${formatCurrency(inv.totalAmount)}</td>
                     </tr>
                 `).join('');
+            }
+
+            // Load and display Mashgiach Logs for associated establishments
+            mashgiachLogListTbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Mashgiach logs...</td></tr>'; // Adjusted colspan to 7
+            selectedMashgiachLogIds.clear(); // Clear selection on reload
+            updateAddToInvoiceButtonVisibility(); // Update button state
+            calculateSelectedTime(); // Reset selected time
+            if (selectAllMashgiachLogsCheckbox) { // Reset select-all checkbox
+                selectAllMashgiachLogsCheckbox.checked = false;
+                selectAllMashgiachLogsCheckbox.indeterminate = false;
+            }
+
+            const clientEstablishmentNames = clientData.establishments ? clientData.establishments.map(estId => {
+                const est = allEstablishments.find(e => e.id === estId);
+                return est ? est.name : null;
+            }).filter(name => name !== null) : [];
+
+            if (clientEstablishmentNames.length > 0) {
+                try {
+                    const mashgiachLogsSnapshot = await db.collection('mashgiach-logs')
+                                                            .where('venue', 'in', clientEstablishmentNames)
+                                                            .orderBy('dateTime', 'desc')
+                                                            .get();
+                    allClientMashgiachLogs = mashgiachLogsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Store logs
+                    
+                    let mashgiachLogsContent = '';
+                    if (allClientMashgiachLogs.length === 0) { // Check length of processed array
+                        mashgiachLogsContent = '<tr><td colspan="7" class="text-center">No Mashgiach logs found for this client\'s establishments.</td></tr>';
+                    } else {
+                        allClientMashgiachLogs.forEach(log => {
+                            const timeInMinutes = log.timeSpentMinutes || 0;
+                            const timeDisplay = timeInMinutes ? `${timeInMinutes} min` : 'N/A';
+                            const billingStatus = log.billingStatus || 'unbilled';
+                            const isBilled = billingStatus === 'billed';
+                            // Checkbox is disabled if already billed
+                            const checkboxDisabled = isBilled ? 'disabled' : '';
+                            const rowClass = isBilled ? 'table-secondary' : '';
+
+                            mashgiachLogsContent += `
+                                <tr data-id="${log.id}" class="${rowClass}">
+                                    <td class="select-checkbox-cell">
+                                        <input type="checkbox" class="log-select-checkbox"
+                                               data-id="${log.id}"
+                                               data-duration-minutes="${timeInMinutes}"
+                                               data-status="${billingStatus}"
+                                               title="${isBilled ? 'Already Billed' : 'Select Log'}"
+                                               ${checkboxDisabled}>
+                                    </td>
+                                    <td>${log.mashgiachName || 'Unknown'}</td>
+                                    <td>${log.venue || 'N/A'}</td>
+                                    <td>${formatFirestoreTimestamp(log.dateTime)}</td>
+                                    <td>${log.description || ''}</td>
+                                    <td>${timeDisplay}</td>
+                                    <td><span class="status-badge status-${billingStatus}">${billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}</span></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    mashgiachLogListTbody.innerHTML = mashgiachLogsContent;
+                    // Attach delegated event listener after content is loaded
+                    mashgiachLogListTbody.removeEventListener('change', handleMashgiachCheckboxChange); // Remove old listener if exists
+                    mashgiachLogListTbody.addEventListener('change', handleMashgiachCheckboxChange);
+
+                } catch (error) {
+                    console.error('Error fetching Mashgiach logs:', error);
+                    mashgiachLogListTbody.innerHTML = `<tr><td colspan="7" class="text-danger">Error loading Mashgiach logs: ${error.message}</td></tr>`;
+                }
+            } else {
+                mashgiachLogListTbody.innerHTML = '<tr><td colspan="7" class="text-center">No establishments assigned to this client, so no logs to display.</td></tr>';
             }
         }
 
@@ -344,6 +593,14 @@
             } catch (error) {
                 console.error('Error loading all establishments for overview page:', error);
             }
+        }
+
+        // Event Listeners for Mashgiach Logs Section
+        if (selectAllMashgiachLogsCheckbox) {
+            selectAllMashgiachLogsCheckbox.addEventListener('change', handleSelectAllMashgiachChange);
+        }
+        if (addSelectedToInvoiceBtn) {
+            addSelectedToInvoiceBtn.addEventListener('click', prepareAndRedirectToCRMForInvoice);
         }
 
         // Make sure these listeners are set up before the init call might fire

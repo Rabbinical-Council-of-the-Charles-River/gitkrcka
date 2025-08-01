@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,7 +188,7 @@
                 <button id="netlify-login-button" class="btn btn-primary btn-lg">
                     <i class="bi bi-box-arrow-in-right"></i> Login
                 </button>
-                <a href="../index.html" class="btn btn-outline-secondary">Back to Portal</a>
+                <a class='btn btn-outline-secondary' href='/'>Back to Portal</a>
             </div>
         </div>
     </div>
@@ -204,7 +205,7 @@
                             <p class="text-muted mb-0">Comprehensive CRM for Kosher Agency Operations</p>
                         </div>
                         <div class="col-md-4 text-end">
-                            <a href="../index.html" class="btn btn-outline-secondary me-2">
+                            <a class='btn btn-outline-secondary me-2' href='/'>
                                 <i class="bi bi-house"></i> Portal
                             </a>
                             <button id="logout-button" class="btn btn-danger">
@@ -612,10 +613,10 @@
                                     <input type="text" class="form-control item-description" placeholder="Description">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" min="1">
+                                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="1">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0">
+                                    <input type="number" class="form-control item-rate" placeholder="Rate">
                                 </div>
                                 <div class="col-md-2">
                                     <input type="text" class="form-control item-total" placeholder="Total" readonly>
@@ -683,5 +684,216 @@
 
     <!-- CRM JavaScript -->
     <script src="js/crm.js"></script>
+
+    <!-- New inline script for handling Mashgiach Logs to Invoice transfer -->
+    <script>
+        // Assumes 'db' and 'firebase' are globally available from Firebase SDKs loaded above.
+        // Assumes functions like 'addInvoiceItem', 'calculateInvoiceTotals' exist in crm.js and are accessible.
+
+        const mashgiachLogRef = db.collection('mashgiach-logs');
+        let pendingMashgiachLogIdsToBill = []; // To store IDs of logs that will be billed by this invoice
+        const MASHGIACH_HOURLY_RATE = 50.00; // Define rate here as well, for consistency
+
+        async function processPendingInvoiceItems() {
+            const pendingInvoiceItemsJson = sessionStorage.getItem('pendingInvoiceItems');
+            const pendingInvoiceClientId = sessionStorage.getItem('pendingInvoiceClientId');
+            const urlParams = new URLSearchParams(window.location.search);
+            const openInvoiceModal = urlParams.get('openInvoiceModal') === 'true';
+
+            if (pendingInvoiceItemsJson && pendingInvoiceClientId && openInvoiceModal) {
+                const invoiceItems = JSON.parse(pendingInvoiceItemsJson);
+                
+                // Clear session storage immediately after reading to prevent re-processing
+                sessionStorage.removeItem('pendingInvoiceItems');
+                sessionStorage.removeItem('pendingInvoiceClientId');
+
+                const addInvoiceModalEl = document.getElementById('addInvoiceModal');
+                const addInvoiceModalInstance = new bootstrap.Modal(addInvoiceModalEl);
+
+                // Pre-fill client dropdown
+                const addInvoiceClientSelect = document.getElementById('add-invoice-client');
+                if (addInvoiceClientSelect) {
+                    // It's crucial that clients data is loaded into this select before this runs.
+                    // A small delay or a more robust loading check might be needed in crm.js
+                    addInvoiceClientSelect.value = pendingInvoiceClientId;
+                }
+
+                // Clear existing items in the modal (e.g., if there's a default empty row)
+                const addInvoiceItemsContainer = document.getElementById('add-invoice-items');
+                addInvoiceItemsContainer.innerHTML = ''; 
+                pendingMashgiachLogIdsToBill = []; // Reset for this new set of items
+
+                invoiceItems.forEach(item => {
+                    // Dynamically add a new invoice item row
+                    const newRow = document.createElement('div');
+                    newRow.classList.add('row', 'mb-2', 'invoice-item-row');
+                    newRow.innerHTML = `
+                        <div class="col-md-4">
+                            <input type="text" class="form-control item-description" placeholder="Description" value="${item.description}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity}" step="0.01" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0" value="${item.unitPrice}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control item-total" placeholder="Total" readonly value="${(item.quantity * item.unitPrice).toFixed(2)}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        ${item.mashgiachLogId ? `<input type="hidden" class="mashgiach-log-id" value="${item.mashgiachLogId}">` : ''}
+                    `;
+                    addInvoiceItemsContainer.appendChild(newRow);
+                    
+                    // Add event listeners for new row's inputs to recalculate totals
+                    const qtyInput = newRow.querySelector('.item-quantity');
+                    const rateInput = newRow.querySelector('.item-rate');
+                    const removeButton = newRow.querySelector('.remove-item');
+
+                    const updateItemTotal = () => {
+                        const q = parseFloat(qtyInput.value) || 0;
+                        const r = parseFloat(rateInput.value) || 0;
+                        newRow.querySelector('.item-total').value = (q * r).toFixed(2);
+                        // Ensure calculateInvoiceTotals is called here, assuming it's available in crm.js
+                        if (typeof calculateInvoiceTotals === 'function') {
+                            calculateInvoiceTotals(); 
+                        }
+                    };
+
+                    qtyInput.addEventListener('input', updateItemTotal);
+                    rateInput.addEventListener('input', updateItemTotal);
+                    removeButton.addEventListener('click', () => {
+                        newRow.remove();
+                        // Ensure calculateInvoiceTotals is called here, assuming it's available in crm.js
+                        if (typeof calculateInvoiceTotals === 'function') {
+                            calculateInvoiceTotals(); 
+                        }
+                    });
+
+                    if (item.mashgiachLogId) {
+                        pendingMashgiachLogIdsToBill.push(item.mashgiachLogId);
+                    }
+                });
+
+                // Ensure calculateInvoiceTotals is called here, assuming it's available in crm.js
+                if (typeof calculateInvoiceTotals === 'function') {
+                    calculateInvoiceTotals(); 
+                }
+
+                // Open the modal
+                addInvoiceModalInstance.show();
+
+                // Also switch to billing tab if the URL parameter requested it
+                const targetTab = urlParams.get('tab');
+                if (targetTab) {
+                    const tabElement = document.getElementById(`${targetTab}-tab`);
+                    if (tabElement) {
+                        const tab = new bootstrap.Tab(tabElement);
+                        tab.show();
+                    }
+                }
+            }
+        }
+
+        // Attach submit handler using addEventListener
+        document.addEventListener('DOMContentLoaded', () => {
+            const addInvoiceForm = document.getElementById('add-invoice-form');
+            if (addInvoiceForm) {
+                addInvoiceForm.addEventListener('submit', async function(event) {
+                    event.preventDefault(); // Prevent default form submission
+
+                    // Existing logic for collecting invoice data from the form
+                    const invoiceNumber = document.getElementById('add-invoice-number').value.trim();
+                    const clientId = document.getElementById('add-invoice-client').value;
+                    const issueDate = document.getElementById('add-invoice-issue-date').value;
+                    const dueDate = document.getElementById('add-invoice-due-date').value;
+                    const status = document.getElementById('add-invoice-status').value;
+                    const taxRate = parseFloat(document.getElementById('add-invoice-tax-rate').value) || 0;
+
+                    const items = [];
+                    const logIdsToUpdate = []; // Collect IDs here from the modal's hidden inputs
+
+                    document.querySelectorAll('#add-invoice-items .invoice-item-row').forEach(row => {
+                        const description = row.querySelector('.item-description').value.trim();
+                        const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                        const unitPrice = parseFloat(row.querySelector('.item-rate').value) || 0;
+                        const mashgiachLogIdInput = row.querySelector('.mashgiach-log-id');
+
+                        if (description && quantity > 0 && unitPrice >= 0) {
+                            items.push({ description, quantity, unitPrice });
+                            if (mashgiachLogIdInput) {
+                                logIdsToUpdate.push(mashgiachLogIdInput.value);
+                            }
+                        }
+                    });
+
+                    if (!clientId || !invoiceNumber || items.length === 0) {
+                        alert('Please fill in all required invoice fields and add at least one item.');
+                        return;
+                    }
+
+                    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+                    const taxAmount = subtotal * (taxRate / 100);
+                    const totalAmount = subtotal + taxAmount;
+
+                    const newInvoice = {
+                        clientId: clientId,
+                        invoiceNumber: invoiceNumber,
+                        issueDate: firebase.firestore.Timestamp.fromDate(new Date(issueDate)),
+                        dueDate: firebase.firestore.Timestamp.fromDate(new Date(dueDate)),
+                        status: status,
+                        items: items,
+                        subtotalAmount: subtotal,
+                        taxRate: taxRate,
+                        taxAmount: taxAmount,
+                        totalAmount: totalAmount,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    try {
+                        await db.collection('invoices').add(newInvoice);
+                        console.log('Invoice added successfully!');
+                        alert('Invoice created successfully!');
+
+                        // Mark mashgiach logs as billed if they were part of this invoice creation
+                        if (logIdsToUpdate.length > 0) {
+                            const batch = db.batch();
+                            logIdsToUpdate.forEach(logId => {
+                                const logRef = mashgiachLogRef.doc(logId);
+                                batch.update(logRef, {
+                                    billingStatus: 'billed',
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            });
+                            await batch.commit();
+                            console.log(`Successfully marked ${logIdsToUpdate.length} mashgiach logs as billed.`);
+                        }
+
+                        // Hide modal and refresh relevant data
+                        const addInvoiceModalEl = document.getElementById('addInvoiceModal');
+                        const modal = bootstrap.Modal.getInstance(addInvoiceModalEl);
+                        if(modal) modal.hide();
+                        
+                        // Trigger a refresh of the CRM data (assuming these functions are in crm.js)
+                        if (typeof loadCRMData === 'function') loadCRMData(); 
+                        if (typeof filterClients === 'function') filterClients(); // To update client table and stats
+                        if (typeof filterInvoices === 'function') filterInvoices(); // To update invoice table
+
+                    } catch (error) {
+                        console.error('Error adding invoice:', error);
+                        alert(`Failed to create invoice: ${error.message}`);
+                    }
+                });
+            }
+
+            // Call the processing function when the DOM is fully loaded.
+            // A small delay is added to ensure crm.js's initial data loading (e.g., clients for dropdown) is complete.
+            setTimeout(processPendingInvoiceItems, 1000); // 1-second delay as a pragmatic solution
+        });
+    </script>
 </body>
 </html>
