@@ -14,6 +14,7 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
+// Removed: const auth = firebase.auth();
 
 // Global Variables
 let currentUser = null;
@@ -25,6 +26,9 @@ let selectedEstablishments = {
     edit: []
 };
 
+// Removed: Variable to store the ID of the invoice currently being edited
+// Removed: let currentEditingInvoiceId = null;
+
 // DOM Elements
 const loginSection = document.getElementById('login-section');
 const crmContent = document.getElementById('crm-content');
@@ -33,14 +37,7 @@ const logoutButton = document.getElementById('logout-button');
 const messageDiv = document.getElementById('message');
 const addInvoiceModalElement = document.getElementById('addInvoiceModal'); // Get modal element once
 
-// Initialize Netlify Identity
-const netlifyIdentity = window.netlifyIdentity;
-if (netlifyIdentity) {
-    netlifyIdentity.init();
-} else {
-    console.error("Netlify Identity widget not loaded.");
-    showMessage('error', 'Authentication service failed to load.');
-}
+// Netlify Identity initialization and event listeners will be moved to DOMContentLoaded
 
 // Utility Functions
 function showMessage(type, text) {
@@ -109,34 +106,10 @@ function updateUI(user) {
 }
 
 // Event Listeners for Authentication
-if (netlifyLoginButton) {
-    netlifyLoginButton.addEventListener('click', () => {
-        netlifyIdentity.open();
-    });
-}
-
-if (logoutButton) {
-    logoutButton.addEventListener('click', () => {
-        netlifyIdentity.logout();
-    });
-}
+// These will also be moved inside DOMContentLoaded
 
 // Netlify Identity Event Listeners
-netlifyIdentity.on('login', user => {
-    console.log('Login event triggered:', user);
-    updateUI(user);
-    netlifyIdentity.close();
-});
-
-netlifyIdentity.on('logout', () => {
-    console.log('Logout event triggered');
-    updateUI(null);
-});
-
-netlifyIdentity.on('init', user => {
-    console.log('Init event triggered:', user);
-    updateUI(user);
-});
+// These will also be moved inside DOMContentLoaded
 
 // CRM Initialization
 async function initializeCRM() {
@@ -148,6 +121,8 @@ async function initializeCRM() {
         updateQuickStats();
         populateDropdowns();
         setupEventListeners();
+        // New: Call the processing function for pending invoice items here
+        processPendingInvoiceItems();
         console.log('CRM initialized successfully.'); // Debugging
     } catch (error) {
         console.error('Error initializing CRM:', error);
@@ -419,7 +394,11 @@ function setupEventListeners() {
     document.getElementById('edit-client-form').addEventListener('submit', handleEditClient);
     
     // Invoice form submission
-    document.getElementById('add-invoice-form').addEventListener('submit', handleAddInvoice);
+    // We move the main invoice submission logic into a dedicated function for better control
+    const addInvoiceForm = document.getElementById('add-invoice-form');
+    if (addInvoiceForm) {
+        addInvoiceForm.addEventListener('submit', handleAddInvoice);
+    }
     
     // Search and filter inputs
     document.getElementById('client-search').addEventListener('input', filterClients);
@@ -476,6 +455,25 @@ function setupEventListeners() {
             document.querySelectorAll('.multi-select-dropdown').forEach(d => d.style.display = 'none');
         }
     });
+
+    // Event listener for the "Create Invoice" button
+    const createNewInvoiceButton = document.getElementById('create-new-invoice-btn');
+    if (createNewInvoiceButton) {
+        createNewInvoiceButton.addEventListener('click', function() {
+            resetInvoiceForm(); // Reset the form explicitly when the button is clicked
+            // Bootstrap's data-bs-toggle="modal" handles showing the modal,
+            // so we don't need new bootstrap.Modal().show() here for this button.
+            // If the button didn't have data-bs-toggle, we would.
+        });
+    }
+
+    // Event listener for modal hidden event - IMPORTANT for clearing state after edit/close
+    const addInvoiceModal = document.getElementById('addInvoiceModal');
+    if (addInvoiceModal) {
+        addInvoiceModal.addEventListener('hidden.bs.modal', function () {
+            resetInvoiceForm(); // Reset the form when the modal is closed (e.g., via X button or clicking outside)
+        });
+    }
 }
 
 // Client Management Functions
@@ -610,7 +608,7 @@ function addInvoiceItem() {
             <input type="text" class="form-control item-description" placeholder="Description">
         </div>
         <div class="col-md-2">
-            <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" min="1">
+            <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" step="0.01">
         </div>
         <div class="col-md-2">
             <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0">
@@ -672,18 +670,26 @@ async function handleAddInvoice(e) {
     
     // Collect invoice items
     const items = [];
+    const logIdsToUpdate = []; // Collect IDs here from the modal's hidden inputs
+
     document.querySelectorAll('.invoice-item-row').forEach(row => {
         const description = row.querySelector('.item-description').value;
         const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
         const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
-        
+        const mashgiachLogIdInput = row.querySelector('.mashgiach-log-id');
+
         if (description && quantity > 0 && rate >= 0) {
-            items.push({
+            const item = {
                 description,
                 quantity,
                 rate,
                 total: quantity * rate
-            });
+            };
+            if (mashgiachLogIdInput) {
+                item.mashgiachLogId = mashgiachLogIdInput.value;
+                logIdsToUpdate.push(mashgiachLogIdInput.value);
+            }
+            items.push(item);
         }
     });
     
@@ -724,11 +730,16 @@ async function handleAddInvoice(e) {
         if (isEditing) {
             await db.collection('invoices').doc(invoiceId).update(invoiceData);
             showMessage('success', 'Invoice updated successfully!');
-            console.log(`Invoice updated: ${invoiceData.invoiceNumber}`); // Changed to console.log as 'log' is not defined
+            console.log(`Invoice updated: ${invoiceData.invoiceNumber}`);
         } else {
-            await db.collection('invoices').add(invoiceData);
+            const docRef = await db.collection('invoices').add(invoiceData);
             showMessage('success', 'Invoice created successfully!');
-            console.log(`Invoice created: ${invoiceData.invoiceNumber}`); // Changed to console.log as 'log' is not defined
+            console.log(`Invoice created: ${invoiceData.invoiceNumber}, ID: ${docRef.id}`);
+
+            // Mark mashgiach logs as billed if they were part of this invoice creation
+            if (logIdsToUpdate.length > 0) {
+                await markLogsAsBilled(logIdsToUpdate);
+            }
         }
         
         // Reset form and close modal
@@ -747,7 +758,7 @@ async function handleAddInvoice(e) {
 // Reset invoice form function
 function resetInvoiceForm() {
     document.getElementById('add-invoice-form').reset();
-    document.getElementById('add-invoice-form').removeAttribute('data-invoice-id');
+    document.getElementById('add-invoice-form').removeAttribute('data-invoice-id'); // Ensure this is present to clear ID
     document.getElementById('addInvoiceModalLabel').textContent = 'Create New Invoice';
     const submitButton = document.querySelector('#add-invoice-form button[type="submit"]');
     submitButton.textContent = 'Create Invoice';
@@ -760,7 +771,7 @@ function resetInvoiceForm() {
                 <input type="text" class="form-control item-description" placeholder="Description">
             </div>
             <div class="col-md-2">
-                <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" min="1">
+                <input type="number" class="form-control item-quantity" placeholder="Qty" value="1" step="0.01">
             </div>
             <div class="col-md-2">
                 <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0">
@@ -790,24 +801,6 @@ function resetInvoiceForm() {
     document.getElementById('add-invoice-establishments').innerHTML = ''; // Clear client establishments
     document.getElementById('add-invoice-tax-rate').value = '0'; // Reset tax rate
 }
-
-// Event listener for the "Create Invoice" button
-document.addEventListener('DOMContentLoaded', function() {
-    const createNewInvoiceButton = document.getElementById('create-new-invoice-btn');
-    if (createNewInvoiceButton) {
-        createNewInvoiceButton.addEventListener('click', function() {
-            resetInvoiceForm(); // Reset the form explicitly when the button is clicked
-            // Bootstrap's data-bs-toggle="modal" handles showing the modal,
-            // so we don't need new bootstrap.Modal().show() here for this button.
-            // If the button didn't have data-bs-toggle, we would.
-        });
-    }
-});
-
-// Event listener for modal hidden event - IMPORTANT for clearing state after edit/close
-document.getElementById('addInvoiceModal').addEventListener('hidden.bs.modal', function () {
-    resetInvoiceForm(); // Reset the form when the modal is closed (e.g., via X button or clicking outside)
-});
 
 // Enhanced Invoice Editing Function
 async function editInvoice(invoiceId) {
@@ -860,7 +853,7 @@ async function editInvoice(invoiceId) {
                     <input type="text" class="form-control item-description" placeholder="Description" value="${item.description || ''}">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity || 1}" min="1">
+                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity || 1}" step="0.01">
                 </div>
                 <div class="col-md-2">
                     <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0" value="${item.rate || 0}">
@@ -873,6 +866,7 @@ async function editInvoice(invoiceId) {
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
+                ${item.mashgiachLogId ? `<input type="hidden" class="mashgiach-log-id" value="${item.mashgiachLogId}">` : ''}
             `;
             itemsContainer.appendChild(itemRow);
         });
@@ -956,7 +950,7 @@ function duplicateInvoice(invoiceId) {
                     <input type="text" class="form-control item-description" placeholder="Description" value="${item.description}">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity}" min="1">
+                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity}" step="0.01">
                 </div>
                 <div class="col-md-2">
                     <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" min="0" value="${item.rate}">
@@ -969,6 +963,7 @@ function duplicateInvoice(invoiceId) {
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
+                ${item.mashgiachLogId ? `<input type="hidden" class="mashgiach-log-id" value="${item.mashgiachLogId}">` : ''}
             `;
             itemsContainer.appendChild(itemRow);
         });
@@ -1041,123 +1036,111 @@ document.addEventListener('DOMContentLoaded', function() {
         updateUI(currentUser);
     }
     
-    // Check for URL parameters to handle mashgiach logs import
-    handleURLParameters();
+    // Handle Netlify Identity events
+    netlifyIdentity.on('init', updateUI);
+    netlifyIdentity.on('login', updateUI);
+    netlifyIdentity.on('logout', function() {
+        document.body.innerHTML = '<div class="container my-5"><div class="alert alert-warning">Logged out. Admin privileges required.</div><button class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button></div>';
+    });
 });
 
-// Handle URL parameters for mashgiach logs integration
-function handleURLParameters() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab');
-    const action = urlParams.get('action');
-    const source = urlParams.get('source');
-    
-    if (tab === 'billing' && action === 'create' && source === 'mashgiach-logs') {
-        // Switch to billing tab
-        setTimeout(() => {
-            const billingTab = document.getElementById('billing-tab');
-            if (billingTab) {
-                billingTab.click();
-                
-                // Wait a bit more then open invoice modal with mashgiach data
-                setTimeout(() => {
-                    openInvoiceWithMashgiachLogs();
-                }, 500);
-            }
-        }, 1000);
-    }
-}
+// Mashgiach Logs Integration Functions (from index.html inline script, moved here for better organization)
+const mashgiachLogRef = db.collection('mashgiach-logs');
+const MASHGIACH_HOURLY_RATE = 50.00;
 
-// Open invoice modal with mashgiach logs data
-function openInvoiceWithMashgiachLogs() {
-    const selectedLogsData = sessionStorage.getItem('selectedMashgiachLogs');
-    const totalTimeData = sessionStorage.getItem('mashgiachLogsTotalTime');
-    
-    if (!selectedLogsData) {
-        showMessage('error', 'No mashgiach logs data found. Please select logs from the Mashgiach Logs page.');
-        return;
-    }
-    
-    try {
-        const selectedLogs = JSON.parse(selectedLogsData);
-        const totalMinutes = parseInt(totalTimeData) || 0;
+async function processPendingInvoiceItems() {
+    const pendingInvoiceItemsJson = sessionStorage.getItem('pendingInvoiceItems');
+    const pendingInvoiceClientId = sessionStorage.getItem('pendingInvoiceClientId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const openInvoiceModal = urlParams.get('openInvoiceModal') === 'true';
+
+    if (pendingInvoiceItemsJson && pendingInvoiceClientId && openInvoiceModal) {
+        const invoiceItems = JSON.parse(pendingInvoiceItemsJson);
         
-        // Reset and open invoice form
-        resetInvoiceForm();
-        
-        // Pre-populate invoice items with mashgiach logs
-        const itemsContainer = document.getElementById('add-invoice-items');
-        itemsContainer.innerHTML = '';
-        
-        // Group logs by venue for better organization
-        const logsByVenue = {};
-        selectedLogs.forEach(log => {
-            if (!logsByVenue[log.venue]) {
-                logsByVenue[log.venue] = [];
-            }
-            logsByVenue[log.venue].push(log);
-        });
-        
-        // Create invoice items for each venue
-        Object.keys(logsByVenue).forEach(venue => {
-            const venueLogs = logsByVenue[venue];
-            const totalVenueMinutes = venueLogs.reduce((sum, log) => sum + log.timeSpent, 0);
-            const totalVenueHours = (totalVenueMinutes / 60).toFixed(2);
-            
-            // Create description with all mashgiach names and activities
-            const mashgiachNames = [...new Set(venueLogs.map(log => log.mashgiach))].join(', ');
-            const activities = venueLogs.map(log => log.description).join('; ');
-            
-            const description = `Mashgiach Services - ${venue}\nMashgiach(im): ${mashgiachNames}\nActivities: ${activities}`;
-            
-            const itemRow = document.createElement('div');
-            itemRow.className = 'row mb-2 invoice-item-row';
-            itemRow.innerHTML = `
+        // Clear session storage immediately after reading to prevent re-processing
+        sessionStorage.removeItem('pendingInvoiceItems');
+        sessionStorage.removeItem('pendingInvoiceClientId');
+
+        const addInvoiceModalEl = document.getElementById('addInvoiceModal');
+        const addInvoiceModalInstance = bootstrap.Modal.getInstance(addInvoiceModalEl) || new bootstrap.Modal(addInvoiceModalEl);
+
+        // Pre-fill client dropdown
+        const addInvoiceClientSelect = document.getElementById('add-invoice-client');
+        if (addInvoiceClientSelect) {
+            addInvoiceClientSelect.value = pendingInvoiceClientId;
+            // Manually trigger change to populate establishments and set due date
+            addInvoiceClientSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Clear existing items in the modal (e.g., if there's a default empty row)
+        const addInvoiceItemsContainer = document.getElementById('add-invoice-items');
+        addInvoiceItemsContainer.innerHTML = ''; 
+
+        invoiceItems.forEach(item => {
+            const newRow = document.createElement('div');
+            newRow.classList.add('row', 'mb-2', 'invoice-item-row');
+            newRow.innerHTML = `
                 <div class="col-md-4">
-                    <textarea class="form-control item-description" placeholder="Description" rows="3">${description}</textarea>
+                    <input type="text" class="form-control item-description" placeholder="Description" value="${item.description}" required>
                 </div>
                 <div class="col-md-2">
-                    <input type="number" class="form-control item-quantity" placeholder="Hours" value="${totalVenueHours}" min="0" step="0.25">
+                    <input type="number" class="form-control item-quantity" placeholder="Qty" value="${item.quantity}" step="0.01" required>
                 </div>
                 <div class="col-md-2">
-                    <input type="number" class="form-control item-rate" placeholder="Rate per Hour" step="0.01" min="0" value="50.00">
+                    <input type="number" class="form-control item-rate" placeholder="Rate" step="0.01" value="${item.unitPrice}" required>
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control item-total" placeholder="Total" readonly>
+                    <input type="text" class="form-control item-total" placeholder="Total" readonly value="${(item.quantity * item.unitPrice).toFixed(2)}">
                 </div>
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-item" onclick="removeInvoiceItem(this)">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
+                ${item.mashgiachLogId ? `<input type="hidden" class="mashgiach-log-id" value="${item.mashgiachLogId}">` : ''}
             `;
-            itemsContainer.appendChild(itemRow);
+            addInvoiceItemsContainer.appendChild(newRow);
+            
+            // Add event listeners for new row's inputs to recalculate totals
+            const qtyInput = newRow.querySelector('.item-quantity');
+            const rateInput = newRow.querySelector('.item-rate');
+            const removeButton = newRow.querySelector('.remove-item');
+
+            const updateItemTotal = () => {
+                const q = parseFloat(qtyInput.value) || 0;
+                const r = parseFloat(rateInput.value) || 0;
+                newRow.querySelector('.item-total').value = (q * r).toFixed(2);
+                calculateInvoiceTotal(); 
+            };
+
+            qtyInput.addEventListener('input', updateItemTotal);
+            rateInput.addEventListener('input', updateItemTotal);
+            removeButton.addEventListener('click', () => {
+                newRow.remove();
+                calculateInvoiceTotal(); 
+            });
         });
-        
-        // Calculate totals
-        calculateInvoiceTotal();
-        
-        // Set invoice description
-        const totalHours = (totalMinutes / 60).toFixed(2);
-        const invoiceNote = `Generated from Mashgiach Logs - Total Time: ${totalHours} hours (${totalMinutes} minutes)`;
+
+        calculateInvoiceTotal(); 
         
         // Show success message
-        showMessage('success', `Invoice pre-populated with ${selectedLogs.length} mashgiach log entries (${totalHours} hours total)`);
+        showMessage('success', `Invoice pre-populated with ${invoiceItems.length} mashgiach log entries`);
         
         // Open the modal
-        new bootstrap.Modal(document.getElementById('addInvoiceModal')).show();
-        
-        // Clear session storage
-        sessionStorage.removeItem('selectedMashgiachLogs');
-        sessionStorage.removeItem('mashgiachLogsTotalTime');
-        
-    } catch (error) {
-        console.error('Error processing mashgiach logs data:', error);
-        showMessage('error', 'Error processing mashgiach logs data.');
+        addInvoiceModalInstance.show();
+
+        // Also switch to billing tab if the URL parameter requested it
+        const targetTab = urlParams.get('tab');
+        if (targetTab) {
+            const tabElement = document.getElementById(`${targetTab}-tab`);
+            if (tabElement) {
+                const tab = new bootstrap.Tab(tabElement);
+                tab.show();
+            }
+        }
     }
 }
 
-// Function to mark mashgiach logs as billed
 async function markLogsAsBilled(logIds) {
     try {
         const batch = db.batch();
@@ -1208,4 +1191,83 @@ function filterClients() {
     clients = filteredClients;
     displayClients();
     clients = originalClients;
+}
+
+// Invoice filtering (new function)
+function filterInvoices() {
+    const clientFilter = document.getElementById('invoice-client-filter').value;
+    const statusFilter = document.getElementById('invoice-status-filter').value;
+    const dateFrom = document.getElementById('invoice-date-from').value;
+    const dateTo = document.getElementById('invoice-date-to').value;
+
+    let filteredInvoices = invoices;
+
+    if (clientFilter) {
+        filteredInvoices = filteredInvoices.filter(inv => inv.clientId === clientFilter);
+    }
+
+    if (statusFilter) {
+        filteredInvoices = filteredInvoices.filter(inv => inv.status === statusFilter);
+    }
+
+    if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filteredInvoices = filteredInvoices.filter(inv => {
+            const issueDate = inv.issueDate.toDate ? inv.issueDate.toDate() : new Date(inv.issueDate);
+            return issueDate >= fromDate;
+        });
+    }
+
+    if (dateTo) {
+        const toDate = new Date(dateTo);
+        filteredInvoices = filteredInvoices.filter(inv => {
+            const issueDate = inv.issueDate.toDate ? inv.issueDate.toDate() : new Date(inv.issueDate);
+            return issueDate <= toDate;
+        });
+    }
+
+    const tbody = document.getElementById('invoices-table-body');
+    if (!tbody) return;
+
+    if (filteredInvoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No invoices found matching criteria.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filteredInvoices.map(invoice => {
+        const client = clients.find(c => c.id === invoice.clientId);
+        const establishmentBadges = invoice.establishments ? 
+            invoice.establishments.map(estId => {
+                const est = establishments.find(e => e.id === estId);
+                return est ? `<span class="establishment-badge">${est.name}</span>` : '';
+            }).join('') : '';
+
+        return `
+            <tr>
+                <td><strong>${invoice.invoiceNumber}</strong></td>
+                <td>${client ? client.companyName : 'Unknown Client'}</td>
+                <td>${establishmentBadges || '<span class="text-muted">None</span>'}</td>
+                <td>${formatDate(invoice.issueDate)}</td>
+                <td>${formatDate(invoice.dueDate)}</td>
+                <td><strong>${formatCurrency(invoice.totalAmount)}</strong></td>
+                <td><span class="status-badge status-${invoice.status}">${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</span></td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editInvoice('${invoice.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="viewInvoice('${invoice.id}')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="duplicateInvoice('${invoice.id}')">
+                            <i class="bi bi-files"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteInvoice('${invoice.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
