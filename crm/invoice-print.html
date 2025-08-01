@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>KRCKA Invoice</title>
     
     <!-- Bootstrap 5 CSS -->
@@ -10,10 +10,45 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
+        body {
+            background-color: #f8f9fa; /* Light grey background for the overall page */
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px; /* Padding around the invoice container */
+            display: flex;
+            justify-content: center; /* Center the invoice on screen */
+            align-items: flex-start; /* Align to the top */
+            min-height: 100vh; /* Ensure body takes full viewport height */
+        }
+        .container {
+            max-width: 850px; /* Adjusted max-width for the invoice content on screen */
+            width: 100%; /* Ensure it's responsive up to max-width */
+            margin: 30px auto; /* Center the container with vertical margin */
+            background: #fff; /* White background for the page look */
+            box-shadow: 0 0 15px rgba(0,0,0,.1); /* Soft shadow for page effect */
+            border-radius: 8px; /* Slightly rounded corners */
+            padding: 50px; /* Increased internal padding to act as page margins for capture */
+            box-sizing: border-box; /* Include padding in the element's total width and height */
+        }
+        
         @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                font-size: 11px; /* Smaller font size for print */
+                -webkit-print-color-adjust: exact; /* Ensure background colors are printed */
+                print-color-adjust: exact;
+                background-color: white !important; /* Force white background for printing */
+            }
+            .container {
+                max-width: none; /* Let it expand to print page width */
+                width: auto;
+                margin: 0;
+                padding: 0; /* Remove container padding for print, let browser handle margins */
+                box-shadow: none; /* No shadow in print */
+                border-radius: 0; /* No border radius in print */
+            }
             .no-print { display: none !important; }
-            body { font-size: 12px; }
-            .container { max-width: none; }
         }
         
         .invoice-header {
@@ -52,7 +87,7 @@
         }
         
         .company-logo {
-            max-height: 80px;
+            max-height: 50px; /* Adjusted logo size */
         }
         
         .status-badge {
@@ -74,8 +109,11 @@
     <div class="container mt-4">
         <!-- Print Controls -->
         <div class="no-print mb-3">
-            <button onclick="window.print()" class="btn btn-primary">
+            <button onclick="window.print()" class="btn btn-primary me-2">
                 <i class="bi bi-printer"></i> Print Invoice
+            </button>
+            <button id="download-pdf-btn" class="btn btn-info me-2">
+                <i class="bi bi-file-earmark-pdf"></i> Download PDF
             </button>
             <button onclick="window.close()" class="btn btn-secondary">
                 <i class="bi bi-x-circle"></i> Close
@@ -188,6 +226,9 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- jsPDF and html2canvas CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script>
         // Firebase Configuration
@@ -320,8 +361,8 @@
                     <tr>
                         <td>${item.description}</td>
                         <td class="text-center">${item.quantity}</td>
-                        <td class="text-end">${formatCurrency(item.rate)}</td>
-                        <td class="text-end">${formatCurrency(item.total)}</td>
+                        <td class="text-end">${item.rate !== undefined ? formatCurrency(item.rate) : 'N/A'}</td>
+                        <td class="text-end">${item.total !== undefined ? formatCurrency(item.total) : 'N/A'}</td>
                     </tr>
                 `).join('');
             } else {
@@ -338,8 +379,70 @@
             document.title = `KRCKA Invoice ${invoice.invoiceNumber}`;
         }
 
+        // Function to download invoice as PDF
+        async function downloadInvoicePdf() {
+            // Target the main container to capture the whole "page" with its padding
+            const invoiceElement = document.querySelector('.container'); 
+            const invoiceNumber = document.getElementById('invoice-number').textContent || 'Invoice';
+
+            // Temporarily hide elements not meant for PDF
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.display = 'none');
+
+            try {
+                // Capture the entire container element with increased scale for better resolution
+                const canvas = await html2canvas(invoiceElement, { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false 
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller file size, 0.9 quality
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4'); // A4 size: 210mm x 297mm
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgWidthPixels = imgProps.width;
+                const imgHeightPixels = imgProps.height;
+
+                // Define desired margins in mm for the PDF document
+                const pdfMargin = 10; 
+                const usablePdfWidth = pdfWidth - (2 * pdfMargin);
+                const usablePdfHeight = pdfHeight - (2 * pdfMargin);
+
+                // Calculate scaling factors based on usable area to fit the image
+                const widthRatio = usablePdfWidth / imgWidthPixels;
+                const heightRatio = usablePdfHeight / imgHeightPixels;
+                const scaleFactor = Math.min(widthRatio, heightRatio); // Use the smaller ratio to fit both dimensions
+
+                const finalImgWidthMm = imgWidthPixels * scaleFactor;
+                const finalImgHeightMm = imgHeightPixels * scaleFactor;
+
+                // Calculate position to center the image within the margins
+                const xPos = pdfMargin + (usablePdfWidth - finalImgWidthMm) / 2;
+                const yPos = pdfMargin + (usablePdfHeight - finalImgHeightMm) / 2;
+                
+                pdf.addImage(imgData, 'JPEG', xPos, yPos, finalImgWidthMm, finalImgHeightMm);
+
+                pdf.save(`Invoice_${invoiceNumber}.pdf`);
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                // Restore visibility of non-print elements
+                noPrintElements.forEach(el => el.style.display = '');
+            }
+        }
+
         // Load invoice when page loads
-        document.addEventListener('DOMContentLoaded', loadInvoice);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInvoice();
+            // Attach event listener to the new download button
+            document.getElementById('download-pdf-btn').addEventListener('click', downloadInvoicePdf);
+        });
     </script>
 </body>
 </html>
