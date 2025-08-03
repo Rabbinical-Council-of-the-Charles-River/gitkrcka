@@ -57,6 +57,9 @@ $(document).ready(function() {
                     kosherStatusDisplay = establishment.kosherStatus; // For backward compatibility
                 }
 
+                // Determine active status display
+                const activeStatusDisplay = (establishment.active === true || establishment.active === undefined) ? 'Yes' : 'No';
+
                 const row = `
                     <tr>
                         <td>
@@ -67,9 +70,9 @@ $(document).ready(function() {
                         </td>
                         <td>${establishment.name || '-'}</td>
                         <td>${establishment.location || '-'}</td>
-                        <td>${establishment.company || '-'}</td>
                         <td>${kosherStatusDisplay}</td>
                         <td><a href="certificate.html?id=${doc.id}" target="_blank" class="btn btn-sm btn-outline-primary">View Cert</a></td>
+                        <td>${activeStatusDisplay}</td>
                         <td>
                             <a href="#editEstablishmentModal" class="edit" data-toggle="modal" data-id="${doc.id}"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i></a>
                             <a href="#deleteEstablishmentModal" class="delete" data-toggle="modal" data-id="${doc.id}" data-name="${establishment.name || 'this establishment'}"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i></a>
@@ -98,9 +101,9 @@ $(document).ready(function() {
         const newEstablishment = {
             name: establishmentName,
             location: $('#establishment-location').val().trim(),
-            company: $('#establishment-company').val().trim(),
             kosherStatus: getSelectedKosherStatusesFromForm('add'),
-            certificateUrl: $('#establishment-certificate').val().trim() // This is the external link
+            certificateUrl: $('#establishment-certificate').val().trim(), // This is the external link
+            active: $('#establishment-active').is(':checked') // Add active status
         };
 
         establishmentsCollection.add(newEstablishment).then(() => {
@@ -122,9 +125,10 @@ $(document).ready(function() {
                 const data = doc.data();
                 $('#edit-establishment-name').val(data.name || '');
                 $('#edit-establishment-location').val(data.location || '');
-                $('#edit-establishment-company').val(data.company || '');
                 populateKosherStatusCheckboxes('edit', data.kosherStatus);
                 $('#edit-establishment-certificate').val(data.certificateUrl || '');
+                // Set the active checkbox
+                $('#edit-establishment-active').prop('checked', data.active !== false); // Default to true if undefined or null
                 // editEstablishmentModal.modal('show'); // Modal is shown by data-toggle attribute
             } else {
                 console.error("No such document for editing!");
@@ -153,9 +157,9 @@ $(document).ready(function() {
         const updatedData = {
             name: establishmentName,
             location: $('#edit-establishment-location').val().trim(),
-            company: $('#edit-establishment-company').val().trim(),
             kosherStatus: getSelectedKosherStatusesFromForm('edit'),
-            certificateUrl: $('#edit-establishment-certificate').val().trim()
+            certificateUrl: $('#edit-establishment-certificate').val().trim(),
+            active: $('#edit-establishment-active').is(':checked') // Update active status
         };
 
         establishmentsCollection.doc(id).update(updatedData).then(() => {
@@ -264,10 +268,12 @@ $(document).ready(function() {
         // Reset kosher status checkboxes specifically for add and edit modals
         if ($(this).is(addEstablishmentModal)) {
             resetKosherStatusCheckboxes('add');
+            $('#establishment-active').prop('checked', true); // Reset active to default true
         }
         if ($(this).is(editEstablishmentModal)) {
             resetKosherStatusCheckboxes('edit');
             editEstablishmentForm.removeAttr('data-id'); // Clear stored ID
+            $('#edit-establishment-active').prop('checked', false); // Reset active checkbox
         }
         if ($(this).is(deleteEstablishmentModal)) {
             idToDelete = null; // Clear delete context

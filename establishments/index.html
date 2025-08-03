@@ -63,9 +63,9 @@
                 </th>
                 <th>Establishment Name</th>
                 <th>Location</th>
-                <th>Company</th>
                 <th>Kosher Status</th>
                 <th>Certificate</th>
+                <th>Active</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -97,10 +97,6 @@
                 <input type="text" id="establishment-location" class="form-control" required>
               </div>
               <div class="form-group">
-                <label>Company</label>
-                <input type="text" id="establishment-company" class="form-control" required>
-              </div>
-              <div class="form-group">
                 <label>Kosher Status (Select all that apply):</label>
                 <div id="add-kosher-status-options">
                   <div>
@@ -128,6 +124,10 @@
               <div class="form-group">
                 <label>Certificate (Link)</label>
                 <input type="url" id="establishment-certificate" class="form-control" >
+              </div>
+              <div class="form-group">
+                <input type="checkbox" id="establishment-active" checked>
+                <label for="establishment-active">Active</label>
               </div>
             </div>
             <div class="modal-footer">
@@ -157,10 +157,6 @@
                 <input type="text" id="edit-establishment-location" class="form-control" required>
               </div>
               <div class="form-group">
-                <label>Company</label>
-                <input type="text" id="edit-establishment-company" class="form-control" required>
-              </div>
-              <div class="form-group">
                 <label>Kosher Status (Select all that apply):</label>
                 <div id="edit-kosher-status-options">
                   <div>
@@ -188,6 +184,10 @@
               <div class="form-group">
                 <label>Certificate (Link)</label>
                 <input type="url" id="edit-establishment-certificate" class="form-control" >
+              </div>
+              <div class="form-group">
+                <input type="checkbox" id="edit-establishment-active">
+                <label for="edit-establishment-active">Active</label>
               </div>
             </div>
             <div class="modal-footer">

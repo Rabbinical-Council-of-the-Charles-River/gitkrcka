@@ -24,13 +24,13 @@
 <body>
     <div class="container">
         <h1>Establishments</h1>
+        <p><a href="index.html">Home</a></p>
         <div class="table-responsive">
             <table id="establishments-table" class="table table-striped table-hover">
                 <thead>
                     <tr>
                         <th>Establishment Name</th>
                         <th>Location</th>
-                        <th>Company</th>
                         <th>Kosher Status</th>
                         <th>Certificate</th>
                         <th>Actions</th>
@@ -70,8 +70,11 @@
                 .then((querySnapshot) => {
                     querySnapshot.forEach((doc) => {
                         const establishmentData = doc.data();
-                        const establishmentRow = createEstablishmentRow(establishmentData, doc.id); // Pass doc.id
-                        establishmentsTableBody.appendChild(establishmentRow);
+                        // Only display if active is true or undefined (for backward compatibility)
+                        if (establishmentData.active === true || establishmentData.active === undefined) {
+                            const establishmentRow = createEstablishmentRow(establishmentData, doc.id); // Pass doc.id
+                            establishmentsTableBody.appendChild(establishmentRow);
+                        }
                     });
                 })
                 .catch((error) => {
@@ -91,10 +94,6 @@
             const locationCell = document.createElement('td');
             locationCell.textContent = data.location || 'N/A';
             row.appendChild(locationCell);
-
-            const companyCell = document.createElement('td');
-            companyCell.textContent = data.company || 'N/A';
-            row.appendChild(companyCell);
 
             const kosherStatusCell = document.createElement('td');
             kosherStatusCell.textContent = data.kosherStatus || 'N/A';
