@@ -12,6 +12,7 @@
   <style>
     :root {
       --sidebar-width: 260px;
+      --navbar-h: 56px; /* default; will sync with actual navbar height via JS */
     }
     html, body {
       height: 100%;
@@ -24,12 +25,12 @@
       padding-top: .75rem;
       padding-bottom: .75rem;
       margin-right: 1rem;
-      background-color: rgba(0,0,0,.25);
-      box-shadow: inset -1px 0 0 rgba(0,0,0,.25);
+      background-color: transparent; /* remove dark pill behind brand */
+      box-shadow: none; /* remove inset border */
     }
     .sidebar {
       position: fixed;
-      top: 56px; /* navbar height */
+      top: var(--navbar-h); /* navbar height (dynamic) */
       bottom: 0;
       left: 0;
       z-index: 100; /* Behind the navbar */
@@ -41,7 +42,7 @@
     }
     .main-content {
       position: fixed;
-      top: 56px; /* navbar height */
+      top: var(--navbar-h); /* navbar height (dynamic) */
       left: var(--sidebar-width);
       right: 0;
       bottom: 0;
@@ -78,7 +79,7 @@
       flex-direction: column;
     }
     .section-header {
-      padding: .75rem 1rem;
+      padding: 1rem 1.25rem; /* improved spacing so title isn't cramped */
       border-bottom: 1px solid #e9ecef;
       background-color: #f8f9fa;
     }
@@ -334,6 +335,17 @@
     const mashgiachNavWrapper = document.getElementById('mashgiach-nav-wrapper');
 
     let netlifyUser = null;
+
+    // Keep CSS navbar height variable in sync to avoid header cutoff
+    function syncNavbarHeight() {
+      const nav = document.querySelector('.navbar');
+      if (nav) {
+        const h = nav.offsetHeight || 56;
+        document.documentElement.style.setProperty('--navbar-h', h + 'px');
+      }
+    }
+    window.addEventListener('resize', syncNavbarHeight);
+    document.addEventListener('DOMContentLoaded', syncNavbarHeight);
 
     function getUserRoles(user) {
       return user && user.app_metadata && Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles : [];
