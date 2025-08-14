@@ -16,6 +16,7 @@
     </style>
 </head>
 <body>
+    <div id="alerts-container"></div>
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1>Kashrus Alerts</h1>
@@ -189,12 +190,32 @@
             const data = doc.data();
             const alertId = doc.id;
 
+            // Create the card element
             const card = document.createElement('div');
-            card.className = 'card shadow-sm'; // Added subtle shadow
+            card.className = 'card'; // Ensure the card has a class
             card.setAttribute('data-id', alertId);
 
+            // Create the card body
             const cardBody = document.createElement('div');
             cardBody.className = 'card-body';
+
+            // Append cardBody to card
+            card.appendChild(cardBody);
+
+            // Check if card is null before accessing classList
+            if (!card) {
+                console.error('Card element is null or undefined');
+            } else {
+                console.log('Card created successfully:', card);
+            }
+
+            // Append card to the parent container
+            const parentContainer = document.getElementById('alerts-container'); // Replace with your container ID
+            if (parentContainer) {
+                parentContainer.appendChild(card);
+            } else {
+                console.error('Parent container not found');
+            }
 
             const title = document.createElement('h5');
             title.className = 'card-title';
