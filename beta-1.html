@@ -336,12 +336,8 @@
 
     let netlifyUser = null;
 
-    // Prevent reload loop: if we previously reloaded after login, clear the flag now
-    try {
-      if (localStorage.getItem('postLoginReload') === '1') {
-        localStorage.removeItem('postLoginReload');
-      }
-    } catch (e) { /* ignore */ }
+    // Session guard: we'll reload once after a successful login using sessionStorage
+    // The flag is set on login and cleared on logout. Nothing to do at startup.
 
     // Keep CSS navbar height variable in sync to avoid header cutoff
     function syncNavbarHeight() {
@@ -435,12 +431,21 @@
       netlifyIdentity.on('init', (user) => updateRoleUI(user));
       netlifyIdentity.on('login', (user) => {
         updateRoleUI(user);
-        // Mark and reload once so all embedded pages see the logged-in state
-        try { localStorage.setItem('postLoginReload', '1'); } catch (e) {}
+        // Reload once so embedded pages recognize the session
+        try {
+          if (!sessionStorage.getItem('reloadedAfterLogin')) {
+            sessionStorage.setItem('reloadedAfterLogin', '1');
+            netlifyIdentity.close();
+            location.reload();
+            return;
+          }
+        } catch (e) {}
         netlifyIdentity.close();
-        location.reload();
       });
-      netlifyIdentity.on('logout', () => updateRoleUI(null));
+      netlifyIdentity.on('logout', () => {
+        try { sessionStorage.removeItem('reloadedAfterLogin'); } catch (e) {}
+        updateRoleUI(null);
+      });
       netlifyIdentity.on('error', (err) => console.error('Netlify Identity Error:', err));
       netlifyIdentity.init();
       const current = netlifyIdentity.currentUser && netlifyIdentity.currentUser();
