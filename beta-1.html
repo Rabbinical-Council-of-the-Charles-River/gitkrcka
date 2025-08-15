@@ -27,22 +27,24 @@
             box-shadow: none; /* remove inset border */
         }
 
-        /* Main content on all screen sizes */
+        /* Sidebar and main content layout for all screens, adjusted with media queries */
+        .sidebar {
+            background-color: #f8f9fa;
+        }
+
         .main-content {
             position: fixed;
-            top: var(--navbar-h); /* navbar height (dynamic) */
-            left: 0; /* Default to 0 for mobile */
+            top: var(--navbar-h);
+            left: 0;
             right: 0;
             bottom: 0;
-            overflow: hidden; /* iframes will manage scroll */
+            overflow: hidden;
             background: #fff;
         }
 
-        /* Sidebar and main content layout for large screens */
+        /* Desktop and Tablet (>992px) */
         @media (min-width: 992px) {
-            /* Override offcanvas styles on large screens */
             .sidebar {
-                /* These properties restore the sidebar's fixed position and size */
                 position: fixed;
                 left: 0;
                 width: var(--sidebar-width);
@@ -51,24 +53,13 @@
                 z-index: 100;
                 box-shadow: inset -1px 0 0 rgba(0,0,0,.1);
                 padding: 1rem 0 0;
-                background-color: #f8f9fa;
             }
 
-            /* Adjust main content to account for the visible sidebar */
             .main-content {
                 left: var(--sidebar-width);
             }
         }
-
-        /* Mobile-first approach for sidebar */
-        @media (max-width: 991.98px) {
-            .sidebar {
-                z-index: 1050; /* Ensure it's above other content when open */
-                position: fixed; /* Keep it fixed */
-                top: 0;
-            }
-        }
-
+        
         /* Feature sections */
         .feature-section { display: none; height: 100%; }
         .feature-section.active { display: block; }
@@ -87,7 +78,7 @@
             flex-direction: column;
         }
         .section-header {
-            padding: 1rem 1.25rem; /* improved spacing so title isn't cramped */
+            padding: 1rem 1.25rem;
             border-bottom: 1px solid #e9ecef;
             background-color: #f8f9fa;
         }
@@ -127,13 +118,13 @@
         </div>
     </nav>
 
-    <aside class="sidebar offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
-        <div class="offcanvas-header border-bottom">
+    <aside class="sidebar offcanvas offcanvas-start d-lg-block" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+        <div class="offcanvas-header border-bottom d-lg-none">
             <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">Navigation</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body">
-            <div class="px-3">
+        <div class="offcanvas-body p-0">
+            <div class="p-3">
                 <div class="nav-group-title">Public</div>
                 <ul class="nav nav-pills flex-column mb-3" id="public-nav">
                     <li class="nav-item"><a class="nav-link active" data-section="home"><i class="bi bi-house-door me-2"></i>Overview</a></li>
@@ -416,7 +407,7 @@
                     const id = link.getAttribute('data-section');
                     showSection(id);
                     // Close the offcanvas on click for mobile
-                    if (sidebarOffcanvas) {
+                    if (sidebarOffcanvas && window.innerWidth < 992) {
                         const offcanvas = bootstrap.Offcanvas.getInstance(sidebarOffcanvas);
                         if (offcanvas) {
                             offcanvas.hide();
