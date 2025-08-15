@@ -26,15 +26,9 @@
             background-color: transparent; /* remove dark pill behind brand */
             box-shadow: none; /* remove inset border */
         }
-
-        /* Sidebar and main content layout for all screens, adjusted with media queries */
-        .sidebar {
-            background-color: #f8f9fa;
-        }
-
         .main-content {
             position: fixed;
-            top: var(--navbar-h);
+            top: var(--navbar-h); /* navbar height (dynamic) */
             left: 0;
             right: 0;
             bottom: 0;
@@ -42,7 +36,7 @@
             background: #fff;
         }
 
-        /* Desktop and Tablet (>992px) */
+        /* Sidebar and main content layout for large screens */
         @media (min-width: 992px) {
             .sidebar {
                 position: fixed;
@@ -53,18 +47,16 @@
                 z-index: 100;
                 box-shadow: inset -1px 0 0 rgba(0,0,0,.1);
                 padding: 1rem 0 0;
+                background-color: #f8f9fa;
             }
-
             .main-content {
                 left: var(--sidebar-width);
             }
         }
-        
+
         /* Feature sections */
         .feature-section { display: none; height: 100%; }
         .feature-section.active { display: block; }
-
-        /* Iframe should fill available space */
         .feature-frame {
             width: 100%;
             height: 100%;
@@ -89,7 +81,6 @@
 
         /* Utility */
         .hidden { display: none !important; }
-
         .nav-link { cursor: pointer; }
         .nav-group-title {
             font-size: .75rem;
@@ -118,7 +109,7 @@
         </div>
     </nav>
 
-    <aside class="sidebar offcanvas offcanvas-start d-lg-block" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+    <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
         <div class="offcanvas-header border-bottom d-lg-none">
             <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">Navigation</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
