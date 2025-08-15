@@ -24,10 +24,10 @@ let selectedEstablishments = {
     add: [],
     edit: []
 };
-let allEstablishments = []; // Added for client-overview.html
+let allEstablishments = []; 
 
 // Set your Google Apps Script Web App URL here
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAvkL2FAFfg1v4-CJg9SpovXfoGvCLfDb8oqjCaazXPp8FIq54L4LngZQj0-1vhEMoBw/exec';
+const APPSCRIPT_URL = 'YOUR_APPSCRIPT_WEB_APP_URL';
 
 // DOM Elements
 const loginSection = document.getElementById('login-section');
@@ -35,6 +35,11 @@ const crmContent = document.getElementById('crm-content');
 const netlifyLoginButton = document.getElementById('netlify-login-button');
 const messageDiv = document.getElementById('message');
 const addInvoiceModalElement = document.getElementById('addInvoiceModal');
+const loadingSpinner = document.getElementById('loading-spinner');
+const clientContent = document.getElementById('client-content');
+const selectAllMashgiachLogsCheckbox = document.getElementById('selectAllMashgiachLogs');
+const addSelectedToInvoiceBtn = document.getElementById('addSelectedToInvoiceBtn');
+const mashgiachLogsBody = document.getElementById('mashgiach-logs-body');
 
 // Utility Functions
 function showMessage(type, text) {
@@ -88,15 +93,21 @@ function updateUI(user) {
     if (user && isAdmin) {
         if (loginSection) loginSection.classList.add('hidden');
         if (crmContent) crmContent.classList.remove('hidden');
+        if (clientContent) clientContent.style.display = 'block';
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
         clearMessage();
         initializeCRM();
     } else if (user) {
         showMessage('error', 'Admin access required for CRM system.');
         if (loginSection) loginSection.classList.remove('hidden');
         if (crmContent) crmContent.classList.add('hidden');
+        if (clientContent) clientContent.style.display = 'none';
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
     } else {
         if (loginSection) loginSection.classList.remove('hidden');
         if (crmContent) crmContent.classList.add('hidden');
+        if (clientContent) clientContent.style.display = 'none';
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
         clearMessage();
     }
 }
@@ -309,9 +320,18 @@ function sendClientEmail(recipient) {
 // Event Listeners for Authentication
 document.addEventListener('DOMContentLoaded', function() {
     if (netlifyIdentity) {
-        netlifyIdentity.on('init', updateUI);
-        netlifyIdentity.on('login', updateUI);
-        netlifyIdentity.on('logout', () => updateUI(null));
+        // Corrected logic: Use a function to check user state immediately and after events.
+        const handleAuthStateChange = (user) => {
+            updateUI(user);
+        };
+        
+        netlifyIdentity.on('init', handleAuthStateChange);
+        netlifyIdentity.on('login', handleAuthStateChange);
+        netlifyIdentity.on('logout', () => handleAuthStateChange(null));
+
+        // Check for an existing user session immediately after setting up listeners
+        handleAuthStateChange(netlifyIdentity.currentUser());
+
         netlifyLoginButton.addEventListener('click', () => netlifyIdentity.open());
     } else {
         console.error('Netlify Identity widget not loaded.');
