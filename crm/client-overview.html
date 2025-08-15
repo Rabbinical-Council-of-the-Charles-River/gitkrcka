@@ -1,3 +1,4 @@
+<!-- crm/client-overview.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,6 @@
     <title>Client Overview</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="crm.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -118,128 +118,500 @@
             font-size: 0.9em;
             margin: 4px;
         }
+        /* New styles for mashgiach logs selection */
         .log-select-checkbox:disabled {
             cursor: not-allowed;
             opacity: 0.6;
         }
         .table-secondary {
-            --bs-table-bg: #e9ecef;
-            --bs-table-striped-bg: #e1e5e9;
+             --bs-table-bg: #e9ecef; /* Lighter gray for billed rows */
+             --bs-table-striped-bg: #e1e5e9;
+        }
+        .select-checkbox-cell, .select-checkbox-header {
+            width: 1%;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .status-billed { background-color: #198754; color: white; } /* Success */
+        .status-unbilled { background-color: #ffc107; color: black; } /* Warning */
+        /* END New styles */
+        @media (max-width: 767px) {
+            .crm-header { flex-direction: column; align-items: flex-start; padding: 24px 12px 16px 12px; }
+            .crm-header .avatar { margin-bottom: 12px; }
+            .stat-box { margin-bottom: 16px; }
+            .client-card { padding: 16px 10px; }
         }
     </style>
 </head>
-
 <body>
-    <div id="loading-spinner" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-    
-    <div id="client-content" class="container-fluid" style="display: none;">
+    <div class="container-fluid">
         <div class="crm-wrapper">
-            <div class="crm-header">
+            <div class="crm-header d-flex align-items-center justify-content-between flex-wrap">
                 <div class="d-flex align-items-center">
-                    <span class="avatar"><i class="bi bi-person-fill"></i></span>
+                    <div class="avatar">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
                     <div>
-                        <h1 class="text-white" id="client-name"></h1>
-                        <p class="text-white-50 mb-0" id="client-contact"></p>
+                        <h2 class="mb-0" id="client-name"></h2>
+                        <div id="client-status" class="mt-1"></div>
                     </div>
                 </div>
+                <a href="index.html" class="btn btn-outline-light mt-3 mt-md-0">
+                    <i class="bi bi-arrow-left"></i> Back to CRM
+                </a>
             </div>
-
-            <div class="container-fluid mt-4 px-4">
-                <div class="row">
-                    <div class="col-md-5">
-                        <div class="client-card">
-                            <h5 class="mb-3">Client Details</h5>
-                            <ul class="list-unstyled mb-0">
-                                <li><strong>Address:</strong> <span id="client-address"></span></li>
-                                <li><strong>Email:</strong> <span id="client-email"></span> <button id="send-client-email-btn" class="btn btn-outline-info btn-sm ms-2"><i class="bi bi-envelope"></i> Email</button></li>
-                                <li><strong>Phone:</strong> <span id="client-phone"></span></li>
-                                <li><strong>Status:</strong> <span id="client-status" class="status-badge"></span></li>
-                                <li><strong>Establishments:</strong> <div id="client-establishments" class="d-inline-flex flex-wrap"></div></li>
-                            </ul>
-                        </div>
-                        <div class="client-card">
-                            <h5 class="mb-3">Mashgiach Logs</h5>
-                            <p class="text-muted">Generate invoices from selected logs.</p>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="selectAllMashgiachLogs" class="form-check-input"></th>
-                                            <th>Date</th>
-                                            <th>Establishment</th>
-                                            <th>Hours</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="mashgiach-logs-body">
-                                        </tbody>
-                                </table>
-                            </div>
-                            <div class="d-grid mt-3">
-                                <button id="addSelectedToInvoiceBtn" class="btn btn-primary" disabled><i class="bi bi-receipt"></i> Add to Invoice</button>
-                            </div>
+            <div class="container" style="max-width: 1000px;">
+                <div class="row mt-4 mb-2 g-3">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-cash-stack"></i></span>
+                            <span id="total-invoiced" class="stat-number">$0.00</span>
+                            <span class="stat-label">Total Invoiced</span>
                         </div>
                     </div>
-                    <div class="col-md-7">
-                        <div class="row">
-                            <div class="col-sm-4">
-                                <div class="stat-box">
-                                    <i class="bi bi-receipt stat-icon text-primary"></i>
-                                    <span class="stat-number" id="total-invoices">0</span>
-                                    <span class="stat-label">Total Invoices</span>
-                                </div>
-                            </div>
-                            <div class="col-sm-4">
-                                <div class="stat-box">
-                                    <i class="bi bi-currency-dollar stat-icon text-success"></i>
-                                    <span class="stat-number" id="total-paid">$0</span>
-                                    <span class="stat-label">Paid Amount</span>
-                                </div>
-                            </div>
-                            <div class="col-sm-4">
-                                <div class="stat-box">
-                                    <i class="bi bi-cash stat-icon text-warning"></i>
-                                    <span class="stat-number" id="total-pending">$0</span>
-                                    <span class="stat-label">Pending Amount</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="client-card">
-                            <h5 class="mb-3">Invoices</h5>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-sm table-invoices">
-                                    <thead>
-                                        <tr>
-                                            <th>Invoice #</th>
-                                            <th>Amount</th>
-                                            <th>Issue Date</th>
-                                            <th>Due Date</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="invoices-body">
-                                        </tbody>
-                                </table>
-                            </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-exclamation-circle"></i></span>
+                            <span id="amount-due" class="stat-number">$0.00</span>
+                            <span class="stat-label">Amount Due</span>
                         </div>
                     </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-hourglass-split"></i></span>
+                            <span id="unbilled" class="stat-number">$0.00</span>
+                            <span class="stat-label">Unbilled</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-box">
+                            <span class="stat-icon"><i class="bi bi-receipt"></i></span>
+                            <span id="invoice-count" class="stat-number">0</span>
+                            <span class="stat-label">Total Invoices</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="client-card mb-4">
+                    <h5 class="mb-3"><i class="bi bi-info-circle"></i> Client Details</h5>
+                    <div id="client-contact"></div>
+                    <div id="client-billing"></div>
+                    <div id="client-notes" class="mt-2"></div>
+                    <h6 class="mt-4 mb-2"><i class="bi bi-geo-alt"></i> Associated Establishments</h6>
+                    <div id="client-establishments-display" class="d-flex flex-wrap gap-2">
+                        <!-- Establishments will load here -->
+                    </div>
+                </div>
+                <h4 class="mb-3">Invoices</h4>
+                <div class="table-responsive table-invoices">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-list">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- New Section for Mashgiach Logs -->
+                <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+                    <h4>Mashgiach Logs</h4>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <strong>Selected Total Time:</strong> <span id="selected-total-time">0 hours 0 minutes</span>
+                        </div>
+                        <button class="btn btn-primary" id="add-selected-to-invoice-btn" style="display: none;">
+                            <i class="bi bi-receipt"></i> Add Selected to Invoice
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive table-mashgiach-logs">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="select-checkbox-header">
+                                    <input type="checkbox" id="select-all-mashgiach-logs" title="Select All Unbilled Logs">
+                                </th>
+                                <th>Mashgiach</th>
+                                <th>Venue</th>
+                                <th>Time/Date</th>
+                                <th>Description</th>
+                                <th>Time Spent</th>
+                                <th>Billing Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mashgiach-log-list">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    
-    <script src="crm.js"></script>
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+        // Firebase config (copy from crm.js)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function formatCurrency(amount) {
+            return '$' + (amount != null ? Number(amount).toFixed(2) : '0.00');
+        }
+        function formatDate(date) {
+            if (!date) return '';
+            if (date.toDate) return date.toDate().toLocaleDateString();
+            return new Date(date).toLocaleDateString();
+        }
+
+        // Function to format Firestore Timestamp objects for display
+        function formatFirestoreTimestamp(timestamp) {
+            if (timestamp && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate().toLocaleString(); // Consider locale options
+            }
+            return 'N/A';
+        }
+
+        // Get clientId from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('id');
+        if (!clientId) {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">No client selected.</div></div>';
+            throw new Error('No client id');
+        }
+
+        // Netlify Identity setup
+        const netlifyIdentity = window.netlifyIdentity;
+        if (!netlifyIdentity) {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">Authentication service not loaded.</div></div>';
+            throw new Error("Netlify Identity widget not loaded.");
+        }
+        netlifyIdentity.init();
+
+        // State variables for mashgiach logs invoicing
+        const MASHGIACH_HOURLY_RATE = 50.00; // ADJUST AS NEEDED!
+        let selectedMashgiachLogIds = new Set();
+        let allClientMashgiachLogs = []; // Store logs fetched for this client
+
+        // DOM references for mashgiach logs section
+        const mashgiachLogListTbody = document.getElementById('mashgiach-log-list');
+        const selectAllMashgiachLogsCheckbox = document.getElementById('select-all-mashgiach-logs');
+        const addSelectedToInvoiceBtn = document.getElementById('add-selected-to-invoice-btn');
+        const selectedTotalTimeDisplay = document.getElementById('selected-total-time');
+
+        // Helper function for updating the Add to Invoice button state
+        function updateAddToInvoiceButtonVisibility() {
+            if (addSelectedToInvoiceBtn) {
+                // Only enable if there are unbilled selected logs
+                const hasUnbilledSelected = Array.from(selectedMashgiachLogIds).some(logId => {
+                    const log = allClientMashgiachLogs.find(l => l.id === logId);
+                    return log && log.billingStatus !== 'billed';
+                });
+                addSelectedToInvoiceBtn.disabled = !hasUnbilledSelected;
+                addSelectedToInvoiceBtn.style.display = hasUnbilledSelected ? 'inline-block' : 'none';
+            }
+        }
+
+        function calculateSelectedTime() {
+            let totalMinutes = 0;
+            selectedMashgiachLogIds.forEach(logId => {
+                const log = allClientMashgiachLogs.find(l => l.id === logId);
+                if (log && log.billingStatus !== 'billed' && !isNaN(log.timeSpentMinutes)) {
+                    totalMinutes += log.timeSpentMinutes;
+                }
+            });
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (selectedTotalTimeDisplay) {
+                selectedTotalTimeDisplay.textContent = `${hours} hours ${minutes} minutes`;
+            }
+        }
+
+        function handleMashgiachCheckboxChange(event) {
+            const checkbox = event.target;
+            const logId = checkbox.dataset.id;
+            const logStatus = checkbox.dataset.status;
+
+            if (logStatus === 'billed') {
+                checkbox.checked = false; // Prevent selection of billed items for invoicing
+                return;
+            }
+
+            if (checkbox.checked) {
+                selectedMashgiachLogIds.add(logId);
+            } else {
+                selectedMashgiachLogIds.delete(logId);
+            }
+
+            // Update "Select All" checkbox state
+            const unbilledCheckboxes = Array.from(mashgiachLogListTbody.querySelectorAll('.log-select-checkbox:not([data-status="billed"])'));
+            const checkedUnbilledCount = Array.from(mashgiachLogListTbody.querySelectorAll('.log-select-checkbox:checked:not([data-status="billed"])')).length;
+
+            if (selectAllMashgiachLogsCheckbox) {
+                if (unbilledCheckboxes.length > 0 && checkedUnbilledCount === unbilledCheckboxes.length) {
+                    selectAllMashgiachLogsCheckbox.checked = true;
+                    selectAllMashgiachLogsCheckbox.indeterminate = false;
+                } else if (checkedUnbilledCount > 0) {
+                    selectAllMashgiachLogsCheckbox.checked = false;
+                    selectAllMashgiachLogsCheckbox.indeterminate = true;
+                } else {
+                    selectAllMashgiachLogsCheckbox.checked = false;
+                    selectAllMashgiachLogsCheckbox.indeterminate = false;
+                }
+            }
+            updateAddToInvoiceButtonVisibility();
+            calculateSelectedTime();
+        }
+
+        function handleSelectAllMashgiachChange(event) {
+            const isChecked = event.target.checked;
+            selectedMashgiachLogIds.clear();
+
+            mashgiachLogListTbody.querySelectorAll('.log-select-checkbox').forEach(checkbox => {
+                if (checkbox.dataset.status !== 'billed') {
+                    checkbox.checked = isChecked;
+                    if (isChecked) {
+                        selectedMashgiachLogIds.add(checkbox.dataset.id);
+                    }
+                } else {
+                    checkbox.checked = false; // Keep billed items unchecked by select-all
+                }
+            });
+            if(selectAllMashgiachLogsCheckbox) selectAllMashgiachLogsCheckbox.indeterminate = false;
+            updateAddToInvoiceButtonVisibility();
+            calculateSelectedTime();
+        }
+
+        async function prepareAndRedirectToCRMForInvoice() {
+            const unbilledSelectedLogEntries = allClientMashgiachLogs.filter(log =>
+                selectedMashgiachLogIds.has(log.id) && log.billingStatus !== 'billed'
+            );
+
+            if (unbilledSelectedLogEntries.length === 0) {
+                alert("Please select at least one 'Unbilled' mashgiach log entry to add to the invoice.");
+                return;
+            }
+
+            const invoiceItems = unbilledSelectedLogEntries.map(log => {
+                const minutes = log.timeSpentMinutes || 0;
+                const hours = minutes > 0 ? (minutes / 60).toFixed(2) : 0;
+                const description = `Mashgiach Visit: ${log.venue || 'N/A'} (${formatFirestoreTimestamp(log.dateTime)}) - ${log.description || ''}`;
+                return {
+                    description: description.substring(0, 200), // Truncate if too long
+                    quantity: parseFloat(hours),
+                    unitPrice: MASHGIACH_HOURLY_RATE,
+                    mashgiachLogId: log.id // Store original log ID to mark as billed later
+                };
+            });
+
+            sessionStorage.setItem('pendingInvoiceItems', JSON.stringify(invoiceItems));
+            sessionStorage.setItem('pendingInvoiceClientId', clientId); // Pass current client ID
+
+            // Redirect to CRM index page with instruction to open invoice modal
+            window.location.href = `index.html?openInvoiceModal=true&tab=billing`;
+        }
+
+        // Function to check user role and load content
+        function checkUserRoleAndLoad() {
+            const user = netlifyIdentity.currentUser();
+            if (user && user.app_metadata && user.app_metadata.roles && 
+                (user.app_metadata.roles.includes('admin') || user.app_metadata.roles.includes('manager'))) {
+                loadAllEstablishments().then(loadClientOverview); // Proceed if admin
+            } else {
+                document.body.innerHTML = '<div class="container my-5"><div class="alert alert-warning">Access Denied: Admin privileges required.</div><button class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button></div>';
+            }
+        }
+
+        let clientData = null;
+        let allEstablishments = []; // New global variable for establishments on this page
+        let invoices = [];
+        console.log("Client Overview Page: Script loaded.");
+
+        async function loadClientOverview() {
+            // Load client
+            const clientDoc = await db.collection('clients').doc(clientId).get();
+            if (!clientDoc.exists) {
+                document.body.innerHTML = '<div class="container my-5"><div class="alert alert-danger">Client not found.</div></div>';
+                return;
+            }
+            clientData = clientDoc.data();
+            document.getElementById('client-name').textContent = clientData.companyName;
+            console.log("Client Data Loaded:", clientData); // Log client data
+            console.log("Client Establishments (from clientData):", clientData.establishments); // Log client's establishments array
+            document.getElementById('client-status').innerHTML = `<span class="status-badge status-${clientData.status}">${clientData.status.charAt(0).toUpperCase() + clientData.status.slice(1)}</span>`;
+            document.getElementById('client-contact').innerHTML = `
+                <strong>Contact:</strong> ${clientData.contactPerson} (<a href="mailto:${clientData.email}">${clientData.email}</a>)<br>
+                <strong>Phone:</strong> ${clientData.phone || 'N/A'}
+            `;
+            document.getElementById('client-billing').innerHTML = `
+                <strong>Billing Terms:</strong> ${clientData.billingTerms || 30} days
+            `;
+            document.getElementById('client-notes').innerHTML = ` 
+                <strong>Notes:</strong> ${clientData.notes || '<span class="text-muted">None</span>'} 
+            `;
+ 
+            // Display establishments for this client, using the dedicated container 
+            const clientEstDisplay = document.getElementById('client-establishments-display'); 
+            clientEstDisplay.innerHTML = (clientData.establishments && clientData.establishments.length > 0) 
+                ? clientData.establishments.map(estId => { 
+                    const est = allEstablishments.find(e => e.id === estId); 
+                    console.log(`Matching estId: ${estId}, Found:`, est); // Log each establishment match attempt
+                    return est ? `<span class="establishment-badge">${est.name} - ${est.location}</span>` : `<span class="establishment-badge badge-warning">Unknown Est: ${estId}</span>`; // Added warning for unknown
+                  }).join('') 
+                : '<span class="text-muted">None assigned</span>'; // Corrected original span text for clarity
+
+            // Load invoices for this client
+            const tbody = document.getElementById('invoice-list');
+            const snapshot = await db.collection('invoices').where('clientId', '==', clientId).get();
+            invoices = [];
+            let totalInvoiced = 0, amountDue = 0, unbilled = 0;
+            snapshot.forEach(doc => {
+                const inv = doc.data();
+                inv.id = doc.id;
+                invoices.push(inv);
+                totalInvoiced += inv.totalAmount || 0;
+                if (inv.status === 'sent' || inv.status === 'overdue') amountDue += inv.totalAmount || 0;
+                if (inv.status === 'draft') unbilled += inv.totalAmount || 0;
+            });
+
+            document.getElementById('total-invoiced').textContent = formatCurrency(totalInvoiced);
+            document.getElementById('amount-due').textContent = formatCurrency(amountDue);
+            document.getElementById('unbilled').textContent = formatCurrency(unbilled);
+            document.getElementById('invoice-count').textContent = invoices.length;
+
+            // List invoices
+            if (invoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No invoices found for this client.</td></tr>';
+            } else {
+                tbody.innerHTML = invoices.map(inv => `
+                    <tr>
+                        <td><span class="invoice-link" onclick="window.open('invoice-print.html?id=${inv.id}', '_blank')">${inv.invoiceNumber}</span></td>
+                        <td>${formatDate(inv.issueDate)}</td>
+                        <td>${formatDate(inv.dueDate)}</td>
+                        <td><span class="status-badge status-${inv.status}">${inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}</span></td>
+                        <td>${formatCurrency(inv.totalAmount)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Load and display Mashgiach Logs for associated establishments
+            mashgiachLogListTbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading Mashgiach logs...</td></tr>'; // Adjusted colspan to 7
+            selectedMashgiachLogIds.clear(); // Clear selection on reload
+            updateAddToInvoiceButtonVisibility(); // Update button state
+            calculateSelectedTime(); // Reset selected time
+            if (selectAllMashgiachLogsCheckbox) { // Reset select-all checkbox
+                selectAllMashgiachLogsCheckbox.checked = false;
+                selectAllMashgiachLogsCheckbox.indeterminate = false;
+            }
+
+            const clientEstablishmentNames = clientData.establishments ? clientData.establishments.map(estId => {
+                const est = allEstablishments.find(e => e.id === estId);
+                return est ? est.name : null;
+            }).filter(name => name !== null) : [];
+
+            if (clientEstablishmentNames.length > 0) {
+                try {
+                    const mashgiachLogsSnapshot = await db.collection('mashgiach-logs')
+                                                            .where('venue', 'in', clientEstablishmentNames)
+                                                            .orderBy('dateTime', 'desc')
+                                                            .get();
+                    allClientMashgiachLogs = mashgiachLogsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Store logs
+                    
+                    let mashgiachLogsContent = '';
+                    if (allClientMashgiachLogs.length === 0) { // Check length of processed array
+                        mashgiachLogsContent = '<tr><td colspan="7" class="text-center">No Mashgiach logs found for this client\'s establishments.</td></tr>';
+                    } else {
+                        allClientMashgiachLogs.forEach(log => {
+                            const timeInMinutes = log.timeSpentMinutes || 0;
+                            const timeDisplay = timeInMinutes ? `${timeInMinutes} min` : 'N/A';
+                            const billingStatus = log.billingStatus || 'unbilled';
+                            const isBilled = billingStatus === 'billed';
+                            // Checkbox is disabled if already billed
+                            const checkboxDisabled = isBilled ? 'disabled' : '';
+                            const rowClass = isBilled ? 'table-secondary' : '';
+
+                            mashgiachLogsContent += `
+                                <tr data-id="${log.id}" class="${rowClass}">
+                                    <td class="select-checkbox-cell">
+                                        <input type="checkbox" class="log-select-checkbox"
+                                               data-id="${log.id}"
+                                               data-duration-minutes="${timeInMinutes}"
+                                               data-status="${billingStatus}"
+                                               title="${isBilled ? 'Already Billed' : 'Select Log'}"
+                                               ${checkboxDisabled}>
+                                    </td>
+                                    <td>${log.mashgiachName || 'Unknown'}</td>
+                                    <td>${log.venue || 'N/A'}</td>
+                                    <td>${formatFirestoreTimestamp(log.dateTime)}</td>
+                                    <td>${log.description || ''}</td>
+                                    <td>${timeDisplay}</td>
+                                    <td><span class="status-badge status-${billingStatus}">${billingStatus.charAt(0).toUpperCase() + billingStatus.slice(1)}</span></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    mashgiachLogListTbody.innerHTML = mashgiachLogsContent;
+                    // Attach delegated event listener after content is loaded
+                    mashgiachLogListTbody.removeEventListener('change', handleMashgiachCheckboxChange); // Remove old listener if exists
+                    mashgiachLogListTbody.addEventListener('change', handleMashgiachCheckboxChange);
+
+                } catch (error) {
+                    console.error('Error fetching Mashgiach logs:', error);
+                    mashgiachLogListTbody.innerHTML = `<tr><td colspan="7" class="text-danger">Error loading Mashgiach logs: ${error.message}</td></tr>`;
+                }
+            } else {
+                mashgiachLogListTbody.innerHTML = '<tr><td colspan="7" class="text-center">No establishments assigned to this client, so no logs to display.</td></tr>';
+            }
+        }
+
+        async function loadAllEstablishments() {
+            try {
+                const snapshot = await db.collection('establishments').get();
+                allEstablishments = [];
+                snapshot.forEach(doc => {
+                    allEstablishments.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                console.log('Loaded all establishments for overview page:', allEstablishments.length, allEstablishments); // Log full array
+            } catch (error) {
+                console.error('Error loading all establishments for overview page:', error);
+            }
+        }
+
+        // Event Listeners for Mashgiach Logs Section
+        if (selectAllMashgiachLogsCheckbox) {
+            selectAllMashgiachLogsCheckbox.addEventListener('change', handleSelectAllMashgiachChange);
+        }
+        if (addSelectedToInvoiceBtn) {
+            addSelectedToInvoiceBtn.addEventListener('click', prepareAndRedirectToCRMForInvoice);
+        }
+
+        // Make sure these listeners are set up before the init call might fire
+        netlifyIdentity.on('init', checkUserRoleAndLoad); 
+        netlifyIdentity.on('login', checkUserRoleAndLoad);
+        netlifyIdentity.on('logout', function() {
+            document.body.innerHTML = '<div class="container my-5"><div class="alert alert-warning">Logged out. Admin privileges required.</div><button class="btn btn-primary" onclick="netlifyIdentity.open()">Login</button></div>';
+        });
+
+        // Also call immediately in case user is already logged in (init might have fired before listeners were ready)
+        checkUserRoleAndLoad();
+    </script>
 </body>
 </html>
