@@ -327,134 +327,137 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-  <script>
-    // --- Role & Identity Helpers (based on root index.html logic) ---
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const adminNavWrapper = document.getElementById('admin-nav-wrapper');
-    const mashgiachNavWrapper = document.getElementById('mashgiach-nav-wrapper');
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script>
+    // --- Role & Identity Helpers (based on root index.html logic) ---
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const adminNavWrapper = document.getElementById('admin-nav-wrapper');
+    const mashgiachNavWrapper = document.getElementById('mashgiach-nav-wrapper');
 
-    let netlifyUser = null;
+    let netlifyUser = null;
 
-    // Session guard: we'll reload once after a successful login using sessionStorage
-    // The flag is set on login and cleared on logout. Nothing to do at startup.
+    // Session guard: we'll reload once after a successful login using sessionStorage
+    // The flag is set on login and cleared on logout. Nothing to do at startup.
 
-    // Keep CSS navbar height variable in sync to avoid header cutoff
-    function syncNavbarHeight() {
-      const nav = document.querySelector('.navbar');
-      if (nav) {
-        const h = nav.offsetHeight || 56;
-        document.documentElement.style.setProperty('--navbar-h', h + 'px');
-      }
-    }
-    window.addEventListener('resize', syncNavbarHeight);
-    document.addEventListener('DOMContentLoaded', syncNavbarHeight);
+    // Keep CSS navbar height variable in sync to avoid header cutoff
+    function syncNavbarHeight() {
+      const nav = document.querySelector('.navbar');
+      if (nav) {
+        const h = nav.offsetHeight || 56;
+        document.documentElement.style.setProperty('--navbar-h', h + 'px');
+      }
+    }
+    window.addEventListener('resize', syncNavbarHeight);
+    document.addEventListener('DOMContentLoaded', syncNavbarHeight);
 
-    function getUserRoles(user) {
-      return user && user.app_metadata && Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles : [];
-    }
+    function getUserRoles(user) {
+      return user && user.app_metadata && Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles : [];
+    }
 
-    function updateRoleUI(user) {
-      netlifyUser = user;
-      const adminRoles = ['admin', 'manager'];
-      const mashgiachRole = 'mashgiach';
-      const userRoles = getUserRoles(user);
+    function updateRoleUI(user) {
+      netlifyUser = user;
+      const adminRoles = ['admin', 'manager'];
+      const mashgiachRole = 'mashgiach';
+      const userRoles = getUserRoles(user);
 
-      const isAdmin = userRoles.some(r => adminRoles.includes(r));
-      const isMashgiach = userRoles.includes(mashgiachRole);
+      const isAdmin = userRoles.some(r => adminRoles.includes(r));
+      const isMashgiach = userRoles.includes(mashgiachRole);
 
-      if (user) {
-        loginBtn.classList.add('hidden');
-        logoutBtn.classList.remove('hidden');
-        if (isAdmin) {
-          adminNavWrapper.classList.remove('hidden');
-          mashgiachNavWrapper.classList.add('hidden');
-        } else if (isMashgiach) {
-          adminNavWrapper.classList.add('hidden');
-          mashgiachNavWrapper.classList.remove('hidden');
-        } else {
-          adminNavWrapper.classList.add('hidden');
-          mashgiachNavWrapper.classList.add('hidden');
-        }
-      } else {
-        // Logged out
-        loginBtn.classList.remove('hidden');
-        logoutBtn.classList.add('hidden');
-        adminNavWrapper.classList.add('hidden');
-        mashgiachNavWrapper.classList.add('hidden');
-      }
-    }
+      if (user) {
+        loginBtn.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+        if (isAdmin) {
+          adminNavWrapper.classList.remove('hidden');
+          mashgiachNavWrapper.classList.add('hidden');
+        } else if (isMashgiach) {
+          adminNavWrapper.classList.add('hidden');
+          mashgiachNavWrapper.classList.remove('hidden');
+        } else {
+          adminNavWrapper.classList.add('hidden');
+          mashgiachNavWrapper.classList.add('hidden');
+        }
+      } else {
+        // Logged out
+        loginBtn.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+        adminNavWrapper.classList.add('hidden');
+        mashgiachNavWrapper.classList.add('hidden');
+      }
+    }
 
-    // --- Section Switching ---
-    const sections = Array.from(document.querySelectorAll('.feature-section'));
+    // --- Section Switching ---
+    const sections = Array.from(document.querySelectorAll('.feature-section'));
 
-    function showSection(id) {
-      sections.forEach(sec => sec.classList.toggle('active', sec.id === id));
-      // Update active link styling
-      document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-        link.classList.toggle('active', link.getAttribute('data-section') === id);
-      });
-      // Update hash for deep-linking
-      if (id) {
-        history.replaceState(null, '', '#' + id);
-      }
-    }
+    function showSection(id) {
+      sections.forEach(sec => sec.classList.toggle('active', sec.id === id));
+      // Update active link styling
+      document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.classList.toggle('active', link.getAttribute('data-section') === id);
+      });
+      // Update hash for deep-linking
+      if (id) {
+        history.replaceState(null, '', '#' + id);
+      }
+    }
 
-    function setupNavClicks(scope) {
-      scope.querySelectorAll('.nav-link[data-section]').forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const id = link.getAttribute('data-section');
-          showSection(id);
-        });
-      });
-    }
+    function setupNavClicks(scope) {
+      scope.querySelectorAll('.nav-link[data-section]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = link.getAttribute('data-section');
+          showSection(id);
+        });
+      });
+    }
 
-    // Initialize nav clicks
-    setupNavClicks(document);
+    // Initialize nav clicks
+    setupNavClicks(document);
 
-    // Deep-link support: if URL has #section, show it; else default to home
-    window.addEventListener('DOMContentLoaded', () => {
-      const hash = location.hash ? location.hash.substring(1) : '';
-      if (hash && document.getElementById(hash)) {
-        showSection(hash);
-      } else {
-        showSection('home');
-      }
-    });
+    // Deep-link support: if URL has #section, show it; else default to home
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = location.hash ? location.hash.substring(1) : '';
+      if (hash && document.getElementById(hash)) {
+        showSection(hash);
+      } else {
+        showSection('home');
+      }
+    });
 
-    // --- Identity Events ---
-    loginBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.open());
-    logoutBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.logout());
+    // --- Identity Events ---
+    loginBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.open());
+    logoutBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.logout());
 
-    if (window.netlifyIdentity) {
-      netlifyIdentity.on('init', (user) => updateRoleUI(user));
-      netlifyIdentity.on('login', (user) => {
-        updateRoleUI(user);
-        // Reload once so embedded pages recognize the session
-        try {
-          if (!sessionStorage.getItem('reloadedAfterLogin')) {
-            sessionStorage.setItem('reloadedAfterLogin', '1');
-            netlifyIdentity.close();
-            location.reload();
-            return;
-          }
-        } catch (e) {}
-        netlifyIdentity.close();
-      });
-      netlifyIdentity.on('logout', () => {
-        try { sessionStorage.removeItem('reloadedAfterLogin'); } catch (e) {}
-        updateRoleUI(null);
-      });
-      netlifyIdentity.on('error', (err) => console.error('Netlify Identity Error:', err));
-      netlifyIdentity.init();
-      const current = netlifyIdentity.currentUser && netlifyIdentity.currentUser();
-      updateRoleUI(current || null);
-    } else {
-      console.error('Netlify Identity widget script not loaded.');
-      loginBtn.textContent = 'Login Unavailable';
-      loginBtn.disabled = true;
-    }
-  </script>
+    if (window.netlifyIdentity) {
+      netlifyIdentity.on('init', (user) => updateRoleUI(user));
+      netlifyIdentity.on('login', (user) => {
+        updateRoleUI(user);
+        // Reload once so embedded pages recognize the session
+        try {
+          if (!sessionStorage.getItem('reloadedAfterLogin')) {
+            sessionStorage.setItem('reloadedAfterLogin', '1');
+            netlifyIdentity.close();
+            location.reload();
+            return;
+          }
+        } catch (e) {}
+        netlifyIdentity.close();
+      });
+      netlifyIdentity.on('logout', () => {
+        try { sessionStorage.removeItem('reloadedAfterLogin'); } catch (e) {}
+        updateRoleUI(null);
+        // Add this line to reload the page after logout
+        location.reload();
+      });
+      netlifyIdentity.on('error', (err) => console.error('Netlify Identity Error:', err));
+      netlifyIdentity.init();
+      const current = netlifyIdentity.currentUser && netlifyIdentity.currentUser();
+      updateRoleUI(current || null);
+    } else {
+      console.error('Netlify Identity widget script not loaded.');
+      loginBtn.textContent = 'Login Unavailable';
+      loginBtn.disabled = true;
+    }
+  </script>
 </body>
 </html>
