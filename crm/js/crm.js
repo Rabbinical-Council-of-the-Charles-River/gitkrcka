@@ -27,7 +27,7 @@ let selectedEstablishments = {
 let allEstablishments = []; // Added for client-overview.html
 
 // Set your Google Apps Script Web App URL here
-const APPSCRIPT_URL = 'YOUR_APPSCRIPT_WEB_APP_URL';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAvkL2FAFfg1v4-CJg9SpovXfoGvCLfDb8oqjCaazXPp8FIq54L4LngZQj0-1vhEMoBw/exec';
 
 // DOM Elements
 const loginSection = document.getElementById('login-section');
