@@ -3,220 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Sender</title>
+    <title>Advanced Email Sender</title>
+    
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     
     <style>
+        /* Base Styles - No centering or color changes */
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
             margin: 0;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 600px;
-            background-color: #fff;
-            padding: 20px 40px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        h1 {
-            color: #4CAF50;
-        }
-
-        .card {
-            background-color: #f9f9f9;
-            border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-
-        input[type="email"],
-        input[type="text"],
-        textarea {
-            width: 100%;
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .panel {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            margin-top: 0;
+            font-weight: 500;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        input[type="text"], input[type="email"], select {
+            width: calc(100% - 22px);
             padding: 10px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        #email-list {
-            list-style-type: none;
-            padding: 0;
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        #email-list li {
-            background-color: #e9e9e9;
-            padding: 8px;
-            border-radius: 5px;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             font-size: 14px;
         }
-
-        #status-message {
-            margin-top: 20px;
+        button {
+            background-color: #1877f2;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
             font-weight: bold;
-            color: #333;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #166fe5;
+        }
+        .button-group {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        #lists-container ul, #recipients-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        #lists-container li, #recipients-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        #lists-container li:last-child, #recipients-list li:last-child {
+            border-bottom: none;
+        }
+        #lists-container li:hover, #recipients-list li:hover {
+            background-color: #f7f7f7;
+        }
+        .delete-btn {
+            background-color: #f02849;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .delete-btn:hover {
+            background-color: #d81c3c;
+        }
+        #quill-editor-container {
+            height: 250px;
+            margin-bottom: 10px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab-buttons button {
+            background: #f7f7f7;
+            border-radius: 8px 8px 0 0;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            padding: 10px 20px;
+            margin-right: 5px;
+            font-weight: normal;
+        }
+        .tab-buttons button.active {
+            background: #fff;
+            border-top: 2px solid #1877f2;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>Email Sender</h1>
         
-        <div class="card">
-            <h2>Mailing List</h2>
-            <input type="email" id="email-input" placeholder="Enter an email address">
-            <button id="add-email-btn">Add Email</button>
-            <ul id="email-list"></ul>
+        <div class="panel">
+            <h2>Mailing Lists</h2>
+            <input type="text" id="new-list-name" placeholder="Enter list name">
+            <button id="add-list-btn">Create List</button>
+            <div id="lists-container">
+                <ul></ul>
+            </div>
+            
+            <h2 style="margin-top: 20px;">Manage Recipients</h2>
+            <select id="list-selector"></select>
+            <input type="email" id="recipient-email" placeholder="Add recipient email">
+            <button id="add-recipient-btn">Add Recipient</button>
+            <ul id="recipients-list"></ul>
         </div>
 
-        <div class="card">
-            <h2>Send Email</h2>
-            <input type="text" id="subject-input" placeholder="Subject">
-            <textarea id="body-textarea" placeholder="Email body"></textarea>
-            <button id="send-to-list-btn">Send to Mailing List</button>
+        <div class="panel">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="bulk-email">Send to List</button>
+                <button class="tab-btn" data-tab="individual-email">Send Individual</button>
+            </div>
+
+            <div id="bulk-email" class="tab-content active">
+                <h2>Compose Email</h2>
+                <input type="text" id="bulk-subject-input" placeholder="Subject">
+                <div id="quill-editor-bulk"></div>
+                <div class="button-group">
+                    <button id="send-bulk-btn">Send to Selected List</button>
+                    <p id="bulk-status" style="margin-left: 10px;"></p>
+                </div>
+            </div>
+
+            <div id="individual-email" class="tab-content">
+                <h2>Send Individual Email</h2>
+                <input type="email" id="individual-recipient-input" placeholder="Recipient Email">
+                <input type="text" id="individual-subject-input" placeholder="Subject">
+                <div id="quill-editor-individual"></div>
+                <div class="button-group">
+                    <button id="send-individual-btn">Send Email</button>
+                    <p id="individual-status" style="margin-left: 10px;"></p>
+                </div>
+            </div>
         </div>
-        <p id="status-message"></p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
     <script>
-        // Replace with your Firebase configuration
+        // --- IMPORTANT: REPLACE WITH YOUR CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            databaseURL: "YOUR_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg", // Replace with your actual API key if different
+    authDomain: "richardrccr-10a9d.firebaseapp.com",
+    projectId: "richardrccr-10a9d",
+    storageBucket: "richardrccr-10a9d.firebasestorage.app",
+    messagingSenderId: "867270362103",
+    appId: "1:867270362103:web:7653459445810350b864f2"
         };
-
-        // Initialize Firebase
+        const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxnmdTnZwooLl-z0qV7QhfXbGdHiu1dWfwoLQeNEnU_X1o5Ak72ei57KMrQThfSYC4HCg/exec';
+        
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const emailsRef = database.ref('emails');
+        const listsRef = database.ref('lists');
 
-        // Get DOM elements
-        const emailInput = document.getElementById('email-input');
-        const addEmailBtn = document.getElementById('add-email-btn');
-        const emailListEl = document.getElementById('email-list');
-        const subjectInput = document.getElementById('subject-input');
-        const bodyTextarea = document.getElementById('body-textarea');
-        const sendToListBtn = document.getElementById('send-to-list-btn');
-        const statusMessage = document.getElementById('status-message');
+        // Initialize Quill editors
+        const quillBulk = new Quill('#quill-editor-bulk', { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] }});
+        const quillIndividual = new Quill('#quill-editor-individual', { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['link']] }});
 
-        // --- Mailing List Functions ---
-        // Add a new email to Firebase
-        addEmailBtn.addEventListener('click', () => {
-            const email = emailInput.value.trim();
-            if (email) {
-                emailsRef.push(email)
-                    .then(() => {
-                        emailInput.value = '';
-                        statusMessage.textContent = 'Email added successfully!';
-                    })
-                    .catch(error => {
-                        statusMessage.textContent = 'Error adding email.';
-                        console.error(error);
-                    });
-            }
-        });
+        // --- DOM Elements ---
+        const listNameInput = document.getElementById('new-list-name');
+        const addListBtn = document.getElementById('add-list-btn');
+        const listsUl = document.querySelector('#lists-container ul');
+        const listSelector = document.getElementById('list-selector');
+        const recipientEmailInput = document.getElementById('recipient-email');
+        const addRecipientBtn = document.getElementById('add-recipient-btn');
+        const recipientsUl = document.getElementById('recipients-list');
+        const bulkSubjectInput = document.getElementById('bulk-subject-input');
+        const sendBulkBtn = document.getElementById('send-bulk-btn');
+        const individualRecipientInput = document.getElementById('individual-recipient-input');
+        const individualSubjectInput = document.getElementById('individual-subject-input');
+        const sendIndividualBtn = document.getElementById('send-individual-btn');
+        const bulkStatus = document.getElementById('bulk-status');
+        const individualStatus = document.getElementById('individual-status');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
 
-        // Listen for changes in the Firebase database and update the UI
-        emailsRef.on('value', (snapshot) => {
-            emailListEl.innerHTML = '';
-            snapshot.forEach((childSnapshot) => {
-                const email = childSnapshot.val();
-                const li = document.createElement('li');
-                li.textContent = email;
-                emailListEl.appendChild(li);
+        // --- Tab Switching Logic ---
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
             });
         });
 
-        // --- Email Sending Function ---
-        sendToListBtn.addEventListener('click', () => {
-            const subject = subjectInput.value.trim();
-            const body = bodyTextarea.value.trim();
+        // --- List Management ---
+        addListBtn.addEventListener('click', () => {
+            const listName = listNameInput.value.trim();
+            if (listName) {
+                listsRef.child(listName).set({ recipients: {} })
+                    .then(() => listNameInput.value = '');
+            }
+        });
 
-            if (!subject || !body) {
-                statusMessage.textContent = 'Please enter both a subject and a body.';
+        // Fetch lists and populate the UI
+        listsRef.on('value', snapshot => {
+            listsUl.innerHTML = '';
+            listSelector.innerHTML = '';
+            recipientsUl.innerHTML = '';
+            
+            snapshot.forEach(child => {
+                const listName = child.key;
+                const li = document.createElement('li');
+                li.textContent = listName;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.onclick = () => listsRef.child(listName).remove();
+                li.appendChild(deleteBtn);
+                listsUl.appendChild(li);
+
+                const option = document.createElement('option');
+                option.value = listName;
+                option.textContent = listName;
+                listSelector.appendChild(option);
+            });
+        });
+
+        // --- Recipient Management ---
+        addRecipientBtn.addEventListener('click', () => {
+            const listName = listSelector.value;
+            const recipientEmail = recipientEmailInput.value.trim();
+            if (listName && recipientEmail) {
+                listsRef.child(listName).child('recipients').push(recipientEmail)
+                    .then(() => recipientEmailInput.value = '');
+            }
+        });
+
+        // Fetch recipients for selected list
+        listSelector.addEventListener('change', () => {
+            const listName = listSelector.value;
+            if (listName) {
+                listsRef.child(listName).child('recipients').on('value', snapshot => {
+                    recipientsUl.innerHTML = '';
+                    snapshot.forEach(child => {
+                        const email = child.val();
+                        const li = document.createElement('li');
+                        li.textContent = email;
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.textContent = 'Remove';
+                        deleteBtn.classList.add('delete-btn');
+                        deleteBtn.onclick = () => child.ref.remove();
+                        li.appendChild(deleteBtn);
+                        recipientsUl.appendChild(li);
+                    });
+                });
+            } else {
+                recipientsUl.innerHTML = '';
+            }
+        });
+        
+        // Trigger initial recipient fetch for the first list
+        listsRef.once('value', snapshot => {
+            const firstList = Object.keys(snapshot.val() || {})[0];
+            if (firstList) {
+                listSelector.value = firstList;
+                listSelector.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // --- Email Sending Logic (Bulk) ---
+        sendBulkBtn.addEventListener('click', () => {
+            const listName = listSelector.value;
+            const subject = bulkSubjectInput.value.trim();
+            const body = quillBulk.root.innerHTML;
+            
+            if (!listName || !subject || !body || quillBulk.getText().trim() === '') {
+                bulkStatus.textContent = 'Please fill out all fields.';
                 return;
             }
 
-            statusMessage.textContent = 'Sending emails...';
-
-            // Fetch all emails from Firebase once
-            emailsRef.once('value', (snapshot) => {
-                const emailAddresses = [];
-                snapshot.forEach((childSnapshot) => {
-                    emailAddresses.push(childSnapshot.val());
-                });
-
+            bulkStatus.textContent = 'Sending emails...';
+            
+            listsRef.child(listName).child('recipients').once('value', snapshot => {
+                const emailAddresses = Object.values(snapshot.val() || {});
                 if (emailAddresses.length === 0) {
-                    statusMessage.textContent = 'Mailing list is empty.';
+                    bulkStatus.textContent = 'The selected list is empty.';
                     return;
                 }
-
-                // The URL of your deployed Google Apps Script web app
-                // IMPORTANT: Replace with your actual URL
-                const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbzVjWTLWkJyiNDfs4EQrXizU3QuH1lvXujqesFfNGWVVX1S0xtBQ9bLB1-HO6VYvQzaVQ/exec';
-                
-                const data = {
-                    subject: subject,
-                    body: body,
-                    emails: emailAddresses
-                };
-                
-                // Use a POST request to send the data to the Apps Script API
-                fetch(appsScriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'text/plain'
-                    },
-                    body: JSON.stringify(data)
-                }).then(response => {
-                    statusMessage.textContent = 'Emails request sent successfully! Check your sent folder.';
-                }).catch(error => {
-                    console.error('Error:', error);
-                    statusMessage.textContent = 'Failed to send emails. Check the console for details.';
-                });
+                sendEmail(emailAddresses, subject, body, bulkStatus);
             });
         });
+
+        // --- Email Sending Logic (Individual) ---
+        sendIndividualBtn.addEventListener('click', () => {
+            const recipient = individualRecipientInput.value.trim();
+            const subject = individualSubjectInput.value.trim();
+            const body = quillIndividual.root.innerHTML;
+
+            if (!recipient || !subject || !body || quillIndividual.getText().trim() === '') {
+                individualStatus.textContent = 'Please fill out all fields.';
+                return;
+            }
+
+            individualStatus.textContent = 'Sending email...';
+            sendEmail([recipient], subject, body, individualStatus);
+        });
+
+        // Generic function to handle the API call
+        function sendEmail(recipients, subject, body, statusEl) {
+            const data = {
+                subject: subject,
+                body: body,
+                emails: recipients
+            };
+            
+            fetch(appsScriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(data)
+            }).then(() => {
+                statusEl.textContent = 'Email request sent successfully!';
+            }).catch(error => {
+                console.error('Error:', error);
+                statusEl.textContent = 'Failed to send email. Check console.';
+            });
+        }
     </script>
+
 </body>
 </html>

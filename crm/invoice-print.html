@@ -5,109 +5,214 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>KRCKA Invoice</title>
     
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
         body {
             background-color: #f8f9fa; /* Light grey background for the overall page */
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Times New Roman', Times, serif; /* Formal serif font */
             margin: 0;
-            padding: 20px; /* Padding around the invoice container */
+            padding: 20px;
             display: flex;
-            justify-content: center; /* Center the invoice on screen */
-            align-items: flex-start; /* Align to the top */
-            min-height: 100vh; /* Ensure body takes full viewport height */
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
         }
         .container {
-            max-width: 850px; /* Adjusted max-width for the invoice content on screen */
-            width: 100%; /* Ensure it's responsive up to max-width */
-            margin: 30px auto; /* Center the container with vertical margin */
-            background: #fff; /* White background for the page look */
-            box-shadow: 0 0 15px rgba(0,0,0,.1); /* Soft shadow for page effect */
-            border-radius: 8px; /* Slightly rounded corners */
-            padding: 50px; /* Increased internal padding to act as page margins for capture */
-            box-sizing: border-box; /* Include padding in the element's total width and height */
+            max-width: 8.5in; /* Sized for Letter paper width */
+            width: 100%;
+            margin: 30px auto;
+            background: #fff; /* White background */
+            box-shadow: 0 0 15px rgba(0,0,0,.1);
+            border-radius: 0;
+            padding: 0.75in; /* Padding to act as page margins */
+            box-sizing: border-box;
         }
         
         @media print {
             body {
                 margin: 0;
                 padding: 0;
-                font-size: 11px; /* Smaller font size for print */
-                -webkit-print-color-adjust: exact; /* Ensure background colors are printed */
+                font-size: 11px;
+                -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                background-color: white !important; /* Force white background for printing */
+                background-color: white !important;
             }
             .container {
-                max-width: none; /* Let it expand to print page width */
+                max-width: none;
                 width: auto;
                 margin: 0;
-                padding: 0; /* Remove container padding for print, let browser handle margins */
-                box-shadow: none; /* No shadow in print */
-                border-radius: 0; /* No border radius in print */
+                padding: 0;
+                box-shadow: none;
+                border-radius: 0;
             }
             .no-print { display: none !important; }
         }
+
+        /* Invoice styles to match the image */
+        .invoice-content {
+            padding: 0;
+            margin: 0;
+        }
         
         .invoice-header {
-            border-bottom: 3px solid #0d6efd;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
         }
-        
-        .invoice-details {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+        .invoice-header-left {
+            flex-grow: 1;
         }
-        
-        .establishment-badge {
-            background-color: #e3f2fd;
-            color: #1976d2;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin: 2px;
+        .company-info h2 {
+            font-size: 2.25rem; /* Increased font size for company name */
+            margin-bottom: 0.25rem;
+            font-weight: normal;
+        }
+        .company-info p {
+            font-size: 12px;
+            line-height: 1.2;
+            margin-bottom: 0;
+        }
+        .invoice-header-right {
+            flex-shrink: 0;
+            margin-left: 20px;
+            text-align: right;
+        }
+        .invoice-details-box {
+            border: 1px solid #000;
+            padding: 5px 10px;
+            margin-top: 5px;
+            width: 250px;
             display: inline-block;
         }
-        
-        .invoice-table th {
-            background-color: #0d6efd;
+        .invoice-details-box p {
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+        .invoice-details-box p strong {
+            display: inline-block;
+            width: 70px;
+        }
+
+        .bill-to-box, .comments-box {
+            border: 1px solid #000;
+            background-color: #35478c; /* Dark blue background */
             color: white;
-            border: none;
+            padding: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .bill-to-section {
+            border: 1px solid #000;
+            padding: 10px;
+            min-height: 120px;
+            border-top: none;
+        }
+        .bill-to-section p {
+            font-size: 12px;
+            margin-bottom: 0.25rem;
+            line-height: 1.2;
         }
         
-        .total-section {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
+        /* New container for the main body */
+        .invoice-main-body-box {
+            border: 1px solid #000;
         }
         
-        .company-logo {
-            max-height: 50px; /* Adjusted logo size */
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-bottom: 0;
         }
-        
-        .status-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
+        .invoice-table thead {
+            background-color: #35478c;
+            color: white;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 12px;
+            font-size: 14px;
+        }
+        .invoice-table th, .invoice-table td {
+            padding: 8px;
+            border: none;
+            vertical-align: top;
+        }
+        .invoice-table th {
+            text-align: left;
+        }
+        .invoice-table tbody td {
+            font-size: 13px;
+            border-bottom: 1px solid #ddd;
+        }
+        .invoice-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .invoice-table .description-column {
+            width: 50%;
+        }
+        .invoice-table .taxed-column {
+            width: 15%;
+            text-align: center;
+        }
+        .invoice-table .amount-column {
+            width: 35%;
+            text-align: right;
+        }
+
+        .totals-section {
+            border: 1px solid #000;
+            border-top: none;
+            padding: 10px;
+        }
+        .totals-table {
+            width: 100%;
+        }
+        .totals-table td {
+            padding: 2px 5px;
+            font-size: 14px;
+        }
+        .totals-table td:first-child {
+            font-weight: bold;
+            text-align: right;
+            text-transform: uppercase;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+        }
+        .totals-table .total-row td {
+            font-size: 16px;
+            font-weight: bold;
         }
         
-        .status-draft { background-color: #6c757d; color: white; }
-        .status-sent { background-color: #0d6efd; color: white; }
-        .status-paid { background-color: #198754; color: white; }
-        .status-overdue { background-color: #dc3545; color: white; }
+        .comments-section {
+            margin-top: 20px;
+        }
+        .comments-body {
+            border: 1px solid #000;
+            padding: 10px;
+            min-height: 100px;
+            border-top: none;
+            font-size: 12px;
+        }
+
+        .payment-info {
+            text-align: right;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .thank-you {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 
 <body>
     <div class="container mt-4">
-        <!-- Print Controls -->
         <div class="no-print mb-3">
             <button onclick="window.print()" class="btn btn-primary me-2">
                 <i class="bi bi-printer"></i> Print Invoice
@@ -120,113 +225,104 @@
             </button>
         </div>
 
-        <!-- Invoice Content -->
-        <div class="invoice-content">
-            <!-- Header -->
+        <div class="invoice-content" id="invoice-content-to-capture">
             <div class="invoice-header">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <img src="../images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png" alt="KRCKA Logo" class="company-logo">
-                        <h2 class="mt-2">KRCKA</h2>
-                        <p class="text-muted mb-0">Kosher Certification Agency</p>
+                <div class="invoice-header-left">
+                    <div class="company-info">
+                        <h2>RCCR Billing</h2>
+                        <p>Mass Turnpike</p>
+                        <p>Westborough MA, 01581</p>
+                        <p>Phone: 617.506.9578</p>
+                        <p>Email: billing@rebchardle.org</p>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <h1 class="display-6">INVOICE</h1>
-                        <p class="mb-1"><strong>Invoice #:</strong> <span id="invoice-number">Loading...</span></p>
-                        <p class="mb-1"><strong>Date:</strong> <span id="invoice-date">Loading...</span></p>
-                        <p class="mb-1"><strong>Due Date:</strong> <span id="due-date">Loading...</span></p>
-                        <span id="invoice-status" class="status-badge">Loading...</span>
+                </div>
+                <div class="invoice-header-right">
+                    <h1>INVOICE</h1>
+                    <div class="invoice-details-box">
+                        <p><strong>DATE:</strong> <span id="invoice-date">Loading...</span></p>
+                        <p><strong>INVOICE #:</strong> <span id="invoice-number">Loading...</span></p>
+                        <p><strong>DUE DATE:</strong> <span id="due-date">Loading...</span></p>
                     </div>
                 </div>
             </div>
 
-            <!-- Invoice Details -->
-            <div class="invoice-details">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5>Bill To:</h5>
-                        <div id="client-info">
-                            <p class="mb-1"><strong id="client-name">Loading...</strong></p>
-                            <p class="mb-1" id="client-contact">Loading...</p>
-                            <p class="mb-1" id="client-email">Loading...</p>
-                            <p class="mb-1" id="client-phone">Loading...</p>
-                            <div id="client-address">Loading...</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h5>Establishments:</h5>
-                        <div id="establishments-list">
-                            Loading...
-                        </div>
-                    </div>
-                </div>
+            <div class="bill-to-box">BILL TO</div>
+            <div class="bill-to-section" id="client-info">
+                <p><strong id="client-name">Loading...</strong></p>
+                <p id="client-contact">Loading...</p>
+                <p id="client-email">Loading...</p>
+                <p id="client-phone">Loading...</p>
+                <div id="client-address">Loading...</div>
             </div>
-
-            <!-- Invoice Items -->
-            <div class="table-responsive mb-4">
-                <table class="table table-striped invoice-table">
+            
+            <div class="invoice-main-body-box mt-4">
+                <table class="invoice-table">
                     <thead>
                         <tr>
-                            <th>Description</th>
-                            <th class="text-center">Quantity</th>
-                            <th class="text-end">Rate</th>
-                            <th class="text-end">Total</th>
+                            <th class="description-column">DESCRIPTION</th>
+                            <th class="taxed-column">TAXED</th>
+                            <th class="amount-column">AMOUNT</th>
                         </tr>
                     </thead>
                     <tbody id="invoice-items">
-                        <tr>
-                            <td colspan="4" class="text-center">Loading items...</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
-
-            <!-- Totals -->
-            <div class="row">
-                <div class="col-md-8"></div>
-                <div class="col-md-4">
-                    <div class="total-section">
-                        <div class="row mb-2">
-                            <div class="col-6"><strong>Subtotal:</strong></div>
-                            <div class="col-6 text-end" id="subtotal">$0.00</div>
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-6">Tax (<span id="tax-rate">0</span>%):</div>
-                            <div class="col-6 text-end" id="tax-amount">$0.00</div>
-                        </div>
-                        <hr>
-                        <div class="row">
-                            <div class="col-6"><h5>Total:</h5></div>
-                            <div class="col-6 text-end"><h5 id="total-amount">$0.00</h5></div>
-                        </div>
-                    </div>
+            
+            <div class="d-flex justify-content-end">
+                <div class="totals-section mt-3">
+                    <table class="totals-table">
+                        <tbody>
+                            <tr>
+                                <td>SUBTOTAL:</td>
+                                <td id="subtotal">$0.00</td>
+                            </tr>
+                            <tr>
+                                <td>TAXABLE:</td>
+                                <td id="taxable-amount">$0.00</td>
+                            </tr>
+                            <tr>
+                                <td>TAX RATE:</td>
+                                <td id="tax-rate">0.00%</td>
+                            </tr>
+                            <tr>
+                                <td>TAX DUE:</td>
+                                <td id="tax-amount">$0.00</td>
+                            </tr>
+                            <tr>
+                                <td>OTHER:</td>
+                                <td id="other-fees">$0.00</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td>TOTAL:</td>
+                                <td id="total-amount">$0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="mt-5 pt-4 border-top">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Payment Information:</h6>
-                        <p class="small text-muted">
-                            Please make payments to KRCKA.<br>
-                            For questions about this invoice, please contact us.
-                        </p>
+            <div class="row comments-section">
+                <div class="col-6">
+                    <div class="comments-box">OTHER COMMENTS</div>
+                    <div class="comments-body">
+                        <div id="comments">Please review and pay this invoice by the due date.</div>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <p class="small text-muted">
-                            Thank you for choosing KRCKA for your kosher certification needs.
-                        </p>
+                </div>
+                <div class="col-6 d-flex flex-column justify-content-end">
+                    <div class="payment-info">
+                        Make all checks payable to <br> **Rabbinical Council of the Charles River**
+                    </div>
+                    <div class="thank-you">
+                        Thank You For Your Business!
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <!-- jsPDF and html2canvas CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -278,7 +374,6 @@
             }
 
             try {
-                // Load invoice
                 const invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
                 if (!invoiceDoc.exists) {
                     document.body.innerHTML = '<div class="container mt-5"><div class="alert alert-danger">Invoice not found</div></div>';
@@ -286,8 +381,6 @@
                 }
 
                 const invoice = invoiceDoc.data();
-
-                // Load client data
                 let client = null;
                 if (invoice.clientId) {
                     const clientDoc = await db.collection('clients').doc(invoice.clientId).get();
@@ -296,20 +389,7 @@
                     }
                 }
 
-                // Load establishments
-                let establishments = [];
-                if (invoice.establishments && invoice.establishments.length > 0) {
-                    const establishmentPromises = invoice.establishments.map(estId => 
-                        db.collection('establishments').doc(estId).get()
-                    );
-                    const establishmentDocs = await Promise.all(establishmentPromises);
-                    establishments = establishmentDocs
-                        .filter(doc => doc.exists)
-                        .map(doc => ({ id: doc.id, ...doc.data() }));
-                }
-
-                // Display invoice data
-                displayInvoice(invoice, client, establishments);
+                displayInvoice(invoice, client);
 
             } catch (error) {
                 console.error('Error loading invoice:', error);
@@ -317,18 +397,11 @@
             }
         }
 
-        function displayInvoice(invoice, client, establishments) {
-            // Basic invoice info
+        function displayInvoice(invoice, client) {
             document.getElementById('invoice-number').textContent = invoice.invoiceNumber || 'N/A';
             document.getElementById('invoice-date').textContent = formatDate(invoice.issueDate);
             document.getElementById('due-date').textContent = formatDate(invoice.dueDate);
             
-            // Status
-            const statusElement = document.getElementById('invoice-status');
-            statusElement.textContent = (invoice.status || 'draft').toUpperCase();
-            statusElement.className = `status-badge status-${invoice.status || 'draft'}`;
-
-            // Client information
             if (client) {
                 document.getElementById('client-name').textContent = client.companyName || 'N/A';
                 document.getElementById('client-contact').textContent = client.contactPerson || '';
@@ -336,7 +409,6 @@
                 document.getElementById('client-phone').textContent = client.phone || '';
                 document.getElementById('client-address').innerHTML = (client.address || '').replace(/\n/g, '<br>');
             } else {
-                // Fallback to invoice client data
                 document.getElementById('client-name').textContent = invoice.clientName || 'N/A';
                 document.getElementById('client-contact').textContent = '';
                 document.getElementById('client-email').textContent = invoice.clientEmail || '';
@@ -344,103 +416,86 @@
                 document.getElementById('client-address').textContent = '';
             }
 
-            // Establishments
-            const establishmentsContainer = document.getElementById('establishments-list');
-            if (establishments.length > 0) {
-                establishmentsContainer.innerHTML = establishments.map(est => 
-                    `<span class="establishment-badge">${est.name} - ${est.location}</span>`
-                ).join('');
-            } else {
-                establishmentsContainer.innerHTML = '<span class="text-muted">No establishments specified</span>';
-            }
-
             // Invoice items
             const itemsContainer = document.getElementById('invoice-items');
             if (invoice.items && invoice.items.length > 0) {
-                itemsContainer.innerHTML = invoice.items.map(item => `
-                    <tr>
-                        <td>${item.description}</td>
-                        <td class="text-center">${item.quantity}</td>
-                        <td class="text-end">${item.rate !== undefined ? formatCurrency(item.rate) : 'N/A'}</td>
-                        <td class="text-end">${item.total !== undefined ? formatCurrency(item.total) : 'N/A'}</td>
-                    </tr>
-                `).join('');
+                itemsContainer.innerHTML = invoice.items.map(item => {
+                    const total = item.quantity * item.rate;
+                    return `
+                        <tr>
+                            <td class="description-column">${item.description}</td>
+                            <td class="taxed-column">${item.taxed ? 'X' : ''}</td>
+                            <td class="amount-column">${formatCurrency(total)}</td>
+                        </tr>
+                    `;
+                }).join('');
             } else {
-                itemsContainer.innerHTML = '<tr><td colspan="4" class="text-center">No items</td></tr>';
+                itemsContainer.innerHTML = '<tr><td colspan="3" class="text-center">No items</td></tr>';
             }
-
+            
             // Totals
-            document.getElementById('subtotal').textContent = formatCurrency(invoice.subtotal);
-            document.getElementById('tax-rate').textContent = (invoice.taxRate || 0).toFixed(2);
-            document.getElementById('tax-amount').textContent = formatCurrency(invoice.taxAmount);
-            document.getElementById('total-amount').textContent = formatCurrency(invoice.totalAmount);
+            const subtotal = (invoice.items || []).reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+            const taxableAmount = subtotal; // Assuming everything is taxable
+            const taxAmount = taxableAmount * (invoice.taxRate || 0) / 100;
+            const otherFees = invoice.otherFees || 0;
+            const totalAmount = subtotal + taxAmount + otherFees;
 
-            // Update page title
-            document.title = `KRCKA Invoice ${invoice.invoiceNumber}`;
+            document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('taxable-amount').textContent = formatCurrency(taxableAmount);
+            document.getElementById('tax-rate').textContent = (invoice.taxRate || 0).toFixed(2) + '%';
+            document.getElementById('tax-amount').textContent = formatCurrency(taxAmount);
+            document.getElementById('other-fees').textContent = formatCurrency(otherFees);
+            document.getElementById('total-amount').textContent = formatCurrency(totalAmount);
+            
+            document.title = `Invoice ${invoice.invoiceNumber}`;
         }
 
         // Function to download invoice as PDF
         async function downloadInvoicePdf() {
-            // Target the main container to capture the whole "page" with its padding
-            const invoiceElement = document.querySelector('.container'); 
+            const invoiceElement = document.getElementById('invoice-content-to-capture'); 
             const invoiceNumber = document.getElementById('invoice-number').textContent || 'Invoice';
 
-            // Temporarily hide elements not meant for PDF
             const noPrintElements = document.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
-
+            
             try {
-                // Capture the entire container element with increased scale for better resolution
+                const scale = 3;
                 const canvas = await html2canvas(invoiceElement, { 
-                    scale: 2, 
+                    scale: scale, 
                     useCORS: true, 
-                    logging: false 
+                    logging: false,
+                    scrollY: -window.scrollY
                 });
-                const imgData = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller file size, 0.9 quality
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
                 const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4'); // A4 size: 210mm x 297mm
-
+                const pdf = new jsPDF('p', 'in', 'letter');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = pdf.internal.pageSize.getHeight();
 
                 const imgProps = pdf.getImageProperties(imgData);
-                const imgWidthPixels = imgProps.width;
-                const imgHeightPixels = imgProps.height;
+                const imgWidth = imgProps.width / imgProps.dpi;
+                const imgHeight = imgProps.height / imgProps.dpi;
 
-                // Define desired margins in mm for the PDF document
-                const pdfMargin = 10; 
-                const usablePdfWidth = pdfWidth - (2 * pdfMargin);
-                const usablePdfHeight = pdfHeight - (2 * pdfMargin);
+                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                const finalImgWidth = imgWidth * ratio;
+                const finalImgHeight = imgHeight * ratio;
 
-                // Calculate scaling factors based on usable area to fit the image
-                const widthRatio = usablePdfWidth / imgWidthPixels;
-                const heightRatio = usablePdfHeight / imgHeightPixels;
-                const scaleFactor = Math.min(widthRatio, heightRatio); // Use the smaller ratio to fit both dimensions
+                const x = (pdfWidth - finalImgWidth) / 2;
+                const y = (pdfHeight - finalImgHeight) / 2;
 
-                const finalImgWidthMm = imgWidthPixels * scaleFactor;
-                const finalImgHeightMm = imgHeightPixels * scaleFactor;
-
-                // Calculate position to center the image within the margins
-                const xPos = pdfMargin + (usablePdfWidth - finalImgWidthMm) / 2;
-                const yPos = pdfMargin + (usablePdfHeight - finalImgHeightMm) / 2;
-                
-                pdf.addImage(imgData, 'JPEG', xPos, yPos, finalImgWidthMm, finalImgHeightMm);
-
+                pdf.addImage(imgData, 'JPEG', x, y, finalImgWidth, finalImgHeight);
                 pdf.save(`Invoice_${invoiceNumber}.pdf`);
             } catch (error) {
                 console.error('Error generating PDF:', error);
-                alert('Failed to generate PDF. Please try again.');
+                alert('Failed to generate PDF. This can be caused by browser security restrictions or CDN issues. Please try printing to PDF instead.');
             } finally {
-                // Restore visibility of non-print elements
                 noPrintElements.forEach(el => el.style.display = '');
             }
         }
 
-        // Load invoice when page loads
         document.addEventListener('DOMContentLoaded', () => {
             loadInvoice();
-            // Attach event listener to the new download button
             document.getElementById('download-pdf-btn').addEventListener('click', downloadInvoicePdf);
         });
     </script>
