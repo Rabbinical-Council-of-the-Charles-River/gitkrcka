@@ -21,6 +21,7 @@ let currentUser = null;
 let clients = [];
 let establishments = [];
 let invoices = [];
+let transactions = [];
 let selectedEstablishments = {
     add: [],
     edit: []
@@ -118,6 +119,7 @@ async function initializeCRM() {
         await loadEstablishments();
         await loadClients(); // Ensure clients are loaded BEFORE dropdowns are populated
         await loadInvoices();
+        await loadTransactions();
         updateQuickStats();
         populateDropdowns();
         setupEventListeners();
@@ -184,6 +186,22 @@ async function loadInvoices() {
     }
 }
 
+async function loadTransactions() {
+    try {
+        const snapshot = await db.collection('transactions').orderBy('date', 'desc').get();
+        transactions = [];
+        snapshot.forEach(doc => {
+            transactions.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+        displayTransactions();
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        showMessage('error', 'Failed to load financial transactions.');
+    }
+}
 // Display Functions
 function displayClients() {
     const tbody = document.getElementById('clients-table-body');
@@ -283,6 +301,52 @@ function displayInvoices() {
             </tr>
         `;
     }).join('');
+}
+
+function displayTransactions() {
+    const tbody = document.getElementById('transactions-table-body');
+    if (!tbody) return;
+
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found</td></tr>';
+    } else {
+        tbody.innerHTML = transactions.map(tx => {
+            const amount = tx.amount || 0;
+            if (tx.type === 'income') {
+                totalIncome += amount;
+            } else {
+                totalExpenses += amount;
+            }
+            return `
+                <tr>
+                    <td>${formatDate(tx.date)}</td>
+                    <td>${tx.description}</td>
+                    <td>${tx.category}</td>
+                    <td><span class="badge ${tx.type === 'income' ? 'bg-success' : 'bg-danger'}">${tx.type}</span></td>
+                    <td>${formatCurrency(amount)}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteTransaction('${tx.id}')"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    const netBalance = totalIncome - totalExpenses;
+    document.getElementById('total-income').textContent = formatCurrency(totalIncome);
+    document.getElementById('total-expenses').textContent = formatCurrency(totalExpenses);
+    document.getElementById('net-balance').textContent = formatCurrency(netBalance);
+
+    const netBalanceEl = document.getElementById('net-balance');
+    netBalanceEl.classList.toggle('text-danger', netBalance < 0);
+    netBalanceEl.classList.toggle('text-success', netBalance >= 0);
+
 }
 
 // Quick Stats Update
@@ -392,6 +456,7 @@ function setupEventListeners() {
     // Client form submission
     document.getElementById('add-client-form').addEventListener('submit', handleAddClient);
     document.getElementById('edit-client-form').addEventListener('submit', handleEditClient);
+    document.getElementById('add-transaction-form').addEventListener('submit', handleAddTransaction);
     
     // Invoice form submission
     // We move the main invoice submission logic into a dedicated function for better control
@@ -472,6 +537,14 @@ function setupEventListeners() {
     if (addInvoiceModal) {
         addInvoiceModal.addEventListener('hidden.bs.modal', function () {
             resetInvoiceForm(); // Reset the form when the modal is closed (e.g., via X button or clicking outside)
+        });
+    }
+
+    // Transaction Modal Cleanup
+    const addTransactionModal = document.getElementById('addTransactionModal');
+    if (addTransactionModal) {
+        addTransactionModal.addEventListener('hidden.bs.modal', function () {
+            resetTransactionForm();
         });
     }
 }
@@ -569,6 +642,79 @@ async function handleEditClient(e) {
     } catch (error) {
         console.error('Error updating client:', error);
         showMessage('error', 'Failed to update client. Please try again.');
+    }
+}
+
+async function handleAddTransaction(e) {
+    e.preventDefault();
+    const form = e.target;
+    const transactionId = form.querySelector('#transaction-id').value;
+    const isEditing = !!transactionId;
+
+    const transactionData = {
+        date: firebase.firestore.Timestamp.fromDate(new Date(form.querySelector('#transaction-date').value)),
+        description: form.querySelector('#transaction-description').value,
+        category: form.querySelector('#transaction-category').value,
+        type: form.querySelector('#transaction-type').value,
+        amount: parseFloat(form.querySelector('#transaction-amount').value),
+    };
+
+    try {
+        if (isEditing) {
+            await db.collection('transactions').doc(transactionId).update(transactionData);
+            showMessage('success', 'Transaction updated successfully!');
+        } else {
+            await db.collection('transactions').add(transactionData);
+            showMessage('success', 'Transaction added successfully!');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('addTransactionModal')).hide();
+        await loadTransactions();
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        showMessage('error', 'Failed to save transaction.');
+    }
+}
+
+function resetTransactionForm() {
+    const form = document.getElementById('add-transaction-form');
+    form.reset();
+    form.querySelector('#transaction-id').value = '';
+    document.getElementById('addTransactionModalLabel').textContent = 'Add Financial Transaction';
+    form.querySelector('button[type="submit"]').textContent = 'Save Transaction';
+    form.querySelector('#transaction-date').valueAsDate = new Date();
+}
+
+function editTransaction(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    const form = document.getElementById('add-transaction-form');
+    form.querySelector('#transaction-id').value = id;
+    form.querySelector('#transaction-date').value = tx.date.toDate().toISOString().split('T')[0];
+    form.querySelector('#transaction-description').value = tx.description;
+    form.querySelector('#transaction-category').value = tx.category;
+    form.querySelector('#transaction-type').value = tx.type;
+    form.querySelector('#transaction-amount').value = tx.amount;
+
+    document.getElementById('addTransactionModalLabel').textContent = 'Edit Financial Transaction';
+    form.querySelector('button[type="submit"]').textContent = 'Update Transaction';
+
+    new bootstrap.Modal(document.getElementById('addTransactionModal')).show();
+}
+
+async function deleteTransaction(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    if (confirm(`Are you sure you want to delete the transaction: "${tx.description}"?`)) {
+        try {
+            await db.collection('transactions').doc(id).delete();
+            showMessage('success', 'Transaction deleted successfully.');
+            await loadTransactions();
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            showMessage('error', 'Failed to delete transaction.');
+        }
     }
 }
 
