@@ -362,9 +362,13 @@ function displayTransactions() {
                         <td><div class="table-actions"><button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-sm" onclick="deleteTransaction('${tx.id}')"><i class="bi bi-trash"></i></button></div></td>
                     </tr>`;
             } else {
-                // Only add to total expenses if it's a paid expense marked for deduction
-                if (tx.paid && tx.deductFromIncome) {
+                // If an expense is unpaid, it's an operating expense.
+                if (!tx.paid) {
                     totalExpenses += amount;
+                }
+                // If an expense is paid AND marked for deduction, it reduces operating income.
+                if (tx.paid && tx.deductFromIncome) {
+                    totalIncome -= amount;
                 }
             }
             const statusBadge = tx.paid ? (tx.deductFromIncome ? 'bg-info' : 'bg-secondary') : 'bg-warning text-dark';
