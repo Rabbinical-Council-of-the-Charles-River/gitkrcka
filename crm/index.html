@@ -375,51 +375,76 @@
 
                     <!-- Finances Panel -->
                     <div class="tab-pane fade" id="finances-panel" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-                            <h3>Financial Overview</h3>
-                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-                                <i class="bi bi-plus-circle"></i> Add Transaction
-                            </button>
-                        </div>
+                        <div class="accordion mt-4" id="financeAccordion">
+                            <!-- Paid Invoices Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingPaidInvoices">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePaidInvoices" aria-expanded="true" aria-controls="collapsePaidInvoices">
+                                        <i class="bi bi-check-circle-fill me-2"></i> Paid Invoices & Revenue
+                                    </button>
+                                </h2>
+                                <div id="collapsePaidInvoices" class="accordion-collapse collapse show" aria-labelledby="headingPaidInvoices" data-bs-parent="#financeAccordion">
+                                    <div class="accordion-body">
+                                        <div class="card text-white bg-primary mb-4">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Total Revenue from Invoices</h5>
+                                                <p class="card-text fs-4" id="total-invoice-revenue">$0.00</p>
+                                            </div>
+                                        </div>
+                                        <h5 class="mb-3">Paid Invoices History</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Invoice #</th><th>Client</th><th>Date Paid</th><th>Amount</th><th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="paid-invoices-table-body"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <!-- Finance Stats -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <div class="card text-white bg-success">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Total Income</h5>
-                                        <p class="card-text fs-4" id="total-income">$0.00</p>
+                            <!-- General Ledger Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingGeneralLedger">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeneralLedger" aria-expanded="false" aria-controls="collapseGeneralLedger">
+                                        <i class="bi bi-book me-2"></i> General Ledger & Expenses
+                                    </button>
+                                </h2>
+                                <div id="collapseGeneralLedger" class="accordion-collapse collapse" aria-labelledby="headingGeneralLedger" data-bs-parent="#financeAccordion">
+                                    <div class="accordion-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5>Operating Account Balance</h5>
+                                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+                                                <i class="bi bi-plus-circle"></i> Add Transaction
+                                            </button>
+                                        </div>
+                                        <!-- Finance Stats -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-4">
+                                                <div class="card text-white bg-success"><div class="card-body"><h5 class="card-title">Operating Income</h5><p class="card-text fs-4" id="total-income">$0.00</p></div></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card text-white bg-danger"><div class="card-body"><h5 class="card-title">Operating Expenses</h5><p class="card-text fs-4" id="total-expenses">$0.00</p></div></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card text-white bg-info"><div class="card-body"><h5 class="card-title">Net Balance</h5><p class="card-text fs-4" id="net-balance">$0.00</p></div></div>
+                                            </div>
+                                        </div>
+                                        <!-- Transactions Table -->
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th>Actions</th></tr>
+                                                </thead>
+                                                <tbody id="transactions-table-body"></tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card text-white bg-danger">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Total Expenses</h5>
-                                        <p class="card-text fs-4" id="total-expenses">$0.00</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card text-white bg-info">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Net Balance</h5>
-                                        <p class="card-text fs-4" id="net-balance">$0.00</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Transactions Table -->
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactions-table-body"></tbody>
-                            </table>
                         </div>
                     </div>
 

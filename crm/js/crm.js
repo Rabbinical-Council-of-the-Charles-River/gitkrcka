@@ -196,6 +196,7 @@ async function loadTransactions() {
                 ...doc.data()
             });
         });
+        displayPaidInvoices();
         displayTransactions();
     } catch (error) {
         console.error('Error loading transactions:', error);
@@ -303,6 +304,41 @@ function displayInvoices() {
     }).join('');
 }
 
+function displayPaidInvoices() {
+    const tbody = document.getElementById('paid-invoices-table-body');
+    if (!tbody) return;
+
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
+    document.getElementById('total-invoice-revenue').textContent = formatCurrency(totalRevenue);
+
+    if (paidInvoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No paid invoices found.</td></tr>';
+    } else {
+        tbody.innerHTML = paidInvoices.map(inv => {
+            const client = clients.find(c => c.id === inv.clientId);
+            // Use the 'lastPayment.date' if available, otherwise fall back.
+            const paidDate = inv.lastPayment?.date ? formatDate(inv.lastPayment.date) : 'N/A';
+            return `
+                <tr>
+                    <td>${inv.invoiceNumber}</td>
+                    <td>${client ? client.companyName : 'Unknown'}</td>
+                    <td>${paidDate}</td>
+                    <td>${formatCurrency(inv.totalAmount)}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn btn-outline-info btn-sm" onclick="viewInvoice('${inv.id}')" title="View Invoice">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+}
+
 function displayTransactions() {
     const tbody = document.getElementById('transactions-table-body');
     if (!tbody) return;
@@ -345,7 +381,7 @@ function displayTransactions() {
 
     const netBalanceEl = document.getElementById('net-balance');
     netBalanceEl.classList.toggle('text-danger', netBalance < 0);
-    netBalanceEl.classList.toggle('text-success', netBalance >= 0);
+    // The info card bg is sufficient, text color can be default
 
 }
 
