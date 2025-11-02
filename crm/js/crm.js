@@ -362,15 +362,21 @@ function displayTransactions() {
                         <td><div class="table-actions"><button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-sm" onclick="deleteTransaction('${tx.id}')"><i class="bi bi-trash"></i></button></div></td>
                     </tr>`;
             } else {
-                totalExpenses += amount;
+                // Only add to total expenses if it's a paid expense marked for deduction
+                if (tx.paid && tx.deductFromIncome) {
+                    totalExpenses += amount;
+                }
             }
+            const statusBadge = tx.paid ? (tx.deductFromIncome ? 'bg-info' : 'bg-secondary') : 'bg-warning text-dark';
+            const statusText = tx.paid ? (tx.deductFromIncome ? 'Paid (Deducted)' : 'Paid (Not Deducted)') : 'Unpaid';
             return `
                 <tr>
                     <td>${formatDate(tx.date)}</td>
                     <td>${tx.description}</td>
                     <td>${tx.category}</td>
                     <td><span class="badge bg-danger">Expense</span></td>
-                    <td><span class="badge ${tx.paid ? 'bg-info' : 'bg-warning text-dark'}">${tx.paid ? 'Paid' : 'Unpaid'}</span></td>                    <td>${formatCurrency(amount)}</td>
+                    <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                    <td>${formatCurrency(amount)}</td>
                     <td>
                         <div class="table-actions">
                             <button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button>
@@ -508,6 +514,17 @@ function setupEventListeners() {
         } else {
             paidContainer.style.display = 'none';
             document.getElementById('transaction-paid').checked = false;
+        }
+    });
+    document.getElementById('transaction-paid').addEventListener('change', function() {
+        const deductContainer = document.getElementById('deduct-from-income-container');
+        if (this.checked) {
+            deductContainer.style.display = 'block';
+            // Default to checked when "Mark as Paid" is newly checked
+            document.getElementById('transaction-deduct').checked = true;
+        } else {
+            deductContainer.style.display = 'none';
+            document.getElementById('transaction-deduct').checked = false;
         }
     });
 
@@ -725,8 +742,10 @@ async function handleAddTransaction(e) {
 
     if (transactionData.type === 'expense') {
         transactionData.paid = form.querySelector('#transaction-paid').checked;
+        transactionData.deductFromIncome = transactionData.paid ? form.querySelector('#transaction-deduct').checked : false;
     } else {
         delete transactionData.paid; // Ensure 'paid' field doesn't exist for income
+        delete transactionData.deductFromIncome;
     }
 
     try {
@@ -753,6 +772,7 @@ function resetTransactionForm() {
     form.querySelector('button[type="submit"]').textContent = 'Save Transaction';
     form.querySelector('#transaction-date').valueAsDate = new Date();
     document.getElementById('expense-paid-container').style.display = 'none';
+    document.getElementById('deduct-from-income-container').style.display = 'none';
 
 }
 
@@ -770,12 +790,19 @@ function editTransaction(id) {
 
     const paidContainer = document.getElementById('expense-paid-container');
     const paidCheckbox = document.getElementById('transaction-paid');
+    const deductContainer = document.getElementById('deduct-from-income-container');
+    const deductCheckbox = document.getElementById('transaction-deduct');
+
     if (tx.type === 'expense') {
         paidContainer.style.display = 'block';
         paidCheckbox.checked = !!tx.paid;
+        deductContainer.style.display = tx.paid ? 'block' : 'none';
+        deductCheckbox.checked = !!tx.deductFromIncome;
     } else {
         paidContainer.style.display = 'none';
         paidCheckbox.checked = false;
+        deductContainer.style.display = 'none';
+        deductCheckbox.checked = false;
     }
 
     document.getElementById('addTransactionModalLabel').textContent = 'Edit Financial Transaction';
