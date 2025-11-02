@@ -385,22 +385,28 @@
                                 </h2>
                                 <div id="collapsePaidInvoices" class="accordion-collapse collapse show" aria-labelledby="headingPaidInvoices" data-bs-parent="#financeAccordion">
                                     <div class="accordion-body">
-                                        <div class="card text-white bg-primary mb-4">
-                                            <div class="card-body">
-                                                <h5 class="card-title">Total Revenue from Invoices</h5>
-                                                <p class="card-text fs-4" id="total-invoice-revenue">$0.00</p>
-                                            </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="mb-0">Revenue Overview</h5>
+                                            <button class="btn btn-primary" id="download-revenue-pdf-btn">
+                                                <i class="bi bi-download"></i> Download PDF
+                                            </button>
                                         </div>
-                                        <h5 class="mb-3">Paid Invoices History</h5>
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Invoice #</th><th>Client</th><th>Date Paid</th><th>Amount</th><th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="paid-invoices-table-body"></tbody>
-                                            </table>
+                                        <div id="revenue-content-to-export">
+                                            <div class="card text-white bg-primary mb-4">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Total Revenue from Invoices</h5>
+                                                    <p class="card-text fs-4" id="total-invoice-revenue">$0.00</p>
+                                                </div>
+                                            </div>
+                                            <h5 class="mb-3">Paid Invoices History</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-hover">
+                                                    <thead class="table-light">
+                                                        <tr><th>Invoice #</th><th>Client</th><th>Date Paid</th><th>Amount</th><th>Actions</th></tr>
+                                                    </thead>
+                                                    <tbody id="paid-invoices-table-body"></tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

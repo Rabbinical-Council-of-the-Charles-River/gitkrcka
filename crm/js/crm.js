@@ -497,6 +497,11 @@ function setupEventListeners() {
     if (downloadLedgerBtn) {
         downloadLedgerBtn.addEventListener('click', downloadLedgerPDF);
     }
+    const downloadRevenueBtn = document.getElementById('download-revenue-pdf-btn');
+    if (downloadRevenueBtn) {
+        downloadRevenueBtn.addEventListener('click', downloadRevenuePDF);
+    }
+
 
     
     // Invoice form submission
@@ -759,6 +764,68 @@ async function deleteTransaction(id) {
     }
 }
 
+async function downloadRevenuePDF() {
+    const revenueContent = document.getElementById('revenue-content-to-export');
+    const downloadBtn = document.getElementById('download-revenue-pdf-btn');
+    if (!revenueContent || !downloadBtn) {
+        showMessage('error', 'Could not find content to export.');
+        return;
+    }
+
+    // Temporarily hide action buttons for a cleaner PDF
+    const actions = revenueContent.querySelectorAll('.table-actions');
+    actions.forEach(el => el.style.display = 'none');
+    downloadBtn.disabled = true;
+    downloadBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Generating...';
+
+    // Add a temporary header for the PDF
+    const header = document.createElement('div');
+    header.className = 'mb-4 text-center';
+    header.innerHTML = `
+        <h3>KRCKA - Official Revenue Report</h3>
+        <p>Generated on: ${new Date().toLocaleDateString('en-US')}</p>
+        <hr>
+    `;
+    revenueContent.prepend(header);
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const canvas = await html2canvas(revenueContent, {
+            scale: 2,
+            useCORS: true,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const canvasAspectRatio = canvasWidth / canvasHeight;
+
+        let finalWidth = pdfWidth - 40; // Add some margin
+        let finalHeight = finalWidth / canvasAspectRatio;
+
+        pdf.addImage(imgData, 'PNG', 20, 20, finalWidth, finalHeight);
+        pdf.save(`KRCKA_Revenue_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        showMessage('error', 'Failed to generate PDF.');
+    } finally {
+        // Restore the UI
+        actions.forEach(el => el.style.display = 'flex');
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+        header.remove(); // Remove the temporary header
+    }
+}
+
 async function downloadLedgerPDF() {
     const ledgerContent = document.getElementById('ledger-content-to-export');
     const downloadBtn = document.getElementById('download-ledger-pdf-btn');
@@ -773,6 +840,15 @@ async function downloadLedgerPDF() {
     downloadBtn.disabled = true;
     downloadBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Generating...';
 
+    // Add a temporary header for the PDF
+    const header = document.createElement('div');
+    header.className = 'mb-4 text-center';
+    header.innerHTML = `
+        <h3>KRCKA - Official Account Ledger</h3>
+        <p>Generated on: ${new Date().toLocaleDateString('en-US')}</p>
+        <hr>
+    `;
+    ledgerContent.prepend(header);
     try {
         const { jsPDF } = window.jspdf;
         const canvas = await html2canvas(ledgerContent, {
@@ -793,7 +869,6 @@ async function downloadLedgerPDF() {
         const canvasHeight = canvas.height;
         const canvasAspectRatio = canvasWidth / canvasHeight;
         const pdfAspectRatio = pdfWidth / pdfHeight;
-
         let finalWidth, finalHeight;
         finalWidth = pdfWidth - 40; // Add some margin
         finalHeight = finalWidth / canvasAspectRatio;
@@ -809,6 +884,7 @@ async function downloadLedgerPDF() {
         actions.forEach(el => el.style.display = 'flex');
         downloadBtn.disabled = false;
         downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+        header.remove(); // Remove the temporary header
     }
 }
 
