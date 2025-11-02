@@ -347,12 +347,20 @@ function displayTransactions() {
     let totalExpenses = 0;
 
     if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No transactions found</td></tr>';
     } else {
         tbody.innerHTML = transactions.map(tx => {
             const amount = tx.amount || 0;
             if (tx.type === 'income') {
                 totalIncome += amount;
+                return `
+                    <tr>
+                        <td>${formatDate(tx.date)}</td><td>${tx.description}</td><td>${tx.category}</td>
+                        <td><span class="badge bg-success">Income</span></td>
+                        <td><span class="badge bg-light text-dark">N/A</span></td>
+                        <td>${formatCurrency(amount)}</td>
+                        <td><div class="table-actions"><button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-sm" onclick="deleteTransaction('${tx.id}')"><i class="bi bi-trash"></i></button></div></td>
+                    </tr>`;
             } else {
                 totalExpenses += amount;
             }
@@ -361,8 +369,8 @@ function displayTransactions() {
                     <td>${formatDate(tx.date)}</td>
                     <td>${tx.description}</td>
                     <td>${tx.category}</td>
-                    <td><span class="badge ${tx.type === 'income' ? 'bg-success' : 'bg-danger'}">${tx.type}</span></td>
-                    <td>${formatCurrency(amount)}</td>
+                    <td><span class="badge bg-danger">Expense</span></td>
+                    <td><span class="badge ${tx.paid ? 'bg-info' : 'bg-warning text-dark'}">${tx.paid ? 'Paid' : 'Unpaid'}</span></td>                    <td>${formatCurrency(amount)}</td>
                     <td>
                         <div class="table-actions">
                             <button class="btn btn-outline-primary btn-sm" onclick="editTransaction('${tx.id}')"><i class="bi bi-pencil"></i></button>
@@ -493,6 +501,16 @@ function setupEventListeners() {
     document.getElementById('add-client-form').addEventListener('submit', handleAddClient);
     document.getElementById('edit-client-form').addEventListener('submit', handleEditClient);
     document.getElementById('add-transaction-form').addEventListener('submit', handleAddTransaction);
+    document.getElementById('transaction-type').addEventListener('change', function() {
+        const paidContainer = document.getElementById('expense-paid-container');
+        if (this.value === 'expense') {
+            paidContainer.style.display = 'block';
+        } else {
+            paidContainer.style.display = 'none';
+            document.getElementById('transaction-paid').checked = false;
+        }
+    });
+
     const downloadLedgerBtn = document.getElementById('download-ledger-pdf-btn');
     if (downloadLedgerBtn) {
         downloadLedgerBtn.addEventListener('click', downloadLedgerPDF);
@@ -705,6 +723,12 @@ async function handleAddTransaction(e) {
         amount: parseFloat(form.querySelector('#transaction-amount').value),
     };
 
+    if (transactionData.type === 'expense') {
+        transactionData.paid = form.querySelector('#transaction-paid').checked;
+    } else {
+        delete transactionData.paid; // Ensure 'paid' field doesn't exist for income
+    }
+
     try {
         if (isEditing) {
             await db.collection('transactions').doc(transactionId).update(transactionData);
@@ -728,6 +752,8 @@ function resetTransactionForm() {
     document.getElementById('addTransactionModalLabel').textContent = 'Add Financial Transaction';
     form.querySelector('button[type="submit"]').textContent = 'Save Transaction';
     form.querySelector('#transaction-date').valueAsDate = new Date();
+    document.getElementById('expense-paid-container').style.display = 'none';
+
 }
 
 function editTransaction(id) {
@@ -741,6 +767,16 @@ function editTransaction(id) {
     form.querySelector('#transaction-category').value = tx.category;
     form.querySelector('#transaction-type').value = tx.type;
     form.querySelector('#transaction-amount').value = tx.amount;
+
+    const paidContainer = document.getElementById('expense-paid-container');
+    const paidCheckbox = document.getElementById('transaction-paid');
+    if (tx.type === 'expense') {
+        paidContainer.style.display = 'block';
+        paidCheckbox.checked = !!tx.paid;
+    } else {
+        paidContainer.style.display = 'none';
+        paidCheckbox.checked = false;
+    }
 
     document.getElementById('addTransactionModalLabel').textContent = 'Edit Financial Transaction';
     form.querySelector('button[type="submit"]').textContent = 'Update Transaction';
