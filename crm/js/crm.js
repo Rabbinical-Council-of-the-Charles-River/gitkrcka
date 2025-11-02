@@ -493,6 +493,11 @@ function setupEventListeners() {
     document.getElementById('add-client-form').addEventListener('submit', handleAddClient);
     document.getElementById('edit-client-form').addEventListener('submit', handleEditClient);
     document.getElementById('add-transaction-form').addEventListener('submit', handleAddTransaction);
+    const downloadLedgerBtn = document.getElementById('download-ledger-pdf-btn');
+    if (downloadLedgerBtn) {
+        downloadLedgerBtn.addEventListener('click', downloadLedgerPDF);
+    }
+
     
     // Invoice form submission
     // We move the main invoice submission logic into a dedicated function for better control
@@ -751,6 +756,59 @@ async function deleteTransaction(id) {
             console.error('Error deleting transaction:', error);
             showMessage('error', 'Failed to delete transaction.');
         }
+    }
+}
+
+async function downloadLedgerPDF() {
+    const ledgerContent = document.getElementById('ledger-content-to-export');
+    const downloadBtn = document.getElementById('download-ledger-pdf-btn');
+    if (!ledgerContent || !downloadBtn) {
+        showMessage('error', 'Could not find content to export.');
+        return;
+    }
+
+    // Temporarily hide action buttons for a cleaner PDF
+    const actions = ledgerContent.querySelectorAll('.table-actions');
+    actions.forEach(el => el.style.display = 'none');
+    downloadBtn.disabled = true;
+    downloadBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Generating...';
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const canvas = await html2canvas(ledgerContent, {
+            scale: 2, // Higher scale for better resolution
+            useCORS: true,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const canvasAspectRatio = canvasWidth / canvasHeight;
+        const pdfAspectRatio = pdfWidth / pdfHeight;
+
+        let finalWidth, finalHeight;
+        finalWidth = pdfWidth - 40; // Add some margin
+        finalHeight = finalWidth / canvasAspectRatio;
+
+        pdf.addImage(imgData, 'PNG', 20, 20, finalWidth, finalHeight);
+        pdf.save(`KRCKA_Account_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        showMessage('error', 'Failed to generate PDF.');
+    } finally {
+        // Restore the UI
+        actions.forEach(el => el.style.display = 'flex');
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
     }
 }
 

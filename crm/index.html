@@ -416,31 +416,39 @@
                                 <div id="collapseGeneralLedger" class="accordion-collapse collapse" aria-labelledby="headingGeneralLedger" data-bs-parent="#financeAccordion">
                                     <div class="accordion-body">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h5>Operating Account Balance</h5>
-                                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-                                                <i class="bi bi-plus-circle"></i> Add Transaction
-                                            </button>
-                                        </div>
-                                        <!-- Finance Stats -->
-                                        <div class="row mb-4">
-                                            <div class="col-md-4">
-                                                <div class="card text-white bg-success"><div class="card-body"><h5 class="card-title">Operating Income</h5><p class="card-text fs-4" id="total-income">$0.00</p></div></div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="card text-white bg-danger"><div class="card-body"><h5 class="card-title">Operating Expenses</h5><p class="card-text fs-4" id="total-expenses">$0.00</p></div></div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="card text-white bg-info"><div class="card-body"><h5 class="card-title">Net Balance</h5><p class="card-text fs-4" id="net-balance">$0.00</p></div></div>
+                                            <h5 class="mb-0">Operating Account Balance</h5>
+                                            <div>
+                                                <button class="btn btn-primary" id="download-ledger-pdf-btn">
+                                                    <i class="bi bi-download"></i> Download PDF
+                                                </button>
+                                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+                                                    <i class="bi bi-plus-circle"></i> Add Transaction
+                                                </button>
                                             </div>
                                         </div>
-                                        <!-- Transactions Table -->
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead class="table-light">
-                                                    <tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th>Actions</th></tr>
-                                                </thead>
-                                                <tbody id="transactions-table-body"></tbody>
-                                            </table>
+                                        <div id="ledger-content-to-export">
+                                            <!-- Finance Stats -->
+                                            <div class="row mb-4 mt-3">
+                                                <div class="col-md-4">
+                                                    <div class="card text-white bg-success"><div class="card-body"><h5 class="card-title">Operating Income</h5><p class="card-text fs-4" id="total-income">$0.00</p></div></div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card text-white bg-danger"><div class="card-body"><h5 class="card-title">Operating Expenses</h5><p class="card-text fs-4" id="total-expenses">$0.00</p></div></div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card text-white bg-info"><div class="card-body"><h5 class="card-title">Net Balance</h5><p class="card-text fs-4" id="net-balance">$0.00</p></div></div>
+                                                </div>
+                                            </div>
+                                            <!-- Transactions Table -->
+                                            <div class="table-responsive">
+                                                <h5 class="mb-3">Transactions</h5>
+                                                <table class="table table-hover">
+                                                    <thead class="table-light">
+                                                        <tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th>Actions</th></tr>
+                                                    </thead>
+                                                    <tbody id="transactions-table-body"></tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -794,6 +802,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
     
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <!-- Netlify Identity Widget -->
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     
