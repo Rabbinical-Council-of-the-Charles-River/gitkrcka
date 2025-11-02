@@ -200,7 +200,7 @@
                 Kosher Status
             </div>
             <div class="validity">
-                Valid: March 13, 2025 ~ April 11, 2026
+                Valid: <span id="validity-dates">Loading...</span>
             </div>
             <div class="notes">
                 Certification does NOT include Passover (unless otherwise specified)<br>
@@ -434,6 +434,7 @@
 
             const establishmentNameEl = document.getElementById('establishmentName');
             const kosherClassificationEl = document.getElementById('kosherClassification');
+            const validityDatesEl = document.getElementById('validity-dates');
             const certificateDateEl = document.getElementById('certificateDate');
             let pdfFileName = 'kosher_certificate'; // Default PDF filename
 
@@ -447,7 +448,7 @@
             if (establishmentId) {
                 db.collection('establishments').doc(establishmentId).get()
                     .then(doc => {
-                        // let establishmentDataForPdf; // Not strictly needed here if only name is used for PDF
+                        // let establishmentDataForPdf; // Not strictly needed here if only name is used for PDF generation step
                         if (doc.exists) {
                             const establishment = doc.data();
                             // establishmentDataForPdf = establishment; // Store if more data needed for PDF generation step
@@ -455,10 +456,20 @@
                             const status = establishment.kosherStatus;
                             if (Array.isArray(status) && status.length > 0) {
                                 kosherClassificationEl.innerHTML = status.join('<br>');
-                            } else if (typeof status === 'string' && status.trim() !== '') {
-                                kosherClassificationEl.innerHTML = status;
                             } else {
                                 kosherClassificationEl.innerHTML = 'N/A';
+                            }
+
+                            if (establishment.validFrom && establishment.validTo) {
+                                // Add a day to the date strings to correct for timezone issues where it might show the previous day
+                                const fromDate = new Date(establishment.validFrom + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+                                const toDate = new Date(establishment.validTo + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+                                validityDatesEl.textContent = `${fromDate} ~ ${toDate}`;
+                            } else {
+                                validityDatesEl.textContent = 'N/A';
+                            }
+                            if (typeof status === 'string' && status.trim() !== '') { // This handles old data format
+                                kosherClassificationEl.innerHTML = status;
                             }
                             applyCertificateColorScheme(establishment.kosherStatus);
                             pdfFileName = establishment.name;
@@ -466,6 +477,7 @@
                             console.error("No such document for ID:", establishmentId);
                             establishmentNameEl.textContent = "Establishment not found";
                             kosherClassificationEl.textContent = "-";
+                            validityDatesEl.textContent = "N/A";
                             applyCertificateColorScheme(null); // Apply default scheme
                             pdfFileName = "establishment_not_found";
                         }
@@ -475,6 +487,7 @@
                         console.error("Error getting document:", error);
                         establishmentNameEl.textContent = "Error loading data";
                         kosherClassificationEl.textContent = "-";
+                        validityDatesEl.textContent = "Error";
                         applyCertificateColorScheme(null); // Apply default scheme
                         pdfFileName = "error_loading_data";
                         generateAndDownloadPDF(pdfFileName);
@@ -483,6 +496,7 @@
                 console.error("No establishment ID provided in URL.");
                 establishmentNameEl.textContent = "No ID provided";
                 kosherClassificationEl.textContent = "-";
+                validityDatesEl.textContent = "N/A";
                 pdfFileName = "no_id_provided";
                 applyCertificateColorScheme(null); // Apply default scheme
                 generateAndDownloadPDF(pdfFileName);
