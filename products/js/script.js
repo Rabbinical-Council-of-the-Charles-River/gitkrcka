@@ -1,22 +1,12 @@
 let productRef = db.collection('products');
 let deleteIDs = [];
 let clients = []; // To store clients from CRM
-document.addEventListener('DOMContentLoaded', () => {
-    const productRef = db.collection('products');
-    const clientRef = db.collection('clients');
-    
-    const searchInput = document.getElementById('search-input');
-    const resultsContainer = document.getElementById('results-container');
-    
-    let clients = [];
-    let products = [];
 
 // REAL TIME LISTENER
 productRef.onSnapshot(snapshot => {
 	let changes = snapshot.docChanges();
 	changes.forEach(change => {
 		if (change.type == 'added') {
-			// console.log('added');
 			renderProduct(change.doc, true);
 		} else if (change.type == 'removed') {
 			let tr = $(`tr[data-id='${change.doc.id}']`);
@@ -26,12 +16,6 @@ productRef.onSnapshot(snapshot => {
 			// console.log('modified');
 		}
 	});
-    // Fetch all clients and products once to enable fast, local searching
-    const fetchData = async () => {
-        try {
-            // Fetch clients
-            const clientSnapshot = await clientRef.get();
-            clients = clientSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
 	// UPDATE TOTAL
 	let size = 0;
@@ -43,16 +27,6 @@ productRef.onSnapshot(snapshot => {
 		$('#product-table tbody').html('<tr><td colspan="7">No products found</td></tr>');
 	}
 });
-            // Fetch products
-            const productSnapshot = await productRef.get();
-            products = productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            console.log(`Fetched ${products.length} products and ${clients.length} clients.`);
-        } catch (error) {
-            console.error("Error fetching initial data:", error);
-            resultsContainer.innerHTML = '<p class="no-results-message">Error: Could not connect to the product directory.</p>';
-        }
-    };
 
 // Fetch clients from CRM
 const fetchClients = async () => {
@@ -64,11 +38,6 @@ const fetchClients = async () => {
 		console.error("Error fetching clients: ", error);
 	}
 };
-    const getClientNameById = (clientId) => {
-        if (!clientId) return 'N/A';
-        const client = clients.find(c => c.id === clientId);
-        return client ? client.companyName : 'Unknown';
-    };
 
 // Populate client dropdowns in modals
 const populateClientDropdowns = () => {
@@ -77,11 +46,6 @@ const populateClientDropdowns = () => {
 	
 	addClientSelect.empty().append('<option value="">Select a Client</option>');
 	editClientSelect.empty().append('<option value="">Select a Client</option>');
-    const renderResults = (results) => {
-        if (results.length === 0) {
-            resultsContainer.innerHTML = '<p class="no-results-message">No products found matching your search.</p>';
-            return;
-        }
 
 	clients.forEach(client => {
 		const option = `<option value="${client.id}">${client.companyName}</option>`;
@@ -89,29 +53,12 @@ const populateClientDropdowns = () => {
 		editClientSelect.append(option);
 	});
 };
-        resultsContainer.innerHTML = results.map(product => `
-            <div class="product-card">
-                <h3>${product.name}</h3>
-                <p><strong>Kashrus Status:</strong> ${product.kashrus || 'N/A'}</p>
-                <p><strong>UKD:</strong> ${product.ukd || 'N/A'}</p>
-                <p><strong>Company:</strong> ${getClientNameById(product.clientId)}</p>
-                ${product.barcode ? `<p><strong>Barcode:</strong> ${product.barcode}</p>` : ''}
-            </div>
-        `).join('');
-    };
 
 const getClientNameById = (clientId) => {
 	if (!clientId) return 'N/A';
 	const client = clients.find(c => c.id === clientId);
 	return client ? client.companyName : 'N/A';
 };
-    const performSearch = () => {
-        const query = searchInput.value.toLowerCase().trim();
-
-        if (query.length < 2) {
-            resultsContainer.innerHTML = '<p class="initial-message">Enter a search term above to find products.</p>';
-            return;
-        }
 
 const displayProducts = async (doc) => {
 	console.log('displayProducts');
@@ -122,41 +69,18 @@ const displayProducts = async (doc) => {
 	} else {
 		products = await productRef.orderBy('createdAt', 'desc').limit(100).get();
 	}
-        const filteredProducts = products.filter(product => {
-            const clientName = getClientNameById(product.clientId).toLowerCase();
-            const productName = (product.name || '').toLowerCase();
-            const ukd = (product.ukd || '').toLowerCase();
-            const barcode = (product.barcode || '').toLowerCase();
 
 	const data = await products.get();
-            return (
-                productName.includes(query) ||
-                clientName.includes(query) ||
-                ukd.includes(query) ||
-                barcode.includes(query)
-            );
-        });
 
 	data.docs.forEach(doc => {
 		renderProduct(doc);
 	})
-        renderResults(filteredProducts);
-    };
 
 	// UPDATE LATEST DOC
 	latestDoc = products.docs[products.docs.length - 1];
-    // Debounce function to limit how often the search function is called
-    let debounceTimer;
-    const debounceSearch = (func, delay) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(func, delay);
-    };
 
 	// UNATTACH EVENT LISTENERS
 	$('.js-loadmore').off('click');
-    searchInput.addEventListener('keyup', () => {
-        debounceSearch(performSearch, 300); // Wait 300ms after user stops typing
-    });
 
 	if (data.empty) {
 		$('.js-loadmore').hide();
@@ -453,6 +377,4 @@ $(document).ready(function () {
 	$("#editProductModal").on('hidden.bs.modal', function () {
 		$('#edit-product-form .form-control').val('');
 	});
-    // Initial data fetch
-    fetchData();
 });
