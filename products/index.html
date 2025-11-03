@@ -114,8 +114,11 @@
                 <input type="text" id="product-ukd" class="form-control" readonly>
               </div>
               <div class="form-group">
-                <label>Client/Business</label>
-                <select id="product-client" class="form-control" required></select>
+                <div class="d-flex justify-content-between align-items-center">
+                  <label for="product-client">Client/Business (optional)</label>
+                  <button type="button" class="btn btn-sm btn-outline-primary" id="show-add-client-modal-btn">+ Add New</button>
+                </div>
+                <select id="product-client" class="form-control"></select>
               </div>
               <div class="form-group">
                 <label>Barcode (optional)</label>
@@ -154,7 +157,7 @@
               </div>
               <div class="form-group">
                 <label>Client/Business</label>
-                <select id="edit-product-client" class="form-control" required></select>
+                <select id="edit-product-client" class="form-control"></select>
               </div>
               <div class="form-group">
                 <label>Barcode</label>
@@ -189,6 +192,30 @@
             <div class="modal-footer">
               <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
               <input type="submit" class="btn btn-danger" value="Delete">
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Client Modal -->
+    <div id="addNewClientModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <form id="add-new-client-form">
+            <div class="modal-header">
+              <h4 class="modal-title">Add New Client</h4>
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" id="new-client-name" class="form-control" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+              <input type="submit" class="btn btn-success" value="Save Client">
             </div>
           </form>
         </div>

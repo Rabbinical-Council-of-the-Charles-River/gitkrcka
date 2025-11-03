@@ -380,6 +380,40 @@ $(document).ready(function () {
 		scannerContainer.addClass('hidden');
 	});
 
+	// Show "Add New Client" modal from within the "Add Product" modal
+	$('#show-add-client-modal-btn').click(function() {
+		$('#addProductModal').modal('hide');
+		$('#addNewClientModal').modal('show');
+	});
+
+	// Handle new client form submission
+	$('#add-new-client-form').submit(async function(event) {
+		event.preventDefault();
+		const newClientName = $('#new-client-name').val().trim();
+		if (!newClientName) {
+			alert('Please enter a client name.');
+			return;
+		}
+
+		try {
+			const docRef = await db.collection('clients').add({
+				companyName: newClientName,
+				status: 'active',
+				createdAt: firebase.firestore.FieldValue.serverTimestamp()
+			});
+			console.log("New client added with ID:", docRef.id);
+
+			// Refresh client list and select the new one
+			await fetchClients();
+			$('#product-client').val(docRef.id);
+
+			$('#addNewClientModal').modal('hide');
+			$('#addProductModal').modal('show');
+		} catch (error) {
+			console.error("Error adding new client:", error);
+			alert('Failed to add new client.');
+		}
+	});
 
 	// RESET FORMS
 	$("#addProductModal").on('hidden.bs.modal', function () {
