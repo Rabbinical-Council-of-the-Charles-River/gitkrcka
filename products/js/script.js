@@ -1,5 +1,6 @@
 let productRef = db.collection('products');
 let deleteIDs = [];
+let clients = []; // To store clients from CRM
 
 // REAL TIME LISTENER
 productRef.onSnapshot(snapshot => {
@@ -27,6 +28,37 @@ productRef.onSnapshot(snapshot => {
 	}
 });
 
+// Fetch clients from CRM
+const fetchClients = async () => {
+	try {
+		const snapshot = await db.collection('clients').orderBy('companyName').get();
+		clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+		populateClientDropdowns();
+	} catch (error) {
+		console.error("Error fetching clients: ", error);
+	}
+};
+
+// Populate client dropdowns in modals
+const populateClientDropdowns = () => {
+	const addClientSelect = $('#product-client');
+	const editClientSelect = $('#edit-product-client');
+	
+	addClientSelect.empty().append('<option value="">Select a Client</option>');
+	editClientSelect.empty().append('<option value="">Select a Client</option>');
+
+	clients.forEach(client => {
+		const option = `<option value="${client.id}">${client.companyName}</option>`;
+		addClientSelect.append(option);
+		editClientSelect.append(option);
+	});
+};
+
+const getClientNameById = (clientId) => {
+	const client = clients.find(c => c.id === clientId);
+	return client ? client.companyName : 'N/A';
+};
+
 
 const displayProducts = async (doc) => {
 	console.log('displayProducts');
@@ -37,52 +69,7 @@ const displayProducts = async (doc) => {
 	const data = await products.get();
 
 	data.docs.forEach(doc => {
-		const product = doc.data();
-		let item =
-			`<tr data-id="${doc.id}">
-					<td>
-							<span class="custom-checkbox">
-									<input type="checkbox" id="${doc.id}" name="options[]" value="${doc.id}">
-									<label for="${doc.id}"></label>
-							</span>
-					</td>
-					<td class="product-name">${product.name}</td>
-					<td class="product-kashrus">${product.kashrus}</td>
-					<td class="product-ukd">${product.ukd}</td>
-					<td class="product-company">${product.company}</td>
-					<td>
-							<a href="#" id="${doc.id}" class="edit js-edit-product"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
-							</a>
-							<a href="#" id="${doc.id}" class="delete js-delete-product"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i>
-							</a>
-					</td>
-			</tr>`;
-
-		$('#product-table').append(item);
-
-		// ACTIVATE TOOLTIP
-		$('[data-toggle="tooltip"]').tooltip();
-
-		// SELECT/DESELECT CHECKBOXES
-		var checkbox = $('table tbody input[type="checkbox"]');
-		$("#selectAll").click(function () {
-			if (this.checked) {
-				checkbox.each(function () {
-					console.log(this.id);
-					deleteIDs.push(this.id);
-					this.checked = true;
-				});
-			} else {
-				checkbox.each(function () {
-					this.checked = false;
-				});
-			}
-		});
-		checkbox.click(function () {
-			if (!this.checked) {
-				$("#selectAll").prop("checked", false);
-			}
-		});
+		renderProduct(doc);
 	})
 
 	// UPDATE LATEST DOC
@@ -92,6 +79,50 @@ const displayProducts = async (doc) => {
 	if (data.empty) {
 		$('.js-loadmore').hide();
 	}
+}
+
+const renderProduct = (doc, prepend = false) => {
+	const product = doc.data();
+	const clientName = getClientNameById(product.clientId);
+	let item =
+		`<tr data-id="${doc.id}">
+				<td>
+						<span class="custom-checkbox">
+								<input type="checkbox" id="${doc.id}" name="options[]" value="${doc.id}">
+								<label for="${doc.id}"></label>
+						</span>
+				</td>
+				<td class="product-name">${product.name}</td>
+				<td class="product-kashrus">${product.kashrus}</td>
+				<td class="product-ukd">${product.ukd}</td>
+				<td class="product-company">${clientName}</td>
+				<td>
+						<a href="#" id="${doc.id}" class="edit js-edit-product"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
+						</a>
+						<a href="#" id="${doc.id}" class="delete js-delete-product"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i>
+						</a>
+				</td>
+		</tr>`;
+
+	if (prepend) {
+		$('#product-table tbody').prepend(item);
+	} else {
+		$('#product-table tbody').append(item);
+	}
+
+	// ACTIVATE TOOLTIP
+	$('[data-toggle="tooltip"]').tooltip();
+
+	// SELECT/DESELECT CHECKBOXES
+	var checkbox = $('table tbody input[type="checkbox"]');
+	$("#selectAll").click(function () {
+		checkbox.prop('checked', this.checked);
+	});
+	checkbox.click(function () {
+		if (!this.checked) {
+			$("#selectAll").prop("checked", false);
+		}
+	});
 }
 
 // ADD TEST DATA
@@ -168,58 +199,43 @@ function addProduct(product) {
 	productRef.add({
 			name: product.name,
 			kashrus: product.kashrus,
-			ukd: product.ukd,
-			company: product.company
+			ukd: product.ukd, // Already generated
+			clientId: product.clientId,
+			barcode: product.barcode,
+			createdAt: firebase.firestore.FieldValue.serverTimestamp()
 		})
 		.then(function (docRef) {
 			console.log("Document written with ID: ", docRef.id);
 			$("#addProductModal").modal('hide');
-
-			let newProduct =
-				`<tr data-id="${docRef.id}">
-					<td>
-							<span class="custom-checkbox">
-									<input type="checkbox" id="${docRef.id}" name="options[]" value="${docRef.id}">
-									<label for="${docRef.id}"></label>
-							</span>
-					</td>
-					<td class="product-name">${product.name}</td>
-					<td class="product-kashrus">${product.kashrus}</td>
-					<td class="product-ukd">${product.ukd}</td>
-					<td class="product-company">${product.company}</td>
-					<td>
-							<a href="#" id="${docRef.id}" class="edit js-edit-product"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i>
-							</a>
-							<a href="#" id="${docRef.id}" class="delete js-delete-product"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i>
-							</a>
-					</td>
-				</tr>`;
-
-			$('#product-table tbody').prepend(newProduct);
-			})
-			.catch(function (error) {
-				console.error("Error writing document: ", error);
-			});
+			// The real-time listener will handle adding the row to the table.
+		})
+		.catch(function (error) {
+			console.error("Error writing document: ", error);
+		});
 }
 
 // INITIALIZE MATERIALIZE COMPONENTS
 $(document).ready(function () {
 
-	// DISPLAY EMPLOYEES ON LOAD
+	// DISPLAY PRODUCTS ON LOAD
+	fetchClients().then(() => {
 	displayProducts();
+	});
 
 	$("#add-product-form").submit(function (event) {
 		event.preventDefault();
 		let productName = $('#product-name').val();
 		let productKashrus = $('#product-kashrus').val();
 		let productUkd = $('#product-ukd').val();
-		let productCompany = $('#product-company').val();
+		let productClientId = $('#product-client').val();
+		let productBarcode = $('#product-barcode').val();
 
 		let product = {
 			name: productName,
 			kashrus: productKashrus,
 			ukd: productUkd,
-			company: productCompany
+			clientId: productClientId,
+			barcode: productBarcode
 		};
 
 		addProduct(product);
@@ -233,9 +249,11 @@ $(document).ready(function () {
 		db.collection('products').doc(id).get().then(function (document) {
 			if (document.exists) {
 				$('#edit-product-form #edit-product-name').val(document.data().name);
+				$('#edit-product-form #edit-product-id').val(id);
 				$('#edit-product-form #edit-product-kashrus').val(document.data().kashrus);
 				$('#edit-product-form #edit-product-ukd').val(document.data().ukd);
-				$('#edit-product-form #edit-product-company').val(document.data().company);
+				$('#edit-product-form #edit-product-client').val(document.data().clientId);
+				$('#edit-product-form #edit-product-barcode').val(document.data().barcode || '');
 				$('#editProductModal').modal('show');
 			} else {
 				console.log("No such document!");
@@ -251,13 +269,15 @@ $(document).ready(function () {
 		let productName = $('#edit-product-form #edit-product-name').val();
 		let productKashrus = $('#edit-product-form #edit-product-kashrus').val();
 		let productUkd = $('#edit-product-form #edit-product-ukd').val();
-		let productCompany =  $('#edit-product-form #edit-product-company').val();
+		let productClientId =  $('#edit-product-form #edit-product-client').val();
+		let productBarcode = $('#edit-product-form #edit-product-barcode').val();
 
 		db.collection('products').doc(id).update({
 			name: productName,
 			kashrus: productKashrus,
 			ukd: productUkd,
-			company: productCompany,
+			clientId: productClientId,
+			barcode: productBarcode,
 			updatedAt : firebase.firestore.FieldValue.serverTimestamp()
 		});
 
@@ -267,7 +287,7 @@ $(document).ready(function () {
 		$('tr[data-id=' + id + '] td.product-name').html(productName);
 		$('tr[data-id=' + id + '] td.product-kashrus').html(productKashrus);
 		$('tr[data-id=' + id + '] td.product-ukd').html(productUkd);
-		$('tr[data-id=' + id + '] td.product-company').html(productCompany);
+		$('tr[data-id=' + id + '] td.product-company').html(getClientNameById(productClientId));
 	});
 
 	// DELETE PRODUCT
@@ -307,22 +327,75 @@ $(document).ready(function () {
 	});
 
 	// SEARCH
-	$("#search-name").keyup(function () {
-		$('#product-table tbody').html('');
-		let nameKeyword = $("#search-name").val();
-		console.log(nameKeyword);
-		productRef.orderBy('name', 'asc').startAt(nameKeyword).endAt(nameKeyword + "\uf8ff").get()
-			.then(function (documentSnapshots) {
-				documentSnapshots.docs.forEach(doc => {
-					renderProduct(doc);
-				});
-			});
+	$("#search-input").keyup(function () {
+		performSearch();
 	});
+
+	const performSearch = async (barcode = null) => {
+		$('#product-table tbody').html('');
+		let keyword = $("#search-input").val().toLowerCase();
+
+		let query = productRef;
+
+		if (barcode) {
+			query = query.where('barcode', '==', barcode);
+		}
+
+		const snapshot = await query.get();
+		snapshot.docs.forEach(doc => {
+			const product = doc.data();
+			const clientName = getClientNameById(product.clientId).toLowerCase();
+			const productName = product.name.toLowerCase();
+			const productBarcode = product.barcode ? product.barcode.toLowerCase() : '';
+
+			if (barcode || clientName.includes(keyword) || productName.includes(keyword) || productBarcode.includes(keyword)) {
+				renderProduct(doc);
+			}
+		});
+	};
+
+	// Barcode Scanner
+	const codeReader = new ZXing.BrowserMultiFormatReader();
+	const scannerContainer = $('#scanner-container');
+	const scannerVideo = scannerContainer.find('video')[0];
+
+	$('#barcode-scanner-button').click(() => {
+		scannerContainer.removeClass('hidden');
+		codeReader.decodeFromVideoDevice(undefined, scannerVideo, (result, err) => {
+			if (result) {
+				console.log('Barcode detected:', result.getText());
+				$('#search-input').val(result.getText());
+				performSearch(result.getText());
+				codeReader.reset();
+				scannerContainer.addClass('hidden');
+			}
+			if (err && !(err instanceof ZXing.NotFoundException)) {
+				console.error(err);
+			}
+		});
+	});
+
+	$('#scanner-close-button').click(() => {
+		codeReader.reset();
+		scannerContainer.addClass('hidden');
+	});
+
 
 	// RESET FORMS
 	$("#addProductModal").on('hidden.bs.modal', function () {
 		$('#add-product-form .form-control').val('');
 	});
+
+	// Auto-generate UKD on modal show
+	$('#addProductModal').on('show.bs.modal', function () {
+		generateUkdCode();
+	});
+
+	const generateUkdCode = () => {
+		const randomPart = Math.floor(100000 + Math.random() * 900000);
+		const ukd = `UKD-${randomPart}`;
+		$('#product-ukd').val(ukd);
+	};
 
 	$("#editProductModal").on('hidden.bs.modal', function () {
 		$('#edit-product-form .form-control').val('');

@@ -44,6 +44,14 @@
                   class="material-icons">&#xE15C;</i> <span>Delete</span></a>
             </div>
           </div>
+          <div class="row mt-3">
+            <div class="col-sm-8">
+              <input type="text" id="search-input" class="form-control" placeholder="Search by Product Name, Client, or Barcode...">
+            </div>
+            <div class="col-sm-4">
+              <button id="barcode-scanner-button" class="btn btn-info w-100"><i class="material-icons">&#xe329;</i> <span>Scan Barcode</span></button>
+            </div>
+          </div>
           <div class="row">
             <div class="col-sm-12">
               <div class="form-group">
@@ -64,7 +72,7 @@
                 <th>Product Name</th>
                 <th>Kashrus Status</th>
                 <th>UKD</th>
-                <th>Company</th>
+                <th>Client/Business</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -76,6 +84,12 @@
           <div class="hint-text">Total of <b class="count">0</b> entries</div>
         </div>
       </div>
+    </div>
+    
+    <!-- Barcode Scanner Modal -->
+    <div id="scanner-container" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1051; display: flex; align-items: center; justify-content: center;">
+      <video style="width: 80%; max-width: 640px; background: black;"></video>
+      <button id="scanner-close-button" class="btn btn-danger" style="position: absolute; top: 20px; right: 20px;">Close</button>
     </div>
 
     <div id="addProductModal" class="modal fade" data-backdrop="static" data-keyboard="false">
@@ -96,12 +110,16 @@
                 <input type="text" id="product-kashrus" class="form-control" required>
               </div>
               <div class="form-group">
-                <label>UKD</label>
-                <input type="text" id="product-ukd" class="form-control" required>
+                <label>UKD (auto-generated)</label>
+                <input type="text" id="product-ukd" class="form-control" readonly>
               </div>
               <div class="form-group">
-                <label>Company</label>
-                <input type="text" id="product-company" class="form-control" required>
+                <label>Client/Business</label>
+                <select id="product-client" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label>Barcode (optional)</label>
+                <input type="text" id="product-barcode" class="form-control">
               </div>
             </div>
             <div class="modal-footer">
@@ -135,8 +153,16 @@
                 <input type="text" id="edit-product-ukd" class="form-control" required>
               </div>
               <div class="form-group">
-                <label>Company</label>
-                <input type="text" id="edit-product-company" class="form-control" required>
+                <label>Client/Business</label>
+                <select id="edit-product-client" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label>Barcode</label>
+                <input type="text" id="edit-product-barcode" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Product ID</label>
+                <input type="text" id="edit-product-id" class="form-control" readonly>
               </div>
             </div>
             <div class="modal-footer">
@@ -172,6 +198,7 @@
 
   <script src="js/vendor/jquery.min.js"></script>
   <script src="js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/6.4.2/firebase-firestore.js"></script>
   <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
