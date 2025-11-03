@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCKA Kosher Product Search</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Merriweather', serif;
+            background-color: #fdfaf6;
+            color: #3a3a3a;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        header {
+            text-align: center;
+            border-bottom: 2px solid #d3c5b3;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            font-weight: 700;
+            color: #5a4a3b;
+        }
+        .subtitle {
+            font-family: 'Roboto', sans-serif;
+            color: #777;
+            font-size: 1.1rem;
+        }
+        .search-wrapper {
+            margin-bottom: 30px;
+        }
+        #search-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            font-family: 'Roboto', sans-serif;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #results-container {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .product-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        .product-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .product-details {
+            font-family: 'Roboto', sans-serif;
+            color: #555;
+            margin-top: 5px;
+        }
+        .product-details span {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        .product-details strong {
+            color: #333;
+        }
+        .message {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.9rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>KRCKA Kosher Product Directory</h1>
+            <p class="subtitle">Your trusted source for kosher product information</p>
+        </header>
+
+        <main>
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Search for a product by name, UKD, or barcode...">
+            </div>
+
+            <div id="results-container">
+                <p class="message">Enter a search term above to find products.</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 KRCKA - All Rights Reserved</p>
+        </footer>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <!-- Custom Script -->
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const productsRef = db.collection('products');
+        let clients = [];
+
+        const searchInput = document.getElementById('search-input');
+        const resultsContainer = document.getElementById('results-container');
+
+        const fetchClients = async () => {
+            try {
+                const snapshot = await db.collection('clients').get();
+                clients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Error fetching clients: ", error);
+            }
+        };
+
+        const getClientNameById = (clientId) => {
+            if (!clientId) return 'N/A';
+            const client = clients.find(c => c.id === clientId);
+            return client ? client.companyName : 'N/A';
+        };
+
+        const performSearch = async () => {
+            const keyword = searchInput.value.toLowerCase().trim();
+            if (!keyword) {
+                resultsContainer.innerHTML = '<p class="message">Enter a search term above to find products.</p>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<p class="message">Searching...</p>';
+
+            try {
+                const snapshot = await productsRef.get();
+                const results = [];
+                snapshot.docs.forEach(doc => {
+                    const product = doc.data();
+                    const clientName = getClientNameById(product.clientId).toLowerCase();
+                    const productName = (product.name || '').toLowerCase();
+                    const productUkd = (product.ukd || '').toLowerCase();
+                    const productBarcode = (product.barcode || '').toLowerCase();
+
+                    if (productName.includes(keyword) || productUkd.includes(keyword) || productBarcode.includes(keyword) || clientName.includes(keyword)) {
+                        results.push(product);
+                    }
+                });
+
+                displayResults(results);
+            } catch (error) {
+                console.error("Error performing search:", error);
+                resultsContainer.innerHTML = '<p class="message">An error occurred while searching. Please try again.</p>';
+            }
+        };
+
+        const displayResults = (results) => {
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<p class="message">No products found matching your search.</p>';
+                return;
+            }
+
+            resultsContainer.innerHTML = results.map(product => `
+                <div class="product-item">
+                    <div class="product-name">${product.name || 'N/A'}</div>
+                    <div class="product-details">
+                        <span><strong>Kashrus:</strong> ${product.kashrus || 'N/A'}</span>
+                        <span><strong>UKD:</strong> ${product.ukd || 'N/A'}</span>
+                        <span><strong>Company:</strong> ${getClientNameById(product.clientId)}</span>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        let searchTimeout;
+        searchInput.addEventListener('keyup', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 500); // Debounce search
+        });
+
+        // Initial fetch of clients
+        fetchClients();
+
+    </script>
+
+</body>
+</html>
