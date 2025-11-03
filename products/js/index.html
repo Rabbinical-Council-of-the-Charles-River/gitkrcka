@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCKA Kosher Product Search</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>KRCKA Kosher Product Directory</h1>
+            <p class="subtitle">Your trusted source for kosher product information</p>
+        </header>
+
+        <main>
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Search for a product by name, UKD, or barcode...">
+            </div>
+
+            <div id="results-container">
+                <p class="initial-message">Enter a search term above to find products.</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 KRCKA - All Rights Reserved</p>
+        </footer>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <!-- Custom Script -->
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+    </script>
+    <script src="js/script.js"></script>
+
+</body>
+</html>

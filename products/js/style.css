@@ -1,0 +1,95 @@
+body {
+    font-family: 'Times New Roman', Times, serif;
+    background-color: #F5F5DC; /* Beige */
+    color: #3D2B1F; /* Dark Brown */
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 30px;
+    background-color: #FFF8E7; /* Cream */
+    border: 3px double #8B4513; /* SaddleBrown */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+}
+
+header {
+    text-align: center;
+    border-bottom: 1px solid #D2B48C; /* Tan */
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-family: 'Georgia', serif;
+    font-size: 2.5em;
+    margin: 0;
+    font-weight: normal;
+}
+
+header .subtitle {
+    font-style: italic;
+    font-size: 1.1em;
+    color: #5a4a3a;
+    margin-top: 5px;
+}
+
+.search-wrapper {
+    margin-bottom: 30px;
+}
+
+#search-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.2em;
+    font-family: 'Times New Roman', Times, serif;
+    border: 1px solid #D2B48C; /* Tan */
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+#results-container .initial-message,
+#results-container .no-results-message {
+    text-align: center;
+    font-style: italic;
+    color: #666;
+    padding: 40px 0;
+}
+
+.product-card {
+    background-color: #FFFFFF;
+    border: 1px solid #EAE0C8; /* Lighter cream */
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.product-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-family: 'Georgia', serif;
+    font-size: 1.8em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.product-card p {
+    margin: 8px 0;
+    line-height: 1.6;
+    font-size: 1.1em;
+}
+
+.product-card strong {
+    color: #5a4a3a;
+}
+
+footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #D2B48C; /* Tan */
+    font-size: 0.9em;
+    color: #666;
+}
