@@ -40,6 +40,8 @@
             <div class="col-sm-6">
               <a href="#addProductModal" class="btn btn-success" data-toggle="modal"><i
                   class="material-icons">&#xE147;</i> <span>Add New Product</span></a>
+              <a href="#bulkEditProductModal" id="bulk-edit-trigger" class="btn btn-info" data-toggle="modal"><i
+                  class="material-icons">&#xE254;</i> <span>Bulk Edit</span></a>
               <a href="#deleteProductModal" class="btn btn-danger" data-toggle="modal"><i
                   class="material-icons">&#xE15C;</i> <span>Delete</span></a>
             </div>
@@ -176,6 +178,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Bulk Edit Product Modal -->
+    <div id="bulkEditProductModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="bulk-edit-product-form">
+            <div class="modal-header">
+              <h4 class="modal-title">Bulk Edit Products</h4>
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p>Update fields for <strong id="bulk-edit-count">0</strong> selected products. Only checked fields will be updated.</p>
+              <hr>
+              <div class="form-group d-flex align-items-center">
+                <input type="checkbox" id="bulk-update-kashrus-check" class="mr-2">
+                <div class="flex-grow-1">
+                  <label for="bulk-edit-product-kashrus">Kashrus Status</label>
+                  <input type="text" id="bulk-edit-product-kashrus" class="form-control" disabled>
+                </div>
+              </div>
+              <div class="form-group d-flex align-items-center">
+                <input type="checkbox" id="bulk-update-client-check" class="mr-2">
+                <div class="flex-grow-1">
+                  <label for="bulk-edit-product-client">Client/Business</label>
+                  <select id="bulk-edit-product-client" class="form-control" disabled></select>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+              <input type="submit" class="btn btn-info" value="Apply Changes">
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
 
     <div id="deleteProductModal" class="modal fade" data-backdrop="static" data-keyboard="false">
       <div class="modal-dialog">

@@ -175,9 +175,10 @@
                     const clientName = getClientNameById(product.clientId).toLowerCase();
                     const productName = (product.name || '').toLowerCase();
                     const productUkd = (product.ukd || '').toLowerCase();
+                    const productKashrus = (product.kashrus || '').toLowerCase();
                     const productBarcode = (product.barcode || '').toLowerCase();
 
-                    if (productName.includes(keyword) || productUkd.includes(keyword) || productBarcode.includes(keyword) || clientName.includes(keyword)) {
+                    if (productName.includes(keyword) || productUkd.includes(keyword) || productBarcode.includes(keyword) || clientName.includes(keyword) || productKashrus.includes(keyword)) {
                         results.push(product);
                     }
                 });

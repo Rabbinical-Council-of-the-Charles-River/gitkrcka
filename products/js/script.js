@@ -43,14 +43,17 @@ const fetchClients = async () => {
 const populateClientDropdowns = () => {
 	const addClientSelect = $('#product-client');
 	const editClientSelect = $('#edit-product-client');
+	const bulkEditClientSelect = $('#bulk-edit-product-client');
 	
 	addClientSelect.empty().append('<option value="">Select a Client</option>');
 	editClientSelect.empty().append('<option value="">Select a Client</option>');
+	bulkEditClientSelect.empty().append('<option value="">Select a Client</option>');
 
 	clients.forEach(client => {
-		const option = `<option value="${client.id}">${client.companyName}</option>`;
+		const option = `<option value="${client.id}">${client.companyName}</option>`; // Use client.id
 		addClientSelect.append(option);
 		editClientSelect.append(option);
+		bulkEditClientSelect.append(option);
 	});
 };
 
@@ -242,6 +245,74 @@ $(document).ready(function () {
 		$('tr[data-id=' + id + '] td.product-kashrus').html(productKashrus);
 		$('tr[data-id=' + id + '] td.product-ukd').html(productUkd);
 		$('tr[data-id=' + id + '] td.product-company').html(getClientNameById(productClientId));
+	});
+
+	// --- BULK EDIT ---
+	
+	// Show bulk edit modal and set count
+	$('#bulk-edit-trigger').on('click', function(e) {
+		const selectedIds = [];
+		$('table tbody input[type="checkbox"]:checked').each(function() {
+			selectedIds.push($(this).val());
+		});
+
+		if (selectedIds.length === 0) {
+			e.preventDefault();
+			alert('Please select at least one product to edit.');
+			$('#bulkEditProductModal').modal('hide');
+			return false;
+		}
+
+		$('#bulk-edit-count').text(selectedIds.length);
+	});
+
+	// Enable/disable inputs in bulk edit modal based on checkboxes
+	$('#bulk-update-kashrus-check').on('change', function() {
+		$('#bulk-edit-product-kashrus').prop('disabled', !this.checked);
+	});
+	$('#bulk-update-client-check').on('change', function() {
+		$('#bulk-edit-product-client').prop('disabled', !this.checked);
+	});
+
+	// Handle bulk edit form submission
+	$('#bulk-edit-product-form').submit(function(event) {
+		event.preventDefault();
+
+		const updateKashrus = $('#bulk-update-kashrus-check').is(':checked');
+		const updateClient = $('#bulk-update-client-check').is(':checked');
+
+		if (!updateKashrus && !updateClient) {
+			alert('Please select at least one field to update.');
+			return;
+		}
+
+		const newKashrus = $('#bulk-edit-product-kashrus').val();
+		const newClientId = $('#bulk-edit-product-client').val();
+
+		const selectedIds = [];
+		$('table tbody input[type="checkbox"]:checked').each(function() {
+			selectedIds.push($(this).val());
+		});
+
+		if (selectedIds.length === 0) {
+			alert('No products selected.');
+			return;
+		}
+
+		const batch = db.batch();
+		selectedIds.forEach(id => {
+			const productRef = db.collection('products').doc(id);
+			const updateData = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+			if (updateKashrus) updateData.kashrus = newKashrus;
+			if (updateClient) updateData.clientId = newClientId;
+			batch.update(productRef, updateData);
+		});
+
+		batch.commit().then(() => {
+			$('#bulkEditProductModal').modal('hide');
+			// The real-time listener will update the UI, so no manual table update is needed.
+			alert(`${selectedIds.length} products updated successfully.`);
+		}).catch(error => console.error("Error performing bulk update: ", error));
 	});
 
 	// DELETE PRODUCT
