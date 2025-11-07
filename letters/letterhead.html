@@ -11,14 +11,26 @@
     <style>
         body {
             background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .page-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 1.5rem;
         }
         .letter-container {
-            max-width: 8.5in;
-            margin: 2rem auto;
+            width: 8.5in;
+            min-height: 11in;
+            margin: 1rem auto;
             background: white;
             padding: 1in;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
         .letter-header {
             display: flex;
@@ -45,6 +57,7 @@
         .letter-body {
             font-size: 16px;
             line-height: 1.6;
+            flex-grow: 1; /* Allows body to expand */
         }
         #editor {
             height: 300px;
@@ -56,7 +69,7 @@
             border-right: 1px solid #dee2e6 !important;
         }
         .letter-footer {
-            margin-top: 2rem;
+            margin-top: auto; /* Pushes footer to the bottom */
             padding-top: 1rem;
             border-top: 1px solid #dee2e6;
             display: flex;
@@ -84,7 +97,7 @@
             height: 150px;
         }
         .controls {
-            position: fixed;
+            position: sticky;
             top: 20px;
             right: 20px;
             background: white;
@@ -92,10 +105,11 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
+            float: right; /* Keep controls to the side */
         }
         @media print {
             body { background-color: white; }
-            .controls, .ql-toolbar { display: none !important; }
+            .controls, .ql-toolbar, #letter-list-view { display: none !important; }
             .letter-container {
                 margin: 0;
                 padding: 0.5in;
@@ -114,49 +128,82 @@
 </head>
 <body>
 
-    <div class="controls card">
-        <div class="card-body">
-            <h5 class="card-title">Actions</h5>
-            <div class="d-grid gap-2">
-                <button id="save-letter-btn" class="btn btn-primary"><i class="bi bi-save"></i> Save Letter</button>
-                <button id="download-pdf-btn" class="btn btn-success"><i class="bi bi-download"></i> Download PDF</button>
-                <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer"></i> Print</button>
-            </div>
-            <div id="status-message" class="mt-3"></div>
-        </div>
-    </div>
+    <div class="page-container">
 
-    <div class="letter-container" id="letter-content">
-        <div class="letter-header">
-            <div>
-                <input type="text" id="letter-title" class="form-control-plaintext letter-title-input" value="Alert: Coffee Machine">
-            </div>
-            <div class="text-end">
-                <div id="letter-date" class="letter-date"></div>
+        <!-- View for Listing Saved Letters -->
+        <div id="letter-list-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Saved Letters</h4>
+                    <button id="create-new-btn" class="btn btn-success"><i class="bi bi-plus-circle"></i> Create New Letter</button>
+                </div>
+                <div class="card-body">
+                    <div id="status-message" class="mb-3"></div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Date Created</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="letter-list-body">
+                                <!-- Letters will be populated here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="letter-body">
-            <div id="editor">
-                <p>It has come to our attention that the Coffee machine at 24 for is unavailable until further notice. Please do not use it.</p>
-                <p>Using it will result in consequences.</p>
-                <p>Corrective action is taking place.</p>
+        <!-- View for Editing/Creating a Letter -->
+        <div id="letter-editor-view" class="hidden">
+            <div class="controls card">
+                <div class="card-body">
+                    <h5 class="card-title">Actions</h5>
+                    <div class="d-grid gap-2">
+                        <button id="back-to-list-btn" class="btn btn-light border"><i class="bi bi-arrow-left"></i> Back to List</button>
+                        <button id="save-letter-btn" class="btn btn-primary"><i class="bi bi-save"></i> Save Letter</button>
+                        <button id="download-pdf-btn" class="btn btn-success"><i class="bi bi-download"></i> Download PDF</button>
+                        <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer"></i> Print</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="letter-container" id="letter-content">
+                <input type="hidden" id="letter-id">
+                <div class="letter-header">
+                    <div>
+                        <input type="text" id="letter-title" class="form-control-plaintext letter-title-input" value="New Letter Title">
+                    </div>
+                    <div class="text-end">
+                        <div id="letter-date" class="letter-date"></div>
+                    </div>
+                </div>
+
+                <div class="letter-body">
+                    <div id="editor">
+                        <p>Start writing your letter here.</p>
+                    </div>
+                </div>
+
+                <div class="letter-footer">
+                    <div class="signature-area">
+                        <p>Authorized Signature</p>
+                        <img src="../images/signature.png" alt="Signature">
+                    </div>
+                    <div class="rabbinical-council-logo">
+                        <img src="../images/Rabbinical Council (1).png" alt="Rabbinical Council of The Charles River">
+                    </div>
+                    <div>
+                        <img src="../images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png" alt="KRCKA Seal" class="seal">
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="letter-footer">
-            <div class="signature-area">
-                <p>Authorized Signature</p>
-                <img src="../images/signature.png" alt="Signature">
-            </div>
-            <div class="rabbinical-council-logo">
-                <img src="../images/vaad-logo.png" alt="Rabbinical Council of The Charles River">
-            </div>
-            <div>
-                <img src="../images/seal.png" alt="KRCKA Seal" class="seal">
-            </div>
-        </div>
-    </div>
+    </div> <!-- end page-container -->
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
@@ -170,7 +217,7 @@
             apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
             authDomain: "richardrccr-10a9d.firebaseapp.com",
             projectId: "richardrccr-10a9d",
-            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            storageBucket: "richardrccr-10a9d.appspot.com",
             messagingSenderId: "867270362103",
             appId: "1:867270362103:web:7653459445810350b864f2"
         };
@@ -180,6 +227,7 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
+        const lettersCollection = db.collection('letters');
 
         // --- Quill Editor ---
         const quill = new Quill('#editor', {
@@ -189,7 +237,7 @@
                     [{ 'header': [1, 2, 3, false] }],
                     ['bold', 'italic', 'underline'],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link'],
+                    ['link', 'image'],
                     ['clean']
                 ]
             }
@@ -197,16 +245,28 @@
 
         // --- DOM Elements ---
         const letterDateEl = document.getElementById('letter-date');
+        const letterIdInput = document.getElementById('letter-id');
+        const letterTitleInput = document.getElementById('letter-title');
         const saveBtn = document.getElementById('save-letter-btn');
         const downloadBtn = document.getElementById('download-pdf-btn');
         const statusMessageEl = document.getElementById('status-message');
+        const createNewBtn = document.getElementById('create-new-btn');
+        const backToListBtn = document.getElementById('back-to-list-btn');
+        const letterListView = document.getElementById('letter-list-view');
+        const letterEditorView = document.getElementById('letter-editor-view');
+        const letterListBody = document.getElementById('letter-list-body');
 
-        // --- Set Date ---
-        letterDateEl.textContent = new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        // --- View Switching Logic ---
+        function showEditorView() {
+            letterListView.classList.add('hidden');
+            letterEditorView.classList.remove('hidden');
+        }
+
+        function showListView() {
+            letterEditorView.classList.add('hidden');
+            letterListView.classList.remove('hidden');
+            loadLetters(); // Refresh list when returning
+        }
 
         // --- Show Status Message ---
         function showStatus(message, type = 'success') {
@@ -220,7 +280,8 @@
 
         // --- Save Letter ---
         saveBtn.addEventListener('click', async () => {
-            const title = document.getElementById('letter-title').value;
+            const letterId = letterIdInput.value;
+            const title = letterTitleInput.value;
             const content = quill.root.innerHTML;
             const date = new Date();
 
@@ -233,12 +294,24 @@
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
 
             try {
-                const docRef = await db.collection('letters').add({
-                    title: title,
-                    content: content,
-                    createdAt: firebase.firestore.Timestamp.fromDate(date)
-                });
-                showStatus(`Letter saved successfully! (ID: ${docRef.id})`, 'success');
+                if (letterId) {
+                    // Update existing letter
+                    await lettersCollection.doc(letterId).update({
+                        title: title,
+                        content: content,
+                        updatedAt: firebase.firestore.Timestamp.fromDate(date)
+                    });
+                    showStatus('Letter updated successfully!', 'success');
+                } else {
+                    // Create new letter
+                    const docRef = await lettersCollection.add({
+                        title: title,
+                        content: content,
+                        createdAt: firebase.firestore.Timestamp.fromDate(date)
+                    });
+                    letterIdInput.value = docRef.id; // Set the new ID for subsequent saves
+                    showStatus('Letter saved successfully!', 'success');
+                }
             } catch (error) {
                 console.error("Error saving letter: ", error);
                 showStatus('Failed to save letter.', 'danger');
@@ -251,7 +324,7 @@
         // --- Download PDF ---
         downloadBtn.addEventListener('click', () => {
             const letterContent = document.getElementById('letter-content');
-            const title = document.getElementById('letter-title').value || 'KRCKA-Letter';
+            const title = letterTitleInput.value || 'KRCKA-Letter';
             const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
             downloadBtn.disabled = true;
@@ -262,7 +335,7 @@
             toolbar.style.display = 'none';
 
             const opt = {
-                margin:       0.5,
+                margin:       0,
                 filename:     `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
@@ -282,18 +355,103 @@
             });
         });
 
-        // --- Netlify Identity Check (for context) ---
-        // This page should be protected. This script assumes it's loaded inside
-        // an iframe in the main portal which handles auth.
-        // You can add a standalone check here if needed.
+        // --- Load and Display All Letters ---
+        async function loadLetters() {
+            letterListBody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+            try {
+                const snapshot = await lettersCollection.orderBy('createdAt', 'desc').get();
+                if (snapshot.empty) {
+                    letterListBody.innerHTML = '<tr><td colspan="3">No saved letters found.</td></tr>';
+                    return;
+                }
+                letterListBody.innerHTML = snapshot.docs.map(doc => {
+                    const letter = doc.data();
+                    const createdDate = letter.createdAt?.toDate().toLocaleDateString() || 'N/A';
+                    return `
+                        <tr>
+                            <td>${letter.title}</td>
+                            <td>${createdDate}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editLetter('${doc.id}')"><i class="bi bi-pencil"></i> Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteLetter('${doc.id}', '${letter.title}')"><i class="bi bi-trash"></i> Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error("Error loading letters:", error);
+                letterListBody.innerHTML = '<tr><td colspan="3" class="text-danger">Error loading letters.</td></tr>';
+            }
+        }
+
+        // --- Edit a Letter ---
+        async function editLetter(id) {
+            try {
+                const doc = await lettersCollection.doc(id).get();
+                if (!doc.exists) {
+                    showStatus('Letter not found.', 'danger');
+                    return;
+                }
+                const letter = doc.data();
+                letterIdInput.value = id;
+                letterTitleInput.value = letter.title;
+                quill.root.innerHTML = letter.content;
+                letterDateEl.textContent = (letter.createdAt?.toDate() || new Date()).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+                showEditorView();
+            } catch (error) {
+                console.error("Error loading letter for edit:", error);
+                showStatus('Failed to load letter.', 'danger');
+            }
+        }
+
+        // --- Delete a Letter ---
+        async function deleteLetter(id, title) {
+            if (confirm(`Are you sure you want to delete the letter titled "${title}"?`)) {
+                try {
+                    await lettersCollection.doc(id).delete();
+                    showStatus('Letter deleted successfully.', 'success');
+                    loadLetters();
+                } catch (error) {
+                    console.error("Error deleting letter:", error);
+                    showStatus('Failed to delete letter.', 'danger');
+                }
+            }
+        }
+
+        // --- Event Listeners for UI ---
+        createNewBtn.addEventListener('click', () => {
+            // Reset editor for a new letter
+            letterIdInput.value = '';
+            letterTitleInput.value = 'New Letter Title';
+            quill.root.innerHTML = '<p>Start writing your letter here.</p>';
+            letterDateEl.textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+            showEditorView();
+        });
+
+        backToListBtn.addEventListener('click', showListView);
+
         document.addEventListener('DOMContentLoaded', () => {
+            // Initial load
+            showListView();
+
+            // Netlify Identity Check (for context)
+            // This page should be protected. This script assumes it's loaded inside
+            // an iframe in the main portal which handles auth.
+            // You can add a standalone check here if needed.
             // Example of how you might check for a user if this page were standalone
-            // if (window.parent.netlifyIdentity) {
-            //     const user = window.parent.netlifyIdentity.currentUser();
-            //     if (!user) {
-            //         document.body.innerHTML = '<div class="alert alert-danger m-5">Access Denied. Please log in through the portal.</div>';
-            //     }
-            // }
+            if (window.parent && window.parent.netlifyIdentity) {
+                const user = window.parent.netlifyIdentity.currentUser();
+                if (!user) {
+                    document.body.innerHTML = '<div class="alert alert-danger m-5">Access Denied. Please log in through the portal.</div>';
+                }
+            } else {
+                // Fallback for standalone development or if parent context is not available
+                console.warn("Could not find Netlify Identity in parent. Assuming logged in for development.");
+            }
         });
 
     </script>
