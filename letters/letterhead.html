@@ -327,113 +327,24 @@
         });
 
         // --- Download PDF ---
-        downloadBtn.addEventListener('click', async () => {
-            const title = letterTitleInput.value || 'KRCKA-Letter';
-            const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const filename = `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`;
+        downloadBtn.addEventListener('click', () => {
+            const letterId = letterIdInput.value;
 
-            downloadBtn.disabled = true;
-            downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
-
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'in',
-                    format: 'letter' // 8.5 x 11 inches
-                });
-
-                // --- Define Margins ---
-                const margin = { top: 1, right: 1, bottom: 1, left: 1 };
-                const contentWidth = doc.internal.pageSize.getWidth() - margin.left - margin.right;
-
-                // --- Helper to load images as base64 ---
-                const loadImageAsBase64 = (url) => {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.crossOrigin = "Anonymous";
-                        img.onload = () => {
-                            const canvas = document.createElement("canvas");
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext("2d");
-                            ctx.drawImage(img, 0, 0);
-                            resolve(canvas.toDataURL("image/png"));
-                        };
-                        img.onerror = (e) => reject(`Could not load image at ${url}. Error: ${e}`);
-                        img.src = url;
-                    });
-                };
-
-                // --- 1. Header ---
-                doc.setFontSize(22);
-                doc.setFont('helvetica', 'bold');
-                doc.text(title, margin.left, margin.top);
-
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'normal');
-                const dateStr = document.getElementById('letter-date').textContent;
-                doc.text(dateStr, doc.internal.pageSize.getWidth() - margin.right, margin.top, { align: 'right' });
-
-                // --- 2. Body Content (from Quill) ---
-                const editorHtml = quill.root.innerHTML;
-                // Use html-to-text to convert Quill's HTML to something jsPDF can better handle
-                const bodyText = htmlToText.convert(editorHtml, {
-                    wordwrap: 130, // Adjust as needed
-                    selectors: [
-                        { selector: 'h1', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
-                        { selector: 'h2', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
-                        { selector: 'p', options: { prefix: '\n\n' } },
-                        { selector: 'a', options: { noLinkBrackets: true } }
-                    ]
-                });
-
-                doc.setFontSize(12);
-                doc.setFont('times', 'normal');
-                const bodyLines = doc.splitTextToSize(bodyText, contentWidth);
-                let cursorY = margin.top + 0.7; // Start below the header
-                doc.text(bodyLines, margin.left, cursorY);
-
-                // --- 3. Footer ---
-                const footerY = doc.internal.pageSize.getHeight() - margin.bottom - 2; // Position from bottom
-                doc.setLineWidth(0.01);
-                doc.line(margin.left, footerY, doc.internal.pageSize.getWidth() - margin.right, footerY);
-
-                // Signature
-                const signatureImgUrl = '../images/signature.png';
-                const signatureBase64 = await loadImageAsBase64(signatureImgUrl);
-                doc.setFontSize(10);
-                doc.text('Authorized Signature', margin.left, footerY + 0.2);
-                doc.addImage(signatureBase64, 'PNG', margin.left, footerY + 0.25, 1.5, 0.75);
-
-                // Council Logo (middle)
-                const councilLogoUrl = '../images/Rabbinical Council (1).png';
-                const councilLogoBase64 = await loadImageAsBase64(councilLogoUrl);
-                const councilLogoWidth = 1.5;
-                const councilLogoX = (doc.internal.pageSize.getWidth() / 2) - (councilLogoWidth / 2);
-                doc.addImage(councilLogoBase64, 'PNG', councilLogoX, footerY + 0.2, councilLogoWidth, 1.0);
-
-                // Seal (right)
-                const sealUrl = '../images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png';
-                const sealBase64 = await loadImageAsBase64(sealUrl);
-                const sealSize = 1.2;
-                const sealX = doc.internal.pageSize.getWidth() - margin.right - sealSize;
-                doc.addImage(sealBase64, 'PNG', sealX, footerY + 0.1, sealSize, sealSize);
-
-                // --- 4. Save the PDF ---
-                doc.save(filename);
-
-            } catch (error) {
-                console.error("PDF generation error:", error);
-                let errorMessage = 'Failed to generate PDF. Please check the console for details.';
-                if (typeof error === 'string' && error.includes('Could not load image')) {
-                    errorMessage = `Failed to generate PDF: An image could not be loaded. Please ensure all images are available. Details: ${error}`;
-                }
-                showStatus(errorMessage, 'danger');
-            } finally {
-                downloadBtn.disabled = false;
-                downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+            if (!letterId) {
+                // Use the status message area in the main list view for this alert
+                const listStatusMessageEl = document.getElementById('status-message');
+                listStatusMessageEl.className = 'alert alert-warning';
+                listStatusMessageEl.textContent = 'Please save the letter before downloading the PDF.';
+                setTimeout(() => {
+                    listStatusMessageEl.textContent = '';
+                    listStatusMessageEl.className = '';
+                }, 5000);
+                return;
             }
+
+            // Open the new print page in a new tab
+            const printUrl = `letters/letter-print.html?id=${letterId}`;
+            window.open(printUrl, '_blank');
         });
 
         // --- Load and Display All Letters ---
@@ -453,6 +364,7 @@
                             <td>${letter.title}</td>
                             <td>${createdDate}</td>
                             <td class="text-end">
+                                <button class="btn btn-sm btn-outline-success" onclick="downloadLetter('${doc.id}')"><i class="bi bi-download"></i> PDF</button>
                                 <button class="btn btn-sm btn-outline-primary" onclick="editLetter('${doc.id}')"><i class="bi bi-pencil"></i> Edit</button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="deleteLetter('${doc.id}', '${letter.title}')"><i class="bi bi-trash"></i> Delete</button>
                             </td>
@@ -499,6 +411,12 @@
                     showStatus('Failed to delete letter.', 'danger');
                 }
             }
+        }
+
+        // --- Download a specific letter from the list view ---
+        function downloadLetter(id) {
+            const printUrl = `letters/letter-print.html?id=${id}`;
+            window.open(printUrl, '_blank');
         }
 
         // --- Event Listeners for UI ---
