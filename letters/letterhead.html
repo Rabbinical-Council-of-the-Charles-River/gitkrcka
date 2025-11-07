@@ -335,20 +335,33 @@
             toolbar.style.display = 'none';
 
             const opt = {
-                margin:       0,
-                filename:     `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                margin: 0,
+                filename: `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2, // Higher scale for better resolution
+                    useCORS: true, // For external images
+                    logging: true, // Log html2canvas activity to the console for debugging
+                    // Explicitly set the width and height for the canvas to match the element
+                    width: letterContent.scrollWidth,
+                    height: letterContent.scrollHeight,
+                    windowWidth: letterContent.scrollWidth,
+                    windowHeight: letterContent.scrollHeight
+                },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             html2pdf().from(letterContent).set(opt).save().then(() => {
                 toolbar.style.display = 'block'; // Show toolbar again
                 downloadBtn.disabled = false;
                 downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
-            }).catch(err => {
+            }).catch(err => { // Enhanced error handling
                 console.error("PDF generation error:", err);
-                showStatus('Failed to generate PDF.', 'danger');
+                let errorMessage = 'Failed to generate PDF. Please check the console for details.';
+                if (err.message && err.message.includes('SecurityError')) {
+                    errorMessage = 'Failed to generate PDF due to a security error, possibly related to cross-origin images.';
+                }
+                showStatus(errorMessage, 'danger');
                 toolbar.style.display = 'block';
                 downloadBtn.disabled = false;
                 downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
