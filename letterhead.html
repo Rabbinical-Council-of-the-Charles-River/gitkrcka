@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCKA Official Letter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+        .letter-container {
+            max-width: 8.5in;
+            margin: 2rem auto;
+            background: white;
+            padding: 1in;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .letter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+        .letter-title-input {
+            font-size: 2rem;
+            font-weight: bold;
+            border: none;
+            width: 100%;
+        }
+        .letter-title-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .letter-date {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .letter-body {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        #editor {
+            height: 300px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .ql-toolbar {
+            border-top: 1px solid #dee2e6 !important;
+            border-left: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .letter-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .signature-area {
+            width: 250px;
+        }
+        .signature-area img {
+            max-width: 100%;
+            margin-bottom: -10px;
+        }
+        .signature-title {
+            font-size: 0.9rem;
+            color: #6c757d;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+        }
+        .rabbinical-council-logo img {
+            max-width: 200px;
+        }
+        .seal {
+            width: 150px;
+            height: 150px;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        @media print {
+            body { background-color: white; }
+            .controls, .ql-toolbar { display: none !important; }
+            .letter-container {
+                margin: 0;
+                padding: 0.5in;
+                box-shadow: none;
+                border: none;
+            }
+            #editor {
+                height: auto;
+                border: none;
+            }
+            .ql-editor {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls card">
+        <div class="card-body">
+            <h5 class="card-title">Actions</h5>
+            <div class="d-grid gap-2">
+                <button id="save-letter-btn" class="btn btn-primary"><i class="bi bi-save"></i> Save Letter</button>
+                <button id="download-pdf-btn" class="btn btn-success"><i class="bi bi-download"></i> Download PDF</button>
+                <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer"></i> Print</button>
+            </div>
+            <div id="status-message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <div class="letter-container" id="letter-content">
+        <div class="letter-header">
+            <div>
+                <input type="text" id="letter-title" class="form-control-plaintext letter-title-input" value="Alert: Coffee Machine">
+            </div>
+            <div class="text-end">
+                <div id="letter-date" class="letter-date"></div>
+            </div>
+        </div>
+
+        <div class="letter-body">
+            <div id="editor">
+                <p>It has come to our attention that the Coffee machine at 24 for is unavailable until further notice. Please do not use it.</p>
+                <p>Using it will result in consequences.</p>
+                <p>Corrective action is taking place.</p>
+            </div>
+        </div>
+
+        <div class="letter-footer">
+            <div class="signature-area">
+                <p>Authorized Signature</p>
+                <img src="../images/signature.png" alt="Signature">
+            </div>
+            <div class="rabbinical-council-logo">
+                <img src="../images/vaad-logo.png" alt="Rabbinical Council of The Charles River">
+            </div>
+            <div>
+                <img src="../images/seal.png" alt="KRCKA Seal" class="seal">
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        // --- Initialize Firebase ---
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // --- Quill Editor ---
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+
+        // --- DOM Elements ---
+        const letterDateEl = document.getElementById('letter-date');
+        const saveBtn = document.getElementById('save-letter-btn');
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        const statusMessageEl = document.getElementById('status-message');
+
+        // --- Set Date ---
+        letterDateEl.textContent = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // --- Show Status Message ---
+        function showStatus(message, type = 'success') {
+            statusMessageEl.className = `alert alert-${type}`;
+            statusMessageEl.textContent = message;
+            setTimeout(() => {
+                statusMessageEl.textContent = '';
+                statusMessageEl.className = '';
+            }, 4000);
+        }
+
+        // --- Save Letter ---
+        saveBtn.addEventListener('click', async () => {
+            const title = document.getElementById('letter-title').value;
+            const content = quill.root.innerHTML;
+            const date = new Date();
+
+            if (!title.trim()) {
+                showStatus('Title cannot be empty.', 'danger');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
+            try {
+                const docRef = await db.collection('letters').add({
+                    title: title,
+                    content: content,
+                    createdAt: firebase.firestore.Timestamp.fromDate(date)
+                });
+                showStatus(`Letter saved successfully! (ID: ${docRef.id})`, 'success');
+            } catch (error) {
+                console.error("Error saving letter: ", error);
+                showStatus('Failed to save letter.', 'danger');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-save"></i> Save Letter';
+            }
+        });
+
+        // --- Download PDF ---
+        downloadBtn.addEventListener('click', () => {
+            const letterContent = document.getElementById('letter-content');
+            const title = document.getElementById('letter-title').value || 'KRCKA-Letter';
+            const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+            // Hide editor toolbar for PDF
+            const toolbar = document.querySelector('.ql-toolbar');
+            toolbar.style.display = 'none';
+
+            const opt = {
+                margin:       0.5,
+                filename:     `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().from(letterContent).set(opt).save().then(() => {
+                toolbar.style.display = 'block'; // Show toolbar again
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+            }).catch(err => {
+                console.error("PDF generation error:", err);
+                showStatus('Failed to generate PDF.', 'danger');
+                toolbar.style.display = 'block';
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+            });
+        });
+
+        // --- Netlify Identity Check (for context) ---
+        // This page should be protected. This script assumes it's loaded inside
+        // an iframe in the main portal which handles auth.
+        // You can add a standalone check here if needed.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Example of how you might check for a user if this page were standalone
+            // if (window.parent.netlifyIdentity) {
+            //     const user = window.parent.netlifyIdentity.currentUser();
+            //     if (!user) {
+            //         document.body.innerHTML = '<div class="alert alert-danger m-5">Access Denied. Please log in through the portal.</div>';
+            //     }
+            // }
+        });
+
+    </script>
+</body>
+</html>
