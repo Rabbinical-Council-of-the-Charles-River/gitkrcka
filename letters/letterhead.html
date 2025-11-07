@@ -208,9 +208,14 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <!-- PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
+    
+    <!-- PDF Generation Libraries -->
+    <!-- jsPDF Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF AutoTable plugin for handling complex content -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js"></script>
+    <!-- html-to-text library to convert Quill content for PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/html-to-text@9.0.5/lib/index.min.js"></script>
     <script>
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -322,50 +327,113 @@
         });
 
         // --- Download PDF ---
-        downloadBtn.addEventListener('click', () => {
-            const letterContent = document.getElementById('letter-content');
+        downloadBtn.addEventListener('click', async () => {
             const title = letterTitleInput.value || 'KRCKA-Letter';
             const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const filename = `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`;
 
             downloadBtn.disabled = true;
             downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
 
-            // Hide editor toolbar for PDF
-            const toolbar = document.querySelector('.ql-toolbar');
-            toolbar.style.display = 'none';
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'in',
+                    format: 'letter' // 8.5 x 11 inches
+                });
 
-            const opt = {
-                margin: 0,
-                filename: `${safeTitle}_${new Date().toISOString().split('T')[0]}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2, // Higher scale for better resolution
-                    useCORS: true, // For external images
-                    logging: true, // Log html2canvas activity to the console for debugging
-                    // Explicitly set the width and height for the canvas to match the element
-                    width: letterContent.scrollWidth,
-                    height: letterContent.scrollHeight,
-                    windowWidth: letterContent.scrollWidth,
-                    windowHeight: letterContent.scrollHeight
-                },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
+                // --- Define Margins ---
+                const margin = { top: 1, right: 1, bottom: 1, left: 1 };
+                const contentWidth = doc.internal.pageSize.getWidth() - margin.left - margin.right;
 
-            html2pdf().from(letterContent).set(opt).save().then(() => {
-                toolbar.style.display = 'block'; // Show toolbar again
-                downloadBtn.disabled = false;
-                downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
-            }).catch(err => { // Enhanced error handling
-                console.error("PDF generation error:", err);
+                // --- Helper to load images as base64 ---
+                const loadImageAsBase64 = (url) => {
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.onload = () => {
+                            const canvas = document.createElement("canvas");
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext("2d");
+                            ctx.drawImage(img, 0, 0);
+                            resolve(canvas.toDataURL("image/png"));
+                        };
+                        img.onerror = (e) => reject(`Could not load image at ${url}. Error: ${e}`);
+                        img.src = url;
+                    });
+                };
+
+                // --- 1. Header ---
+                doc.setFontSize(22);
+                doc.setFont('helvetica', 'bold');
+                doc.text(title, margin.left, margin.top);
+
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'normal');
+                const dateStr = document.getElementById('letter-date').textContent;
+                doc.text(dateStr, doc.internal.pageSize.getWidth() - margin.right, margin.top, { align: 'right' });
+
+                // --- 2. Body Content (from Quill) ---
+                const editorHtml = quill.root.innerHTML;
+                // Use html-to-text to convert Quill's HTML to something jsPDF can better handle
+                const bodyText = htmlToText.convert(editorHtml, {
+                    wordwrap: 130, // Adjust as needed
+                    selectors: [
+                        { selector: 'h1', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+                        { selector: 'h2', options: { uppercase: false, prefix: '\n\n', suffix: '\n' } },
+                        { selector: 'p', options: { prefix: '\n\n' } },
+                        { selector: 'a', options: { noLinkBrackets: true } }
+                    ]
+                });
+
+                doc.setFontSize(12);
+                doc.setFont('times', 'normal');
+                const bodyLines = doc.splitTextToSize(bodyText, contentWidth);
+                let cursorY = margin.top + 0.7; // Start below the header
+                doc.text(bodyLines, margin.left, cursorY);
+
+                // --- 3. Footer ---
+                const footerY = doc.internal.pageSize.getHeight() - margin.bottom - 2; // Position from bottom
+                doc.setLineWidth(0.01);
+                doc.line(margin.left, footerY, doc.internal.pageSize.getWidth() - margin.right, footerY);
+
+                // Signature
+                const signatureImgUrl = '../images/signature.png';
+                const signatureBase64 = await loadImageAsBase64(signatureImgUrl);
+                doc.setFontSize(10);
+                doc.text('Authorized Signature', margin.left, footerY + 0.2);
+                doc.addImage(signatureBase64, 'PNG', margin.left, footerY + 0.25, 1.5, 0.75);
+
+                // Council Logo (middle)
+                const councilLogoUrl = '../images/Rabbinical Council (1).png';
+                const councilLogoBase64 = await loadImageAsBase64(councilLogoUrl);
+                const councilLogoWidth = 1.5;
+                const councilLogoX = (doc.internal.pageSize.getWidth() / 2) - (councilLogoWidth / 2);
+                doc.addImage(councilLogoBase64, 'PNG', councilLogoX, footerY + 0.2, councilLogoWidth, 1.0);
+
+                // Seal (right)
+                const sealUrl = '../images/VAAD HARABONIM CHARLES RIVER REB CHARDLE SHATZLABAM (1).png';
+                const sealBase64 = await loadImageAsBase64(sealUrl);
+                const sealSize = 1.2;
+                const sealX = doc.internal.pageSize.getWidth() - margin.right - sealSize;
+                doc.addImage(sealBase64, 'PNG', sealX, footerY + 0.1, sealSize, sealSize);
+
+                // --- 4. Save the PDF ---
+                doc.save(filename);
+
+            } catch (error) {
+                console.error("PDF generation error:", error);
                 let errorMessage = 'Failed to generate PDF. Please check the console for details.';
-                if (err.message && err.message.includes('SecurityError')) {
-                    errorMessage = 'Failed to generate PDF due to a security error, possibly related to cross-origin images.';
+                if (typeof error === 'string' && error.includes('Could not load image')) {
+                    errorMessage = `Failed to generate PDF: An image could not be loaded. Please ensure all images are available. Details: ${error}`;
                 }
                 showStatus(errorMessage, 'danger');
-                toolbar.style.display = 'block';
+            } finally {
                 downloadBtn.disabled = false;
                 downloadBtn.innerHTML = '<i class="bi bi-download"></i> Download PDF';
-            });
+            }
         });
 
         // --- Load and Display All Letters ---
