@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCKA Form Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .hidden { display: none !important; }
+        .field-editor-row {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: .375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .options-container {
+            padding-left: 2rem;
+            margin-top: 0.5rem;
+        }
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Section -->
+    <div id="login-section">
+        <div class="container" style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <h1 class="text-center">Admin Access Required</h1>
+            <div id="message" class="message"></div>
+            <div class="d-grid gap-2">
+                <button id="netlify-login-button" class="btn btn-primary btn-lg">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Content -->
+    <div id="admin-content" class="hidden">
+        <div class="container-fluid">
+            <div class="table-wrapper">
+                <div class="table-title">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h2>KRCKA <b>Form Builder</b></h2>
+                        </div>
+                        <div class="col-sm-6 text-end">
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#formBuilderModal" id="create-new-form-btn">
+                                <i class="material-icons">&#xE147;</i> <span>Create New Form</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive mt-3">
+                    <table id="forms-table" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Form Title</th>
+                                <th>Submissions</th>
+                                <th>Created Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forms-table-body">
+                            <!-- Forms will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Builder Modal -->
+    <div class="modal fade" id="formBuilderModal" tabindex="-1" aria-labelledby="formBuilderModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <form id="form-builder-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="formBuilderModalLabel">Create New Form</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="form-id">
+                        <div class="mb-3">
+                            <label for="form-title" class="form-label">Form Title</label>
+                            <input type="text" class="form-control" id="form-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="form-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="form-description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="form-notification-emails" class="form-label">Email for Notifications (comma-separated)</label>
+                            <input type="text" class="form-control" id="form-notification-emails" placeholder="e.g., admin@example.com, manager@example.com" required>
+                            <div class="form-text">Submissions will be sent to these emails via FormSubmit.co.</div>
+                        </div>
+
+                        <hr>
+                        <h5>Form Fields</h5>
+                        <div id="fields-container">
+                            <!-- Dynamic fields will be added here -->
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary mt-2" id="add-field-btn">
+                            <i class="material-icons" style="vertical-align: middle;">&#xE145;</i> Add Field
+                        </button>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save Form</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Form Modal -->
+    <div id="deleteFormModal" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="delete-form-form">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Delete Form</h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete this form and all its submissions?</p>
+                        <p class="text-warning"><small>This action cannot be undone.</small></p>
+                        <p><strong>Form: <span id="delete-form-title-display"></span></strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
+                        <input type="submit" class="btn btn-danger" value="Delete">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+            authDomain: "richardrccr-10a9d.firebaseapp.com",
+            projectId: "richardrccr-10a9d",
+            storageBucket: "richardrccr-10a9d.firebasestorage.app",
+            messagingSenderId: "867270362103",
+            appId: "1:867270362103:web:7653459445810350b864f2"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const formsRef = db.collection('forms');
+
+        // --- DOM Elements ---
+        const loginSection = document.getElementById('login-section');
+        const adminContent = document.getElementById('admin-content');
+        const netlifyLoginButton = document.getElementById('netlify-login-button');
+        const messageDiv = document.getElementById('message');
+        const formsTableBody = document.getElementById('forms-table-body');
+        const formBuilderModalEl = document.getElementById('formBuilderModal');
+        const formBuilderModal = new bootstrap.Modal(formBuilderModalEl);
+        const formBuilderForm = document.getElementById('form-builder-form');
+        const fieldsContainer = document.getElementById('fields-container');
+        const addFieldBtn = document.getElementById('add-field-btn');
+        const deleteFormModalEl = document.getElementById('deleteFormModal');
+        const deleteFormModal = new bootstrap.Modal(deleteFormModalEl);
+
+        // --- Netlify Identity ---
+        netlifyIdentity.init();
+
+        function updateAdminUI(user) {
+            const isAdmin = user?.app_metadata?.roles?.includes('admin');
+            if (isAdmin) {
+                loginSection.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+                loadForms();
+            } else {
+                loginSection.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+                if (user) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = 'Admin access required.';
+                    messageDiv.style.display = 'block';
+                }
+            }
+        }
+
+        netlifyIdentity.on('init', user => updateAdminUI(user));
+        netlifyIdentity.on('login', user => {
+            updateAdminUI(user);
+            netlifyIdentity.close();
+        });
+        netlifyIdentity.on('logout', () => updateAdminUI(null));
+        netlifyLoginButton.addEventListener('click', () => netlifyIdentity.open());
+
+        // --- Form Builder Logic ---
+
+        function createFieldEditor(field = {}) {
+            const fieldId = `field-${Date.now()}`;
+            const editorRow = document.createElement('div');
+            editorRow.className = 'field-editor-row';
+            editorRow.id = fieldId;
+            editorRow.innerHTML = `
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Label</label>
+                        <input type="text" class="form-control form-control-sm field-label" value="${field.label || ''}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Type</label>
+                        <select class="form-select form-select-sm field-type">
+                            <option value="text" ${field.type === 'text' ? 'selected' : ''}>Text</option>
+                            <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Text Area</option>
+                            <option value="radio" ${field.type === 'radio' ? 'selected' : ''}>Radio Buttons</option>
+                            <option value="checkbox" ${field.type === 'checkbox' ? 'selected' : ''}>Checkboxes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end align-self-end">
+                        <button type="button" class="btn btn-danger btn-sm remove-field-btn">&times; Remove</button>
+                    </div>
+                </div>
+                <div class="options-container mt-2" style="display: ${['radio', 'checkbox'].includes(field.type) ? 'block' : 'none'};">
+                    <h6>Options</h6>
+                    <div class="options-list">
+                        ${(field.options || []).map(opt => `
+                            <div class="option-row">
+                                <input type="text" class="form-control form-control-sm" value="${opt}">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-option-btn">&times;</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm add-option-btn mt-1">+ Add Option</button>
+                </div>
+            `;
+            fieldsContainer.appendChild(editorRow);
+        }
+
+        fieldsContainer.addEventListener('change', e => {
+            if (e.target.classList.contains('field-type')) {
+                const optionsContainer = e.target.closest('.field-editor-row').querySelector('.options-container');
+                optionsContainer.style.display = ['radio', 'checkbox'].includes(e.target.value) ? 'block' : 'none';
+            }
+        });
+
+        fieldsContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('remove-field-btn')) {
+                e.target.closest('.field-editor-row').remove();
+            }
+            if (e.target.classList.contains('add-option-btn')) {
+                const optionsList = e.target.previousElementSibling;
+                const optionRow = document.createElement('div');
+                optionRow.className = 'option-row';
+                optionRow.innerHTML = `
+                    <input type="text" class="form-control form-control-sm" placeholder="Option label">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-option-btn">&times;</button>
+                `;
+                optionsList.appendChild(optionRow);
+            }
+            if (e.target.classList.contains('remove-option-btn')) {
+                e.target.closest('.option-row').remove();
+            }
+        });
+
+        addFieldBtn.addEventListener('click', () => createFieldEditor());
+
+        formBuilderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formId = document.getElementById('form-id').value;
+            const fields = [];
+            document.querySelectorAll('.field-editor-row').forEach(row => {
+                const field = {
+                    label: row.querySelector('.field-label').value,
+                    type: row.querySelector('.field-type').value,
+                    required: true // Simplified for now
+                };
+                if (['radio', 'checkbox'].includes(field.type)) {
+                    field.options = Array.from(row.querySelectorAll('.options-list input'))
+                                         .map(input => input.value)
+                                         .filter(val => val);
+                }
+                fields.push(field);
+            });
+
+            const formData = {
+                title: document.getElementById('form-title').value,
+                description: document.getElementById('form-description').value,
+                notificationEmails: document.getElementById('form-notification-emails').value,
+                fields: fields,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (formId) {
+                    await formsRef.doc(formId).update(formData);
+                } else {
+                    formData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await formsRef.add(formData);
+                }
+                formBuilderModal.hide();
+                loadForms();
+            } catch (error) {
+                console.error("Error saving form: ", error);
+                alert('Error saving form: ' + error.message);
+            }
+        });
+
+        formBuilderModalEl.addEventListener('hidden.bs.modal', () => {
+            formBuilderForm.reset();
+            document.getElementById('form-id').value = '';
+            fieldsContainer.innerHTML = '';
+            document.getElementById('formBuilderModalLabel').textContent = 'Create New Form';
+        });
+
+        // --- Form Loading and Management ---
+
+        async function loadForms() {
+            formsTableBody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+            try {
+                const snapshot = await formsRef.orderBy('createdAt', 'desc').get();
+                if (snapshot.empty) {
+                    formsTableBody.innerHTML = '<tr><td colspan="4">No forms created yet.</td></tr>';
+                    return;
+                }
+                formsTableBody.innerHTML = snapshot.docs.map(doc => {
+                    const form = doc.data();
+                    const formId = doc.id;
+                    const viewUrl = `${window.location.origin}/forms/view.html?id=${formId}`;
+                    return `
+                        <tr>
+                            <td>${form.title}</td>
+                            <td>0</td> <!-- Placeholder for submission count -->
+                            <td>${form.createdAt?.toDate().toLocaleDateString() || 'N/A'}</td>
+                            <td>
+                                <a href="${viewUrl}" target="_blank" class="btn btn-sm btn-outline-info" title="View Form"><i class="material-icons">visibility</i></a>
+                                <button class="btn btn-sm btn-outline-secondary" title="Copy Link" onclick="copyToClipboard('${viewUrl}')"><i class="material-icons">link</i></button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editForm('${formId}')"><i class="material-icons">edit</i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="openDeleteFormModal('${formId}', '${form.title}')"><i class="material-icons">delete</i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error("Error loading forms: ", error);
+                formsTableBody.innerHTML = `<tr><td colspan="4" class="text-danger">Error loading forms.</td></tr>`;
+            }
+        }
+
+        window.copyToClipboard = (text) => {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Form link copied to clipboard!');
+            }, (err) => {
+                alert('Failed to copy link.');
+            });
+        };
+
+        window.editForm = async (formId) => {
+            const doc = await formsRef.doc(formId).get();
+            if (!doc.exists) {
+                alert('Form not found!');
+                return;
+            }
+            const form = doc.data();
+            document.getElementById('form-id').value = formId;
+            document.getElementById('form-title').value = form.title;
+            document.getElementById('form-description').value = form.description;
+            document.getElementById('form-notification-emails').value = form.notificationEmails;
+            
+            fieldsContainer.innerHTML = '';
+            form.fields.forEach(field => createFieldEditor(field));
+
+            document.getElementById('formBuilderModalLabel').textContent = 'Edit Form';
+            formBuilderModal.show();
+        };
+
+        window.openDeleteFormModal = (formId, title) => {
+            document.getElementById('delete-form-form').setAttribute('data-delete-id', formId);
+            document.getElementById('delete-form-title-display').textContent = title;
+            deleteFormModal.show();
+        };
+
+        document.getElementById('delete-form-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formId = e.target.getAttribute('data-delete-id');
+            if (!formId) return;
+
+            try {
+                await formsRef.doc(formId).delete();
+                // In a real app, you'd also delete all submissions for this form.
+                deleteFormModal.hide();
+                loadForms();
+            } catch (error) {
+                console.error("Error deleting form:", error);
+                alert('Failed to delete form.');
+            }
+        });
+
+    </script>
+</body>
+</html>
