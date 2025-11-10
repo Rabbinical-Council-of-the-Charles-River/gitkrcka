@@ -96,9 +96,9 @@
                             <textarea class="form-control" id="form-description" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="form-notification-emails" class="form-label">Email for Notifications (comma-separated)</label>
-                            <input type="text" class="form-control" id="form-notification-emails" placeholder="e.g., admin@example.com, manager@example.com" required>
-                            <div class="form-text">Submissions will be sent to these emails via FormSubmit.co.</div>
+                            <label for="form-notification-email" class="form-label">Notification Email</label>
+                            <input type="email" class="form-control" id="form-notification-email" placeholder="e.g., admin@example.com" required>
+                            <div class="form-text">Submissions will be sent to this email via FormSubmit.co. You will need to click an activation link in the first email you receive.</div>
                         </div>
 
                         <hr>
@@ -299,7 +299,7 @@
             const formData = {
                 title: document.getElementById('form-title').value,
                 description: document.getElementById('form-description').value,
-                notificationEmails: document.getElementById('form-notification-emails').value,
+                notificationEmail: document.getElementById('form-notification-email').value,
                 fields: fields,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -378,7 +378,7 @@
             document.getElementById('form-id').value = formId;
             document.getElementById('form-title').value = form.title;
             document.getElementById('form-description').value = form.description;
-            document.getElementById('form-notification-emails').value = form.notificationEmails;
+            document.getElementById('form-notification-email').value = form.notificationEmail;
             
             fieldsContainer.innerHTML = '';
             form.fields.forEach(field => createFieldEditor(field));

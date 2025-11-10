@@ -121,7 +121,8 @@
                         <h1>${form.title}</h1>
                         <p class="lead">${form.description || ''}</p>
                     </div>
-                    <form action="https://formsubmit.co/${form.notificationEmails}" method="POST">
+                    <form action="https://formsubmit.co/ajax/${form.notificationEmail}" method="POST">
+                        <input type="hidden" name="_to" value="${form.notificationEmail}">
                         <input type="hidden" name="_subject" value="New Submission for: ${form.title}">
                         <input type="hidden" name="_next" value="${window.location.href.split('?')[0]}?submitted=true">
                 `;
