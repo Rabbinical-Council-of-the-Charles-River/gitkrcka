@@ -144,6 +144,27 @@
         </div>
     </div>
 
+    <!-- View Submissions Modal -->
+    <div class="modal fade" id="viewSubmissionsModal" tabindex="-1" aria-labelledby="viewSubmissionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewSubmissionsModalLabel">Form Submissions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 id="submissions-form-title"></h6>
+                    <div id="submissions-container" class="table-responsive">
+                        <!-- Submissions table will be rendered here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
@@ -165,6 +186,7 @@
         }
         const db = firebase.firestore();
         const formsRef = db.collection('forms');
+        const submissionsRef = db.collection('form-submissions');
 
         // --- DOM Elements ---
         const loginSection = document.getElementById('login-section');
@@ -179,6 +201,8 @@
         const addFieldBtn = document.getElementById('add-field-btn');
         const deleteFormModalEl = document.getElementById('deleteFormModal');
         const deleteFormModal = new bootstrap.Modal(deleteFormModalEl);
+        const viewSubmissionsModalEl = document.getElementById('viewSubmissionsModal');
+        const viewSubmissionsModal = new bootstrap.Modal(viewSubmissionsModalEl);
 
         // --- Netlify Identity ---
         netlifyIdentity.init();
@@ -336,16 +360,24 @@
                     formsTableBody.innerHTML = '<tr><td colspan="4">No forms created yet.</td></tr>';
                     return;
                 }
-                formsTableBody.innerHTML = snapshot.docs.map(doc => {
+
+                let tableHtml = '';
+                for (const doc of snapshot.docs) {
                     const form = doc.data();
                     const formId = doc.id;
                     const viewUrl = `${window.location.origin}/forms/view.html?id=${formId}`;
-                    return `
+
+                    // Get submission count for this form
+                    const submissionsSnapshot = await submissionsRef.where('formId', '==', formId).get();
+                    const submissionCount = submissionsSnapshot.size;
+
+                    tableHtml += `
                         <tr>
                             <td>${form.title}</td>
-                            <td>0</td> <!-- Placeholder for submission count -->
+                            <td>${submissionCount}</td>
                             <td>${form.createdAt?.toDate().toLocaleDateString() || 'N/A'}</td>
                             <td>
+                                <button class="btn btn-sm btn-outline-success" title="View Submissions" onclick="viewSubmissions('${formId}', '${form.title}')"><i class="material-icons">list_alt</i></button>
                                 <a href="${viewUrl}" target="_blank" class="btn btn-sm btn-outline-info" title="View Form"><i class="material-icons">visibility</i></a>
                                 <button class="btn btn-sm btn-outline-secondary" title="Copy Link" onclick="copyToClipboard('${viewUrl}')"><i class="material-icons">link</i></button>
                                 <button class="btn btn-sm btn-outline-primary" onclick="editForm('${formId}')"><i class="material-icons">edit</i></button>
@@ -353,7 +385,8 @@
                             </td>
                         </tr>
                     `;
-                }).join('');
+                }
+                formsTableBody.innerHTML = tableHtml;
             } catch (error) {
                 console.error("Error loading forms: ", error);
                 formsTableBody.innerHTML = `<tr><td colspan="4" class="text-danger">Error loading forms.</td></tr>`;
@@ -408,6 +441,54 @@
                 alert('Failed to delete form.');
             }
         });
+
+        window.viewSubmissions = async (formId, formTitle) => {
+            document.getElementById('submissions-form-title').textContent = `Submissions for: ${formTitle}`;
+            const container = document.getElementById('submissions-container');
+            container.innerHTML = '<p>Loading submissions...</p>';
+            viewSubmissionsModal.show();
+
+            try {
+                const snapshot = await submissionsRef.where('formId', '==', formId).orderBy('submittedAt', 'desc').get();
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p>No submissions found for this form.</p>';
+                    return;
+                }
+
+                const submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Dynamically create table headers from the first submission's keys
+                const firstSubmissionData = submissions[0].data;
+                const headers = ['Submitted At', ...Object.keys(firstSubmissionData)];
+
+                let table = '<table class="table table-bordered table-sm">';
+                table += '<thead><tr>';
+                headers.forEach(header => table += `<th>${header}</th>`);
+                table += '</tr></thead>';
+
+                table += '<tbody>';
+                submissions.forEach(sub => {
+                    table += '<tr>';
+                    // Add submitted at timestamp
+                    table += `<td>${sub.submittedAt?.toDate().toLocaleString() || 'N/A'}</td>`;
+                    // Add other data
+                    Object.keys(firstSubmissionData).forEach(key => {
+                        const value = sub.data[key];
+                        // Handle array values (from checkboxes)
+                        const displayValue = Array.isArray(value) ? value.join(', ') : value;
+                        table += `<td>${displayValue || ''}</td>`;
+                    });
+                    table += '</tr>';
+                });
+                table += '</tbody></table>';
+
+                container.innerHTML = table;
+            } catch (error) {
+                console.error("Error loading submissions:", error);
+                container.innerHTML = '<p class="text-danger">Failed to load submissions.</p>';
+            }
+        };
 
     </script>
 </body>

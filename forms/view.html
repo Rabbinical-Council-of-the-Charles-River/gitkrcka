@@ -121,10 +121,7 @@
                         <h1>${form.title}</h1>
                         <p class="lead">${form.description || ''}</p>
                     </div>
-                    <form action="https://formsubmit.co/ajax/${form.notificationEmail}" method="POST">
-                        <input type="hidden" name="_to" value="${form.notificationEmail}">
-                        <input type="hidden" name="_subject" value="New Submission for: ${form.title}">
-                        <input type="hidden" name="_next" value="${window.location.href.split('?')[0]}?submitted=true">
+                    <form id="public-form" data-form-id="${formId}" data-form-title="${form.title}" data-notification-email="${form.notificationEmail}">
                 `;
 
                 form.fields.forEach(field => {
@@ -132,11 +129,56 @@
                 });
 
                 formHtml += `
-                        <button type="submit" class="btn btn-primary w-100 btn-lg">Submit</button>
+                        <button type="submit" id="submit-btn" class="btn btn-primary w-100 btn-lg">Submit</button>
                     </form>
                 `;
 
                 formDisplayContainer.innerHTML = formHtml;
+
+                // --- New Submission Handler ---
+                const publicForm = document.getElementById('public-form');
+                publicForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Submitting...';
+
+                    const formData = new FormData(publicForm);
+                    const submissionData = Object.fromEntries(formData.entries());
+
+                    const formId = publicForm.dataset.formId;
+                    const formTitle = publicForm.dataset.formTitle;
+                    const notificationEmail = publicForm.dataset.notificationEmail;
+
+                    try {
+                        // 1. Save to Firestore
+                        await db.collection('form-submissions').add({
+                            formId: formId,
+                            formTitle: formTitle,
+                            submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            data: submissionData
+                        });
+
+                        // 2. Send to FormSubmit.co via AJAX
+                        const response = await fetch(`https://formsubmit.co/ajax/${notificationEmail}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(submissionData)
+                        });
+
+                        if (!response.ok) throw new Error('Email submission failed.');
+
+                        // 3. Show success message
+                        formDisplayContainer.innerHTML = `<div class="alert alert-success text-center"><h2>Thank You!</h2><p>Your form has been submitted successfully.</p></div>`;
+
+                    } catch (error) {
+                        console.error('Submission error:', error);
+                        formDisplayContainer.innerHTML = `<div class="alert alert-danger">There was an error submitting your form. Please try again.</div>`;
+                    }
+                });
 
             } catch (error) {
                 console.error("Error loading form: ", error);
