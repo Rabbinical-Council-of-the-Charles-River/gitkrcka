@@ -235,20 +235,24 @@
         // --- Form Builder Logic ---
 
         function createFieldEditor(field = {}) {
-            const fieldId = `field-${Date.now()}`;
+            const fieldId = `field-${Date.now()}-${Math.random()}`;
             const editorRow = document.createElement('div');
             editorRow.className = 'field-editor-row';
             editorRow.id = fieldId;
             editorRow.innerHTML = `
-                <div class="row">
+                <div class="row g-2">
                     <div class="col-md-5">
                         <label class="form-label">Label</label>
                         <input type="text" class="form-control form-control-sm field-label" value="${field.label || ''}" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Type</label>
                         <select class="form-select form-select-sm field-type">
                             <option value="text" ${field.type === 'text' ? 'selected' : ''}>Text</option>
+                            <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
+                            <option value="phone" ${field.type === 'phone' ? 'selected' : ''}>Phone</option>
+                            <option value="date" ${field.type === 'date' ? 'selected' : ''}>Date</option>
+                            <option value="number" ${field.type === 'number' ? 'selected' : ''}>Number</option>
                             <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Text Area</option>
                             <option value="radio" ${field.type === 'radio' ? 'selected' : ''}>Radio Buttons</option>
                             <option value="checkbox" ${field.type === 'checkbox' ? 'selected' : ''}>Checkboxes</option>
@@ -256,6 +260,12 @@
                     </div>
                     <div class="col-md-3 text-end align-self-end">
                         <button type="button" class="btn btn-danger btn-sm remove-field-btn">&times; Remove</button>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end justify-content-center">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input field-required" type="checkbox" role="switch" ${field.required ? 'checked' : ''}>
+                            <label class="form-check-label small">Required</label>
+                        </div>
                     </div>
                 </div>
                 <div class="options-container mt-2" style="display: ${['radio', 'checkbox'].includes(field.type) ? 'block' : 'none'};">
@@ -310,7 +320,7 @@
                 const field = {
                     label: row.querySelector('.field-label').value,
                     type: row.querySelector('.field-type').value,
-                    required: true // Simplified for now
+                    required: row.querySelector('.field-required').checked
                 };
                 if (['radio', 'checkbox'].includes(field.type)) {
                     field.options = Array.from(row.querySelectorAll('.options-list input'))

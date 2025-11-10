@@ -65,7 +65,14 @@
 
             switch (field.type) {
                 case 'text':
-                    fieldHtml += `<input type="text" id="${fieldId}" name="${field.label}" class="form-control" ${field.required ? 'required' : ''}>`;
+                case 'email':
+                case 'phone':
+                case 'date':
+                case 'number':
+                    fieldHtml += `<input type="${field.type}" id="${fieldId}" name="${field.label}" class="form-control" ${field.required ? 'required' : ''}>`;
+                    if (field.type === 'phone') {
+                        fieldHtml = fieldHtml.replace('type="phone"', 'type="tel"');
+                    }
                     break;
                 case 'textarea':
                     fieldHtml += `<textarea id="${fieldId}" name="${field.label}" class="form-control" rows="4" ${field.required ? 'required' : ''}></textarea>`;
