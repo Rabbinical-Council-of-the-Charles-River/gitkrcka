@@ -41,6 +41,20 @@
         <div id="add-alert-controls" class="mb-3 admin-controls">
             <button id="add-alert-btn" class="btn btn-success mb-2" data-bs-toggle="modal" data-bs-target="#addAlertModal">Add New Alert</button>
         </div>
+
+        <!-- NEW: Banner Management Section -->
+        <div id="banner-management-controls" class="admin-controls">
+            <hr>
+            <h2>Manage Banners</h2>
+            <p><small>Banners appear at the very top of the main portal page. Only one banner can be active at a time.</small></p>
+            <button id="add-banner-btn" class="btn btn-info mb-2" data-bs-toggle="modal" data-bs-target="#bannerModal">
+                Add/Edit Banner
+            </button>
+            <div id="current-banner-display" class="card" style="display: none;">
+                <!-- Active banner info will be loaded here -->
+            </div>
+            <hr>
+        </div>
         <h2>Current Alerts</h2>
         <div id="alerts-list">
             <div id="loading-indicator" class="text-center">
@@ -133,6 +147,49 @@
         </div>
     </div>
 
+    <!-- NEW: Add/Edit Banner Modal -->
+    <div class="modal fade" id="bannerModal" tabindex="-1" aria-labelledby="bannerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bannerModalLabel">Add/Edit Banner</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="banner-form">
+                        <input type="hidden" id="banner-id" value="main-banner">
+                        <div class="mb-3">
+                            <label for="banner-text" class="form-label">Banner Text</label>
+                            <input type="text" class="form-control" id="banner-text" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="banner-urgency" class="form-label">Urgency / Color</label>
+                            <select id="banner-urgency" class="form-select">
+                                <option value="primary">Blue (Info)</option>
+                                <option value="success">Green (Success)</option>
+                                <option value="warning">Yellow (Warning)</option>
+                                <option value="danger">Red (Danger)</option>
+                                <option value="light">White (Subtle)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="banner-link" class="form-label">Optional Link URL</label>
+                            <input type="url" class="form-control" id="banner-link" placeholder="https://example.com">
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="banner-is-active">
+                            <label class="form-check-label" for="banner-is-active">Show banner on portal</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="save-banner-btn">Save Banner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -152,6 +209,7 @@
         }
         const db = firebase.firestore();
         const alertsCollection = db.collection('alerts');
+        const bannerRef = db.collection('site-settings').doc('main-banner');
 
         const alertsListDiv = document.getElementById('alerts-list');
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -159,6 +217,10 @@
         const logoutButton = document.getElementById('logout-btn');
         const addAlertControlsDiv = document.getElementById('add-alert-controls');
         const addAlertBtn = document.getElementById('add-alert-btn');
+        const bannerManagementControls = document.getElementById('banner-management-controls');
+        const currentBannerDisplay = document.getElementById('current-banner-display');
+        const saveBannerBtn = document.getElementById('save-banner-btn');
+        const bannerModal = new bootstrap.Modal(document.getElementById('bannerModal'));
 
         const addAlertModalEl = document.getElementById('addAlertModal');
         const addAlertModal = addAlertModalEl ? new bootstrap.Modal(addAlertModalEl) : null;
@@ -271,8 +333,10 @@
             loginButton.style.display = user ? 'none' : 'inline-block';
             logoutButton.style.display = user ? 'inline-block' : 'none';
             addAlertControlsDiv.style.display = isAdmin ? 'block' : 'none';
+            bannerManagementControls.style.display = isAdmin ? 'block' : 'none';
             
             displayAlerts(isAdmin);
+            if (isAdmin) loadBannerData();
         }
 
         netlifyIdentity.init();
@@ -295,6 +359,78 @@
             netlifyIdentity.logout();
         });
 
+        // --- Banner Logic ---
+        function loadBannerData() {
+            bannerRef.get().then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    // Populate the modal fields
+                    document.getElementById('banner-text').value = data.text || '';
+                    document.getElementById('banner-urgency').value = data.urgency || 'primary';
+                    document.getElementById('banner-link').value = data.link || '';
+                    document.getElementById('banner-is-active').checked = data.isActive || false;
+
+                    // Populate the display card
+                    if (data.isActive) {
+                        currentBannerDisplay.innerHTML = `
+                            <div class="card-header">Current Active Banner</div>
+                            <div class="card-body">
+                                <div class="alert alert-${data.urgency || 'primary'}" role="alert">
+                                    ${escapeHtml(data.text)}
+                                    ${data.link ? ` <a href="${data.link}" target="_blank" class="alert-link">(Link)</a>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        currentBannerDisplay.style.display = 'block';
+                    } else {
+                        currentBannerDisplay.innerHTML = `
+                            <div class="card-header">No Active Banner</div>
+                            <div class="card-body text-muted">
+                                There is no banner currently displayed on the portal. Click 'Add/Edit Banner' to create or activate one.
+                            </div>
+                        `;
+                        currentBannerDisplay.style.display = 'block';
+                    }
+                } else {
+                    console.log("No banner document found. Ready to create one.");
+                     currentBannerDisplay.innerHTML = `
+                        <div class="card-header">No Active Banner</div>
+                        <div class="card-body text-muted">
+                            There is no banner currently displayed on the portal. Click 'Add/Edit Banner' to create one.
+                        </div>
+                    `;
+                    currentBannerDisplay.style.display = 'block';
+                }
+            }).catch(error => {
+                console.error("Error loading banner:", error);
+                currentBannerDisplay.innerHTML = `<div class="card-body text-danger">Error loading banner data.</div>`;
+                currentBannerDisplay.style.display = 'block';
+            });
+        }
+
+        saveBannerBtn.addEventListener('click', () => {
+            const bannerData = {
+                text: document.getElementById('banner-text').value.trim(),
+                urgency: document.getElementById('banner-urgency').value,
+                link: document.getElementById('banner-link').value.trim(),
+                isActive: document.getElementById('banner-is-active').checked,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (!bannerData.text) {
+                alert('Banner text cannot be empty.');
+                return;
+            }
+
+            bannerRef.set(bannerData, { merge: true })
+                .then(() => {
+                    bannerModal.hide();
+                    loadBannerData(); // Refresh display
+                }).catch(error => {
+                    console.error("Error saving banner:", error);
+                    alert('Failed to save banner: ' + error.message);
+                });
+        });
 
         // --- Add Alert Logic ---
         const saveAlertBtn = document.getElementById('save-alert-btn');
