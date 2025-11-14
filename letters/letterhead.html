@@ -178,7 +178,7 @@
                         <input type="text" id="letter-title" class="form-control-plaintext letter-title-input" value="New Letter Title">
                     </div>
                     <div class="text-end">
-                        <div id="letter-date" class="letter-date"></div>
+                        <input type="text" id="letter-date" class="form-control-plaintext letter-date text-end">
                     </div>
                 </div>
 
@@ -388,8 +388,8 @@
                 const letter = doc.data();
                 letterIdInput.value = id;
                 letterTitleInput.value = letter.title;
-                quill.root.innerHTML = letter.content;
-                letterDateEl.textContent = (letter.createdAt?.toDate() || new Date()).toLocaleDateString('en-US', {
+                quill.setContents(quill.clipboard.convert(letter.content)); // Safer way to set content
+                letterDateEl.value = (letter.createdAt?.toDate() || new Date()).toLocaleDateString('en-US', {
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
                 showEditorView();
@@ -424,8 +424,8 @@
             // Reset editor for a new letter
             letterIdInput.value = '';
             letterTitleInput.value = 'New Letter Title';
-            quill.root.innerHTML = '<p>Start writing your letter here.</p>';
-            letterDateEl.textContent = new Date().toLocaleDateString('en-US', {
+            quill.setContents([{ insert: 'Start writing your letter here.\n' }]);
+            letterDateEl.value = new Date().toLocaleDateString('en-US', {
                 year: 'numeric', month: 'long', day: 'numeric'
             });
             showEditorView();
