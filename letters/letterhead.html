@@ -387,8 +387,8 @@
                 }
                 const letter = doc.data();
                 letterIdInput.value = id;
-                letterTitleInput.value = letter.title;
-                quill.setContents(quill.clipboard.convert(letter.content)); // Safer way to set content
+                letterTitleInput.value = letter.title || 'Untitled';
+                quill.root.innerHTML = letter.content || '';
                 letterDateEl.value = (letter.createdAt?.toDate() || new Date()).toLocaleDateString('en-US', {
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
