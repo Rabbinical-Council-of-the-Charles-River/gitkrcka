@@ -687,6 +687,9 @@ async function editClient(clientId) {
     document.getElementById('edit-client-billing-terms').value = client.billingTerms || 30;
     document.getElementById('edit-client-notes').value = client.notes || '';
     
+    // Convert array back to a comma-separated string for display
+    document.getElementById('edit-client-authorized-emails').value = (client.authorizedEmails || []).join(', ');
+
     // Set selected establishments
     selectedEstablishments.edit = client.establishments || [];
     updateSelectedEstablishmentsDisplay('edit');
