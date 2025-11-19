@@ -47,6 +47,7 @@
           <div class="row">
             <div class="col-sm-12">
               <div class="form-group">
+                  <input type="text" id="search-input" class="form-control" placeholder="Search by Name, Location, or Status...">
                 </div>
             </div>
           </div>
@@ -337,6 +338,22 @@
         adminContent.classList.add('hidden');
       }
     });
+
+    // Search/Filter functionality
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.addEventListener('keyup', function() {
+        const filter = searchInput.value.toLowerCase();
+        const table = document.getElementById('establishment-table');
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+          const cells = rows[i].getElementsByTagName('td');
+          const rowText = `${cells[1].textContent.toLowerCase()} ${cells[2].textContent.toLowerCase()} ${cells[3].textContent.toLowerCase()}`;
+          rows[i].style.display = rowText.includes(filter) ? '' : 'none';
+        }
+      });
+    }
   </script>
   <script src="js/script.js"></script>
 </body>

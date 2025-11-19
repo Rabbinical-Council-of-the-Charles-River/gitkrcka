@@ -551,7 +551,11 @@ function setupEventListeners() {
     }
     
     // Search and filter inputs
+    // Make search and filters apply instantly on change
     document.getElementById('client-search').addEventListener('input', filterClients);
+    document.getElementById('status-filter').addEventListener('change', filterClients);
+    document.getElementById('establishment-filter').addEventListener('change', filterClients);
+
     
     // Invoice calculation listeners
     document.addEventListener('input', function(e) {
