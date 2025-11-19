@@ -648,6 +648,9 @@ async function handleAddClient(e) {
         billingTerms: parseInt(document.getElementById('add-client-billing-terms').value) || 30,
         establishments: selectedEstablishments.add,
         notes: document.getElementById('add-client-notes').value,
+        authorizedEmails: document.getElementById('add-client-authorized-emails').value.trim()
+            ? document.getElementById('add-client-authorized-emails').value.trim().split(',').map(email => email.trim()).filter(email => email)
+            : [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         createdBy: currentUser.email
     };
@@ -712,6 +715,9 @@ async function handleEditClient(e) {
         billingTerms: parseInt(document.getElementById('edit-client-billing-terms').value) || 30,
         establishments: selectedEstablishments.edit,
         notes: document.getElementById('edit-client-notes').value,
+        authorizedEmails: document.getElementById('edit-client-authorized-emails').value.trim()
+            ? document.getElementById('edit-client-authorized-emails').value.trim().split(',').map(email => email.trim()).filter(email => email)
+            : [],
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: currentUser.email
     };
