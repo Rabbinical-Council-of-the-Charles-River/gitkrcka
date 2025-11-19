@@ -92,6 +92,7 @@
     </style>
 </head>
 <body>
+<<<<<<< HEAD
     <nav class="navbar navbar-dark bg-dark fixed-top">
         <div class="container-fluid">
             <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas" aria-label="Toggle navigation">
@@ -146,6 +147,73 @@
                         <li class="nav-item"><a class="nav-link" data-section="client-invoices"><i class="bi bi-receipt me-2"></i>My Invoices</a></li>
                         <li class="nav-item"><a class="nav-link" data-section="client-establishments"><i class="bi bi-shop-window me-2"></i>My Establishments</a></li>
                         <!-- Placeholder for future visits/logs page -->
+=======
+    <!-- NEW: Banner will be injected here -->
+    <div id="site-banner-container" class="sticky-top" style="z-index: 1031;"></div>
+
+    <!-- NEW: Banner template -->
+    <template id="banner-template">
+        <div class="alert alert-dismissible fade show m-0 rounded-0 border-0" role="alert">
+            <div class="container-fluid">
+                <span class="banner-text"></span>
+                <a href="#" class="alert-link banner-link" target="_blank" rel="noopener noreferrer" style="display: none;"></a>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- End Firebase SDK -->
+
+    <nav class="navbar navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="bi bi-speedometer2 me-2"></i>
+                KRCKA Portal
+            </a>
+
+            <div class="d-flex align-items-center gap-2">
+                <button id="login-btn" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-in-right me-1"></i>Login</button>
+                <button id="logout-btn" class="btn btn-outline-danger btn-sm hidden"><i class="bi bi-box-arrow-left me-1"></i>Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+        <div class="offcanvas-header border-bottom d-lg-none">
+            <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">Navigation</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="p-3">
+                <div class="nav-group-title">Public</div>
+                <ul class="nav nav-pills flex-column mb-3" id="public-nav">
+                    <li class="nav-item"><a class="nav-link active" data-section="home"><i class="bi bi-house-door me-2"></i>Overview</a></li>
+                    <li class="nav-item"><a class="nav-link" data-section="apply"><i class="bi bi-file-earmark-text me-2"></i>Apply for Certification</a></li>
+                    <li class="nav-item"><a class="nav-link" data-section="establishments-view"><i class="bi bi-building me-2"></i>View Establishments</a></li>
+                    <li class="nav-item"><a class="nav-link" data-section="product-lookup"><i class="bi bi-search me-2"></i>Product Search</a></li>
+                    <li class="nav-item"><a class="nav-link" data-section="alerts-view"><i class="bi bi-exclamation-triangle me-2"></i>Kashrus Alerts</a></li>
+                    <li class="nav-item"><a class="nav-link" data-section="payment"><i class="bi bi-credit-card me-2"></i>Make Payment</a></li>
+                </ul>
+
+                <div id="admin-nav-wrapper" class="hidden">
+                    <div class="nav-group-title">Admin Area</div>
+                    <ul class="nav nav-pills flex-column mb-3" id="admin-nav">
+                        <li class="nav-item"><a class="nav-link" data-section="admin-products"><i class="bi bi-box-seam me-2"></i>Manage Products</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-establishments"><i class="bi bi-shop me-2"></i>Manage Establishments</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-alerts"><i class="bi bi-bell me-2"></i>Manage Alerts</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-logs"><i class="bi bi-journal-check me-2"></i>Mashgiach Logs</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-forms"><i class="bi bi-card-list me-2"></i>Form Builder</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-letters"><i class="bi bi-envelope-paper me-2"></i>Official Letters</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-crm"><i class="bi bi-people-fill me-2"></i>CRM System</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-payroll-employee"><i class="bi bi-wallet2 me-2"></i>My Payroll</a></li>
+                        <li class="nav-item"><a class="nav-link" data-section="admin-payroll-admin"><i class="bi bi-cash-stack me-2"></i>Manage Payroll</a></li>
+>>>>>>> e10d80e74e5e55d3386d861091f4b02e06ca0276
                     </ul>
                 </div>
 
@@ -323,6 +391,7 @@
             </div>
         </section>
 
+<<<<<<< HEAD
         <!-- Client Sections -->
         <section id="client-invoices" class="feature-section" aria-label="My Invoices">
             <div class="section-container">
@@ -335,6 +404,12 @@
             <div class="section-container">
                 <div class="section-header d-flex align-items-center"><h6 class="m-0"><i class="bi bi-shop-window me-2"></i>My Establishments</h6></div>
                 <div class="section-body"><iframe class="feature-frame" src="client/establishments.html" title="My Establishments"></iframe></div>
+=======
+        <section id="admin-forms" class="feature-section" aria-label="Form Builder">
+            <div class="section-container">
+                <div class="section-header d-flex align-items-center"><h6 class="m-0"><i class="bi bi-card-list me-2"></i>Form Builder</h6></div>
+                <div class="section-body"><iframe class="feature-frame" src="forms/builder.html" title="Form Builder"></iframe></div>
+>>>>>>> e10d80e74e5e55d3386d861091f4b02e06ca0276
             </div>
         </section>
 
@@ -361,6 +436,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<<<<<<< HEAD
     <script>
         // --- Role & Identity Helpers (based on root index.html logic) ---
         const loginBtn = document.getElementById('login-btn');
@@ -508,6 +584,192 @@
             loginBtn.textContent = 'Login Unavailable';
             loginBtn.disabled = true;
         }
+=======
+    <script>
+        // --- Role & Identity Helpers (based on root index.html logic) ---
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const adminNavWrapper = document.getElementById('admin-nav-wrapper');
+        const mashgiachNavWrapper = document.getElementById('mashgiach-nav-wrapper');
+        const sidebarOffcanvas = document.getElementById('sidebarOffcanvas');
+
+        let netlifyUser = null;
+
+        // Session guard: we'll reload once after a successful login using sessionStorage
+        // The flag is set on login and cleared on logout. Nothing to do at startup.
+
+        // Keep CSS navbar height variable in sync to avoid header cutoff
+        function syncNavbarHeight() {
+            const nav = document.querySelector('.navbar');
+            if (nav) {
+                const h = nav.offsetHeight || 56;
+                document.documentElement.style.setProperty('--navbar-h', h + 'px');
+            }
+        }
+        window.addEventListener('resize', syncNavbarHeight);
+        document.addEventListener('DOMContentLoaded', syncNavbarHeight);
+
+        function getUserRoles(user) {
+            return user && user.app_metadata && Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles : [];
+        }
+
+        function updateRoleUI(user) {
+            netlifyUser = user;
+            const adminRoles = ['admin', 'manager'];
+            const mashgiachRole = 'mashgiach';
+            const userRoles = getUserRoles(user);
+
+            const isAdmin = userRoles.some(r => adminRoles.includes(r));
+            const isMashgiach = userRoles.includes(mashgiachRole);
+
+            if (user) {
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                if (isAdmin) {
+                    adminNavWrapper.classList.remove('hidden');
+                    mashgiachNavWrapper.classList.add('hidden');
+                } else if (isMashgiach) {
+                    adminNavWrapper.classList.add('hidden');
+                    mashgiachNavWrapper.classList.remove('hidden');
+                } else {
+                    adminNavWrapper.classList.add('hidden');
+                    mashgiachNavWrapper.classList.add('hidden');
+                }
+            } else {
+                // Logged out
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                adminNavWrapper.classList.add('hidden');
+                mashgiachNavWrapper.classList.add('hidden');
+            }
+        }
+
+        // --- Section Switching ---
+        const sections = Array.from(document.querySelectorAll('.feature-section'));
+
+        function showSection(id) {
+            sections.forEach(sec => sec.classList.toggle('active', sec.id === id));
+            // Update active link styling
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.toggle('active', link.getAttribute('data-section') === id);
+            });
+            // Update hash for deep-linking
+            if (id) {
+                history.replaceState(null, '', '#' + id);
+            }
+        }
+
+        function setupNavClicks(scope) {
+            scope.querySelectorAll('.nav-link[data-section]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const id = link.getAttribute('data-section');
+                    showSection(id);
+                    // Close the offcanvas on click for mobile
+                    if (sidebarOffcanvas && window.innerWidth < 992) {
+                        const offcanvas = bootstrap.Offcanvas.getInstance(sidebarOffcanvas);
+                        if (offcanvas) {
+                            offcanvas.hide();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Initialize nav clicks
+        setupNavClicks(document);
+
+        // Deep-link support: if URL has #section, show it; else default to home
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = location.hash ? location.hash.substring(1) : '';
+            if (hash && document.getElementById(hash)) {
+                showSection(hash);
+            } else {
+                showSection('home');
+            }
+        });
+
+        // --- Identity Events ---
+        loginBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.open());
+        logoutBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.logout());
+
+        if (window.netlifyIdentity) {
+            netlifyIdentity.on('init', (user) => updateRoleUI(user));
+            netlifyIdentity.on('login', (user) => {
+                updateRoleUI(user);
+                // Reload once so embedded pages recognize the session
+                try {
+                    if (!sessionStorage.getItem('reloadedAfterLogin')) {
+                        sessionStorage.setItem('reloadedAfterLogin', '1');
+                        netlifyIdentity.close();
+                        location.reload();
+                        return;
+                    }
+                } catch (e) {}
+                netlifyIdentity.close();
+            });
+            netlifyIdentity.on('logout', () => {
+                try { sessionStorage.removeItem('reloadedAfterLogin'); } catch (e) {}
+                updateRoleUI(null);
+                location.reload();
+            });
+            netlifyIdentity.on('error', (err) => console.error('Netlify Identity Error:', err));
+            netlifyIdentity.init();
+            const current = netlifyIdentity.currentUser && netlifyIdentity.currentUser();
+            updateRoleUI(current || null);
+        } else {
+            console.error('Netlify Identity widget script not loaded.');
+            loginBtn.textContent = 'Login Unavailable';
+            loginBtn.disabled = true;
+        }
+    </script>
+
+    <!-- NEW: Banner display script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const firebaseConfig = {
+                apiKey: "AIzaSyAhOboBWpkzHegBBXIwQBa6SWD7JoLJvUg",
+                authDomain: "richardrccr-10a9d.firebaseapp.com",
+                projectId: "richardrccr-10a9d",
+            };
+
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            const db = firebase.firestore();
+            const bannerRef = db.collection('site-settings').doc('main-banner');
+
+            const bannerContainer = document.getElementById('site-banner-container');
+            const bannerTemplate = document.getElementById('banner-template');
+
+            bannerRef.onSnapshot((doc) => {
+                bannerContainer.innerHTML = ''; // Clear existing banner
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.isActive && data.text) {
+                        const bannerClone = bannerTemplate.content.cloneNode(true);
+                        const alertDiv = bannerClone.querySelector('.alert');
+                        const bannerText = bannerClone.querySelector('.banner-text');
+                        const bannerLink = bannerClone.querySelector('.banner-link');
+
+                        alertDiv.classList.add(`alert-${data.urgency || 'primary'}`);
+                        bannerText.textContent = data.text;
+
+                        if (data.link) {
+                            bannerLink.href = data.link;
+                            bannerLink.textContent = ' (Learn More)';
+                            bannerLink.style.display = 'inline';
+                        }
+
+                        bannerContainer.appendChild(bannerClone);
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching banner: ", error);
+            });
+        });
+>>>>>>> e10d80e74e5e55d3386d861091f4b02e06ca0276
     </script>
 </body>
 </html>
