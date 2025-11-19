@@ -669,6 +669,18 @@ async function handleAddClient(e) {
         await loadClients();
         updateQuickStats();
         populateDropdowns();
+
+        // --- NEW: Update establishments with the client ID ---
+        const batch = db.batch();
+        clientData.establishments.forEach(estId => {
+            const estRef = db.collection('establishments').doc(estId);
+            batch.update(estRef, { clientId: docRef.id });
+        });
+        await batch.commit();
+        // --- END NEW ---
+
+        await loadEstablishments(); // Reload establishments to reflect changes if needed
+
     } catch (error) {
         console.error('Error adding client:', error);
         showMessage('error', 'Failed to add client. Please try again.');
@@ -733,6 +745,17 @@ async function handleEditClient(e) {
         await loadClients();
         updateQuickStats();
         populateDropdowns();
+
+        // --- NEW: Update establishments with the client ID ---
+        const batch = db.batch();
+        clientData.establishments.forEach(estId => {
+            const estRef = db.collection('establishments').doc(estId);
+            batch.update(estRef, { clientId: clientId });
+        });
+        await batch.commit();
+        // --- END NEW ---
+
+        await loadEstablishments(); // Reload establishments to reflect changes if needed
     } catch (error) {
         console.error('Error updating client:', error);
         showMessage('error', 'Failed to update client. Please try again.');
