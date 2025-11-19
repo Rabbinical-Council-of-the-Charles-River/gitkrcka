@@ -161,7 +161,7 @@ async function loadClients() {
             });
         });
         console.log('Loaded clients:', clients.length, clients); // Debugging: Check if clients array has data
-        displayClients(); // Display clients in table
+        displayClients(clients); // Display clients in table
     } catch (error) {
         console.error('Error loading clients:', error);
         showMessage('error', 'Failed to load clients.'); // User feedback
@@ -204,16 +204,18 @@ async function loadTransactions() {
     }
 }
 // Display Functions
-function displayClients() {
+function displayClients(clientsToDisplay) {
     const tbody = document.getElementById('clients-table-body');
     if (!tbody) return;
 
-    if (clients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No clients found</td></tr>';
+    const clientList = clientsToDisplay || clients;
+
+    if (clientList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No clients match the current filters.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = clients.map(client => {
+    tbody.innerHTML = clientList.map(client => {
         const establishmentBadges = client.establishments ? 
             client.establishments.map(estId => {
                 const est = establishments.find(e => e.id === estId);
@@ -672,7 +674,7 @@ async function handleAddClient(e) {
         // Reload data
         await loadClients();
         updateQuickStats();
-        populateDropdowns();
+        populateDropdowns(); // This will call displayClients with the full list
 
         // --- NEW: Update establishments with the client ID ---
         const batch = db.batch();
@@ -748,7 +750,7 @@ async function handleEditClient(e) {
         // Reload data
         await loadClients();
         updateQuickStats();
-        populateDropdowns();
+        populateDropdowns(); // This will call displayClients with the full list
 
         // --- NEW: Update establishments with the client ID ---
         const batch = db.batch();
@@ -1439,7 +1441,7 @@ async function deleteClient(clientId) {
 
         // Reload data
         await loadClients();
-        updateQuickStats();
+        updateQuickStats(); // This will call displayClients with the full list
         populateDropdowns();
     } catch (error) {
         console.error('Error deleting client:', error);
@@ -1585,31 +1587,26 @@ function filterClients() {
     const statusFilter = document.getElementById('status-filter').value;
     const establishmentFilter = document.getElementById('establishment-filter').value;
     
-    let filteredClients = clients;
+    let filteredClients = [...clients]; // Start with a copy of the full client list
     
     if (searchTerm) {
         filteredClients = filteredClients.filter(client => 
-            client.companyName.toLowerCase().includes(searchTerm) ||
-            client.contactPerson.toLowerCase().includes(searchTerm) ||
-            client.email.toLowerCase().includes(searchTerm)
+            (client.companyName && client.companyName.toLowerCase().includes(searchTerm)) ||
+            (client.contactPerson && client.contactPerson.toLowerCase().includes(searchTerm)) ||
+            (client.email && client.email.toLowerCase().includes(searchTerm))
         );
     }
     
     if (statusFilter) {
         filteredClients = filteredClients.filter(client => client.status === statusFilter);
     }
-    
     if (establishmentFilter) {
         filteredClients = filteredClients.filter(client => 
             client.establishments && client.establishments.includes(establishmentFilter)
         );
     }
-    
-    // Temporarily update clients array for display
-    const originalClients = clients;
-    clients = filteredClients;
-    displayClients();
-    clients = originalClients;
+    // Display the filtered results without modifying the global 'clients' array
+    displayClients(filteredClients);
 }
 
 // Invoice filtering (new function)
