@@ -20,10 +20,13 @@
         .forum-container { max-width: 960px; }
         .topic-card, .reply-card {
             border: 1px solid #dee2e6;
-            transition: box-shadow 0.2s ease-in-out;
         }
-        .topic-card:hover {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        .post-card {
+             border: 1px solid #dee2e6;
+             transition: box-shadow 0.2s ease-in-out;
+        }
+        .post-card:hover {
+             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .reply-card {
             margin-left: 2.5rem;
@@ -39,11 +42,11 @@
         .post-content {
             white-space: pre-wrap; /* Preserve line breaks */
         }
-        .topic-row:hover {
+        .clickable-row:hover {
             background-color: #e9ecef;
             cursor: pointer;
         }
-        .topic-title {
+        .item-title {
             font-weight: 500;
             color: #0d6efd;
         }
@@ -67,50 +70,115 @@
                 <!-- Breadcrumb Navigation -->
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb" id="breadcrumb-nav">
-                        <li class="breadcrumb-item"><a href="#" id="breadcrumb-home">Forum Home</a></li>
-                        <!-- Active topic will be appended here -->
+                        <li class="breadcrumb-item active" id="breadcrumb-home">Forum Home</li>
                     </ol>
                 </nav>
 
-                <!-- Topics List View -->
-                <div id="topics-view">
+                <!-- Forum Topics View (Level 1) -->
+                <div id="forum-topics-view">
                     <div class="d-flex justify-content-end mb-3">
-                        <a id="create-topic-btn" href="create-post.html" class="btn btn-primary hidden">
+                        <button id="create-topic-btn" class="btn btn-primary hidden" data-bs-toggle="modal" data-bs-target="#newTopicModal">
                             <i class="bi bi-plus-circle"></i> Create New Topic
-                        </a>
+                        </button>
                     </div>
                     <div class="card">
-                        <div class="card-header fw-bold">Topics</div>
+                        <div class="card-header fw-bold">Forum Topics</div>
                         <div class="list-group list-group-flush" id="topics-container">
-                            <div class="list-group-item" id="loading-message">Loading topics...</div>
+                            <div class="list-group-item" id="loading-topics-message">Loading topics...</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Single Topic View -->
-                <div id="single-topic-view" class="hidden">
-                    <h4 id="topic-title-header"></h4>
+                <!-- Topic Posts View (Level 2) -->
+                <div id="topic-posts-view" class="hidden">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button id="create-post-btn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newPostModal">
+                            <i class="bi bi-plus-circle"></i> Create New Post
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header fw-bold" id="posts-view-header">Posts</div>
+                        <div class="list-group list-group-flush" id="posts-list-container">
+                            <div class="list-group-item" id="loading-posts-message">Loading posts...</div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Single Post View (Level 3) -->
+                <div id="single-post-view" class="hidden">
+                    <h4 id="post-title-header"></h4>
                     <div id="posts-container" class="d-flex flex-column gap-3 mb-4">
-                        <!-- Original Post and Replies will be loaded here -->
+                        <!-- Original Post and Comments will be loaded here -->
                     </div>
 
-                    <!-- Reply Form -->
+                    <!-- Comment Form -->
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Post a Reply</h5>
-                            <form id="add-reply-form">
+                            <h5 class="card-title">Post a Comment</h5>
+                            <form id="add-comment-form">
                                 <div class="mb-3">
-                                    <label for="reply-content" class="form-label">Your Reply</label>
-                                    <div id="reply-content-editor"></div>
+                                    <label for="comment-content-editor" class="form-label">Your Comment</label>
+                                    <div id="comment-content-editor"></div>
                                 </div>
                                 <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-reply-fill"></i> Submit Reply
+                                    <i class="bi bi-reply-fill"></i> Submit Comment
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- New Topic Modal (for Admins) -->
+    <div class="modal fade" id="newTopicModal" tabindex="-1" aria-labelledby="newTopicModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="add-topic-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newTopicModalLabel">Create New Forum Topic</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="topic-title" class="form-label">Topic Title</label>
+                            <input type="text" class="form-control" id="topic-title" required placeholder="e.g., General Discussion">
+                        </div>
+                        <div class="mb-3">
+                            <label for="topic-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="topic-description" rows="3" placeholder="A brief description of this topic."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Topic</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Post Modal -->
+    <div class="modal fade" id="newPostModal" tabindex="-1" aria-labelledby="newPostModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="add-post-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newPostModalLabel">Create New Post</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3"><label for="post-title" class="form-label">Post Title</label><input type="text" class="form-control" id="post-title" required></div>
+                        <div class="mb-3"><label for="post-content-editor" class="form-label">Content</label><div id="post-content-editor"></div></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Publish Post</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -171,29 +239,42 @@
         const forumRef = db.collection('internal_forum');
 
         // --- DOM Elements ---
-        const topicsView = document.getElementById('topics-view');
-        const singleTopicView = document.getElementById('single-topic-view');
+        const forumTopicsView = document.getElementById('forum-topics-view');
+        const topicPostsView = document.getElementById('topic-posts-view');
+        const singlePostView = document.getElementById('single-post-view');
+
         const topicsContainer = document.getElementById('topics-container');
-        const loadingMessage = document.getElementById('loading-message');
+        const postsListContainer = document.getElementById('posts-list-container');
         const postsContainer = document.getElementById('posts-container');
-        const topicTitleHeader = document.getElementById('topic-title-header');
+
+        const loadingTopicsMessage = document.getElementById('loading-topics-message');
+        const loadingPostsMessage = document.getElementById('loading-posts-message');
+
+        const postTitleHeader = document.getElementById('post-title-header');
         const breadcrumbNav = document.getElementById('breadcrumb-nav');
         const breadcrumbHome = document.getElementById('breadcrumb-home');
         const createTopicBtn = document.getElementById('create-topic-btn');
 
         // Forms
+        const addTopicForm = document.getElementById('add-topic-form');
+        const addPostForm = document.getElementById('add-post-form');
         const editPostForm = document.getElementById('edit-post-form');
-        const addReplyForm = document.getElementById('add-reply-form');
+        const addCommentForm = document.getElementById('add-comment-form');
 
         // Modals
+        const newTopicModal = new bootstrap.Modal(document.getElementById('newTopicModal'));
+        const newPostModal = new bootstrap.Modal(document.getElementById('newPostModal'));
         const editPostModal = new bootstrap.Modal(document.getElementById('editPostModal'));
 
         // --- Quill Editors ---
-        let replyEditor;
+        let postEditor;
+        let commentEditor;
         let editEditor;
 
         // --- State ---
-        let currentTopicId = null;
+        let currentView = 'topics'; // topics, posts, single-post
+        let currentTopic = { id: null, title: null };
+        let currentPostId = null;
 
         // --- Helper Functions ---
         function formatTimestamp(timestamp, fallback = 'a few moments ago') {
@@ -204,12 +285,11 @@
         }
 
         // --- Firestore Operations ---
-        function displayPosts() {
-            // Listen for topics (posts without a parentId)
-            forumRef.where('parentId', '==', null).orderBy('lastReplyAt', 'desc').onSnapshot(querySnapshot => {
-                loadingMessage.style.display = 'none';
+        function displayForumTopics() {
+            forumRef.where('type', '==', 'topic').orderBy('createdAt', 'desc').onSnapshot(querySnapshot => {
+                loadingTopicsMessage.style.display = 'none';
                 if (querySnapshot.empty) {
-                    topicsContainer.innerHTML = '<div class="list-group-item">No topics yet. Be the first to create one!</div>';
+                    topicsContainer.innerHTML = '<div class="list-group-item">No forum topics found. Admins can create them.</div>';
                     return;
                 }
 
@@ -217,41 +297,71 @@
                 querySnapshot.forEach(doc => {
                     const topic = doc.data();
                     topicsHtml += `
-                        <a href="#" class="list-group-item list-group-item-action topic-row" data-id="${doc.id}">
+                        <div class="list-group-item list-group-item-action clickable-row js-view-topic" data-id="${doc.id}" data-title="${topic.title}">
                             <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1 topic-title">${topic.title}</h5>
-                                <small class="text-muted">${topic.replyCount || 0} replies</small>
+                                <h5 class="mb-1 item-title">${topic.title}</h5>
+                                <small class="text-muted">${topic.postCount || 0} posts</small>
                             </div>
-                            <p class="mb-1 text-muted small">
-                                Started by ${topic.authorName || 'Unknown'}
-                            </p>
-                            <small class="text-muted">Last activity: ${formatTimestamp(topic.lastReplyAt)}</small>
-                        </a>
+                            <p class="mb-1 text-muted small">${topic.description || ''}</p>
+                            <small class="text-muted">Created by ${topic.authorName || 'Unknown'}</small>
+                        </div>
                     `;
                 });
                 topicsContainer.innerHTML = topicsHtml;
             }, error => {
                 console.error("Error fetching topics: ", error);
-                topicsContainer.innerHTML = `<div class="alert alert-danger m-3">Error loading topics: ${error.message}</div>`;
+                topicsContainer.innerHTML = `<div class="alert alert-danger m-3">Error loading forum topics: ${error.message}</div>`;
             });
         }
 
-        function displaySinglePost(topicId) {
-            currentTopicId = topicId;
+        function displayTopicPosts(topicId, topicTitle) {
+            document.getElementById('posts-view-header').textContent = `Posts in "${topicTitle}"`;
+            forumRef.where('type', '==', 'post').where('parentId', '==', topicId).orderBy('lastReplyAt', 'desc').onSnapshot(querySnapshot => {
+                loadingPostsMessage.style.display = 'none';
+                if (querySnapshot.empty) {
+                    postsListContainer.innerHTML = '<div class="list-group-item">No posts in this topic yet. Be the first!</div>';
+                    return;
+                }
+                let postsHtml = '';
+                querySnapshot.forEach(doc => {
+                    const post = doc.data();
+                    postsHtml += `
+                        <div class="list-group-item list-group-item-action clickable-row js-view-post" data-id="${doc.id}" data-title="${post.title}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1 item-title">${post.title}</h5>
+                                <small class="text-muted">${post.commentCount || 0} comments</small>
+                            </div>
+                            <p class="mb-1 text-muted small">
+                                By ${post.authorName || 'Unknown'}
+                            </p>
+                            <small class="text-muted">Last activity: ${formatTimestamp(post.lastReplyAt)}</small>
+                        </div>
+                    `;
+                });
+                postsListContainer.innerHTML = postsHtml;
+            }, error => {
+                console.error(`Error fetching posts for topic ${topicId}:`, error);
+                postsListContainer.innerHTML = `<div class="alert alert-danger m-3">Error loading posts: ${error.message}</div>`;
+            });
+        }
+
+
+        function displaySinglePost(postId, postTitle) {
+            currentPostId = postId;
             const currentUser = window.netlifyIdentity.currentUser();
             const isAdmin = currentUser?.app_metadata?.roles?.includes('admin');
             // Fetch the main topic post first
-            forumRef.doc(topicId).get().then(doc => {
+            forumRef.doc(postId).get().then(doc => {
                 if (!doc.exists) {
                     console.error("Post not found");
                     return;
                 }
                 const topicData = doc.data();
-                topicTitleHeader.textContent = topicData.title;
-                updateBreadcrumb(topicData.title);
+                postTitleHeader.textContent = topicData.title;
+                updateBreadcrumb(currentTopic.title, topicData.title);
 
                 let originalPostHtml = `
-                    <div class="card topic-card" data-id="${doc.id}" data-author-id="${topicData.authorId}">
+                    <div class="card post-card" data-id="${doc.id}" data-author-id="${topicData.authorId}">
                         <div class="card-body post-content-container">
                             <p class="card-text post-content">${topicData.content}</p>
                             <div class="d-flex justify-content-between align-items-center mt-3">
@@ -260,7 +370,7 @@
                                 </div>
                                 <div class="post-actions">
                                     ${ (isAdmin || currentUser?.id === topicData.authorId) ? `
-                                        <a href="#" class="text-primary me-2 js-edit-post" data-id="${doc.id}">Edit</a>
+                                        <a href="#" class="text-primary me-2 js-edit-post" data-id="${doc.id}" data-type="post">Edit</a>
                                         <a href="#" class="text-danger js-delete-post" data-id="${doc.id}">Delete</a>
                                     ` : '' }
                                 </div>
@@ -269,8 +379,8 @@
                     </div>
                 `;
 
-                // Now listen for replies
-                forumRef.where('parentId', '==', topicId).orderBy('createdAt', 'asc').onSnapshot(querySnapshot => {
+                // Now listen for comments
+                forumRef.where('type', '==', 'comment').where('parentId', '==', postId).orderBy('createdAt', 'asc').onSnapshot(querySnapshot => {
                     let repliesHtml = '';
                     querySnapshot.forEach(replyDoc => {
                         const reply = replyDoc.data();
@@ -284,8 +394,8 @@
                                         </div>
                                         <div class="post-actions">
                                             ${ (isAdmin || currentUser?.id === reply.authorId) ? `
-                                                <a href="#" class="text-primary me-2 js-edit-post" data-id="${replyDoc.id}">Edit</a>
-                                                <a href="#" class="text-danger js-delete-post" data-id="${replyDoc.id}">Delete</a>
+                                                <a href="#" class="text-primary me-2 js-edit-post" data-id="${replyDoc.id}" data-type="comment">Edit</a>
+                                                <a href="#" class="text-danger js-delete-post" data-id="${replyDoc.id}" data-type="comment">Delete</a>
                                             ` : '' }
                                         </div>
                                     </div>
@@ -311,45 +421,130 @@
         }
 
         // --- UI Navigation ---
-        function showTopicsView() {
-            topicsView.classList.remove('hidden');
-            singleTopicView.classList.add('hidden');
-            currentTopicId = null;
+        function showForumTopicsView() {
+            currentView = 'topics';
+            forumTopicsView.classList.remove('hidden');
+            topicPostsView.classList.add('hidden');
+            singlePostView.classList.add('hidden');
+            currentTopic = { id: null, title: null };
+            currentPostId = null;
             updateBreadcrumb(); // Reset breadcrumb
         }
 
-        function showSingleTopicView(topicId) {
-            topicsView.classList.add('hidden');
-            singleTopicView.classList.remove('hidden');
-            displaySinglePost(topicId);
+        function showTopicPostsView(topicId, topicTitle) {
+            currentView = 'posts';
+            currentTopic = { id: topicId, title: topicTitle };
+            forumTopicsView.classList.add('hidden');
+            topicPostsView.classList.remove('hidden');
+            singlePostView.classList.add('hidden');
+            updateBreadcrumb(topicTitle);
+            displayTopicPosts(topicId, topicTitle);
         }
 
-        function updateBreadcrumb(topicTitle = null) {
-            // Remove old active breadcrumb if it exists
-            const oldActive = breadcrumbNav.querySelector('.breadcrumb-item.active');
-            if (oldActive) oldActive.remove();
+        function showSinglePostView(postId, postTitle) {
+            currentView = 'single-post';
+            forumTopicsView.classList.add('hidden');
+            topicPostsView.classList.add('hidden');
+            singlePostView.classList.remove('hidden');
+            displaySinglePost(postId, postTitle);
+        }
+
+        function updateBreadcrumb(topicTitle = null, postTitle = null) {
+            breadcrumbNav.innerHTML = '<li class="breadcrumb-item"><a href="#" id="breadcrumb-home-link">Forum Home</a></li>';
+            document.getElementById('breadcrumb-home-link').addEventListener('click', (e) => { e.preventDefault(); showForumTopicsView(); });
 
             if (topicTitle) {
-                const newActive = document.createElement('li');
-                newActive.className = 'breadcrumb-item active';
-                newActive.setAttribute('aria-current', 'page');
-                newActive.textContent = topicTitle;
-                breadcrumbNav.appendChild(newActive);
+                const topicEl = document.createElement('li');
+                topicEl.className = 'breadcrumb-item';
+                if (postTitle) {
+                    topicEl.innerHTML = `<a href="#" id="breadcrumb-topic-link">${topicTitle}</a>`;
+                } else {
+                    topicEl.classList.add('active');
+                    topicEl.textContent = topicTitle;
+                }
+                breadcrumbNav.appendChild(topicEl);
+                if (postTitle) {
+                    document.getElementById('breadcrumb-topic-link').addEventListener('click', (e) => { e.preventDefault(); showTopicPostsView(currentTopic.id, currentTopic.title); });
+                }
+            }
+
+            if (postTitle) {
+                const postEl = document.createElement('li');
+                postEl.className = 'breadcrumb-item active';
+                postEl.textContent = postTitle;
+                breadcrumbNav.appendChild(postEl);
             }
         }
 
         // --- Form Submissions ---
-        async function addReplySubmit(event) {
+        async function addTopicSubmit(event) {
             event.preventDefault();
             const user = window.netlifyIdentity.currentUser();
-            if (!user || !currentTopicId) {
-                alert("You must be logged in and viewing a topic to reply.");
+            if (!user) { alert("You must be logged in."); return; }
+
+            const title = document.getElementById('topic-title').value.trim();
+            const description = document.getElementById('topic-description').value.trim();
+            if (!title) { alert("Topic title is required."); return; }
+
+            try {
+                await forumRef.add({
+                    type: 'topic',
+                    title: title,
+                    description: description,
+                    authorName: user.user_metadata?.full_name || user.email,
+                    authorId: user.id,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    postCount: 0
+                });
+                addTopicForm.reset();
+                newTopicModal.hide();
+            } catch (error) {
+                console.error("Error adding topic:", error);
+                alert("Failed to create topic: " + error.message);
+            }
+        }
+
+        async function addPostSubmit(event) {
+            event.preventDefault();
+            const user = window.netlifyIdentity.currentUser();
+            if (!user || !currentTopic.id) { alert("You must be viewing a topic to create a post."); return; }
+
+            const title = document.getElementById('post-title').value.trim();
+            const content = postEditor.root.innerHTML;
+            if (!title || postEditor.getLength() <= 1) { alert("Title and content are required."); return; }
+
+            const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
+            const batch = db.batch();
+            const newPostRef = forumRef.doc();
+            batch.set(newPostRef, {
+                type: 'post',
+                parentId: currentTopic.id, // Link to the topic
+                title: title,
+                content: content,
+                authorName: user.user_metadata?.full_name || user.email,
+                authorId: user.id,
+                createdAt: serverTimestamp,
+                lastReplyAt: serverTimestamp,
+                commentCount: 0
+            });
+            batch.update(forumRef.doc(currentTopic.id), { postCount: firebase.firestore.FieldValue.increment(1) });
+            await batch.commit();
+            addPostForm.reset();
+            postEditor.setContents([{ insert: '\n' }]);
+            newPostModal.hide();
+        }
+
+        async function addCommentSubmit(event) {
+            event.preventDefault();
+            const user = window.netlifyIdentity.currentUser();
+            if (!user || !currentPostId) {
+                alert("You must be viewing a post to comment.");
                 return;
             }
 
             // Get content from Quill editor
-            const content = replyEditor.root.innerHTML;
-            if (replyEditor.getLength() <= 1) { // Don't submit empty replies
+            const content = commentEditor.root.innerHTML;
+            if (commentEditor.getLength() <= 1) { // Don't submit empty comments
                 return;
             }
 
@@ -360,22 +555,23 @@
             const newReplyRef = forumRef.doc(); // Create a ref with a new ID
             batch.set(newReplyRef, {
                 content: content,
+                type: 'comment',
                 authorName: user.user_metadata?.full_name || user.email,
                 authorId: user.id,
                 createdAt: serverTimestamp,
-                parentId: currentTopicId
+                parentId: currentPostId
             });
 
             // 2. Update the parent topic's metadata
-            const topicRef = forumRef.doc(currentTopicId);
+            const topicRef = forumRef.doc(currentPostId);
             batch.update(topicRef, {
                 lastReplyAt: serverTimestamp,
-                replyCount: firebase.firestore.FieldValue.increment(1)
+                commentCount: firebase.firestore.FieldValue.increment(1)
             });
 
             try {
                 await batch.commit();
-                replyEditor.setContents([{ insert: '\n' }]); // Clear editor
+                commentEditor.setContents([{ insert: '\n' }]); // Clear editor
             } catch (error) {
                 console.error("Error adding reply: ", error);
                 alert(`Failed to post reply: ${error.message}`);
@@ -383,7 +579,7 @@
         }
 
         // --- Edit & Delete Operations ---
-        async function openEditModal(postId) {
+        async function openEditModal(postId, type) {
             const doc = await forumRef.doc(postId).get();
             if (!doc.exists) {
                 alert("Error: Post not found.");
@@ -395,7 +591,7 @@
             const titleWrapper = document.getElementById('edit-title-wrapper');
 
             // Check if it's a top-level post (a "topic") or a reply
-            if (postData.parentId === null) {
+            if (type === 'post') {
                 titleWrapper.style.display = 'block';
                 document.getElementById('edit-post-title').value = postData.title;
             } else {
@@ -436,13 +632,13 @@
             }
         }
 
-        async function deletePost(postId) {
+        async function deletePost(postId, type) {
             if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) return;
 
             try {
                 await forumRef.doc(postId).delete();
                 // If we deleted the main topic, go back to the home view.
-                if (postId === currentTopicId) showTopicsView();
+                if (type === 'post' && postId === currentPostId) showTopicPostsView(currentTopic.id, currentTopic.title);
             } catch (error) {
                 console.error("Error deleting post:", error);
                 alert("Failed to delete post: " + error.message);
@@ -461,37 +657,58 @@
                         ['link']
                     ]
                 },
-                placeholder: 'Write your reply...'
             };
+            postEditor = new Quill('#post-content-editor', editorOptions);
             editEditor = new Quill('#edit-post-content-editor', editorOptions);
-            replyEditor = new Quill('#reply-content-editor', editorOptions);
+            commentEditor = new Quill('#comment-content-editor', { ...editorOptions, placeholder: 'Write your comment...' });
         });
+        addTopicForm.addEventListener('submit', addTopicSubmit);
+        addPostForm.addEventListener('submit', addPostSubmit);
         editPostForm.addEventListener('submit', editPostSubmit);
-        addReplyForm.addEventListener('submit', addReplySubmit);
+        addCommentForm.addEventListener('submit', addCommentSubmit);
 
-        topicsContainer.addEventListener('click', (e) => {
-            const topicRow = e.target.closest('.topic-row');            if (topicRow) {                e.preventDefault();
-                const topicId = topicRow.dataset.id;
-                showSingleTopicView(topicId);
+        // View navigation listeners
+        document.body.addEventListener('click', (e) => {
+            const topicRow = e.target.closest('.js-view-topic');
+            if (topicRow) {
+                e.preventDefault();
+                showTopicPostsView(topicRow.dataset.id, topicRow.dataset.title);
+                return;
             }
-        });
 
-        postsContainer.addEventListener('click', (e) => {
+            const postRow = e.target.closest('.js-view-post');
+            if (postRow) {
+                e.preventDefault();
+                showSinglePostView(postRow.dataset.id, postRow.dataset.title);
+                return;
+            }
+
             const editBtn = e.target.closest('.js-edit-post');
             const deleteBtn = e.target.closest('.js-delete-post');
 
             if (editBtn) {
                 e.preventDefault();
-                openEditModal(editBtn.dataset.id);
+                openEditModal(editBtn.dataset.id, editBtn.dataset.type);
             } else if (deleteBtn) {
                 e.preventDefault();
-                deletePost(deleteBtn.dataset.id);
+                deletePost(deleteBtn.dataset.id, deleteBtn.dataset.type);
+            }
+
+            // This needs to be specific to avoid capturing all breadcrumb clicks
+            if (e.target.id === 'breadcrumb-home') {
+                 e.preventDefault();
+                 showForumTopicsView();
             }
         });
 
-        breadcrumbHome.addEventListener('click', (e) => {
-            e.preventDefault();
-            showTopicsView();
+        // Reset editors when modals are hidden
+        document.getElementById('newPostModal').addEventListener('hidden.bs.modal', () => {
+            addPostForm.reset();
+            postEditor.setContents([{ insert: '\n' }]);
+        });
+        document.getElementById('editPostModal').addEventListener('hidden.bs.modal', () => {
+            editPostForm.reset();
+            editEditor.setContents([{ insert: '\n' }]);
         });
 
         // Initialize Netlify Identity and load notes
@@ -502,8 +719,8 @@
                 if (isAdmin) {
                     createTopicBtn.classList.remove('hidden');
                 }
-                showTopicsView(); // Start at the topics list
-                displayPosts();
+                showForumTopicsView(); // Start at the topics list
+                displayForumTopics();
             } else {
                 document.body.innerHTML = '<div class="container vh-100 d-flex justify-content-center align-items-center"><div class="alert alert-warning">You must be logged in to view the forum. Please log in through the main portal.</div></div>';
             }
