@@ -13,21 +13,34 @@
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
-        .note-card {
-            border-left: 4px solid #0d6efd;
+        .forum-container { max-width: 960px; }
+        .topic-card, .reply-card {
+            border-left: 4px solid #0d6efd; /* Blue accent */
         }
-        .note-meta {
+        .reply-card {
+            margin-left: 2.5rem;
+            border-left-color: #6c757d; /* Gray accent for replies */
+        }
+        .post-meta {
             font-size: 0.85rem;
             color: #6c757d;
         }
-        .note-content {
+        .post-content {
             white-space: pre-wrap; /* Preserve line breaks */
         }
-        #notes-container {
-            max-height: 60vh;
-            overflow-y: auto;
+        .topic-row:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
         }
+        .topic-title {
+            font-weight: 500;
+            color: #0d6efd;
+        }
+        .hidden { display: none; }
+        .breadcrumb-item a { text-decoration: none; }
+        .breadcrumb-item.active { color: #212529; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -35,33 +48,51 @@
     <div class="container py-4">
         <div class="row">
             <div class="col-12">
-                <h3 class="mb-3"><i class="bi bi-chat-left-text-fill"></i> Internal Forum & Notes</h3>
+                <h3 class="mb-3"><i class="bi bi-chat-left-text-fill"></i> Internal Forum</h3>
 
-                <!-- Add Note Form -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title">Add a New Note</h5>
-                        <form id="add-note-form">
-                            <div class="mb-3">
-                                <label for="note-content" class="form-label">Your Note</label>
-                                <textarea class="form-control" id="note-content" rows="3" required placeholder="Type your note here..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Add Note
-                            </button>
-                        </form>
+                <!-- Breadcrumb Navigation -->
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb" id="breadcrumb-nav">
+                        <li class="breadcrumb-item"><a href="#" id="breadcrumb-home">Forum Home</a></li>
+                        <!-- Active topic will be appended here -->
+                    </ol>
+                </nav>
+
+                <!-- Topics List View -->
+                <div id="topics-view">
+                    <div class="d-flex justify-content-end mb-3">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTopicModal">
+                            <i class="bi bi-plus-circle"></i> Create New Topic
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header fw-bold">Topics</div>
+                        <div class="list-group list-group-flush" id="topics-container">
+                            <div class="list-group-item" id="loading-message">Loading topics...</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Notes Display -->
-                <div class="card">
-                    <div class="card-header">
-                        Recent Notes
+                <!-- Single Topic View -->
+                <div id="single-topic-view" class="hidden">
+                    <h4 id="topic-title-header"></h4>
+                    <div id="posts-container" class="d-flex flex-column gap-3 mb-4">
+                        <!-- Original Post and Replies will be loaded here -->
                     </div>
-                    <div class="card-body">
-                        <div id="notes-container" class="d-flex flex-column gap-3">
-                            <!-- Notes will be loaded here -->
-                            <p id="loading-message">Loading notes...</p>
+
+                    <!-- Reply Form -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Post a Reply</h5>
+                            <form id="add-reply-form">
+                                <div class="mb-3">
+                                    <label for="reply-content" class="form-label">Your Reply</label>
+                                    <textarea class="form-control" id="reply-content" rows="4" required placeholder="Type your reply..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-reply-fill"></i> Submit Reply
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -70,9 +101,39 @@
         </div>
     </div>
 
+    <!-- New Topic Modal -->
+    <div class="modal fade" id="newTopicModal" tabindex="-1" aria-labelledby="newTopicModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="add-topic-form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newTopicModalLabel">Create a New Topic</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="topic-title" class="form-label">Topic Title</label>
+                            <input type="text" class="form-control" id="topic-title" required placeholder="Enter a descriptive title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="topic-content" class="form-label">Your Message</label>
+                            <textarea class="form-control" id="topic-content" rows="5" required placeholder="Start the conversation..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Topic</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // --- Firebase Configuration ---
@@ -90,16 +151,30 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
-        const notesRef = db.collection('internal_notes');
+        const forumRef = db.collection('internal_forum');
 
         // --- DOM Elements ---
-        const addNoteForm = document.getElementById('add-note-form');
-        const noteContentInput = document.getElementById('note-content');
-        const notesContainer = document.getElementById('notes-container');
+        const topicsView = document.getElementById('topics-view');
+        const singleTopicView = document.getElementById('single-topic-view');
+        const topicsContainer = document.getElementById('topics-container');
         const loadingMessage = document.getElementById('loading-message');
+        const postsContainer = document.getElementById('posts-container');
+        const topicTitleHeader = document.getElementById('topic-title-header');
+        const breadcrumbNav = document.getElementById('breadcrumb-nav');
+        const breadcrumbHome = document.getElementById('breadcrumb-home');
+
+        // Forms
+        const addTopicForm = document.getElementById('add-topic-form');
+        const addReplyForm = document.getElementById('add-reply-form');
+
+        // Modals
+        const newTopicModal = new bootstrap.Modal(document.getElementById('newTopicModal'));
+
+        // --- State ---
+        let currentTopicId = null;
 
         // --- Helper Functions ---
-        function formatTimestamp(timestamp) {
+        function formatTimestamp(timestamp, fallback = 'a few moments ago') {
             if (timestamp && typeof timestamp.toDate === 'function') {
                 return timestamp.toDate().toLocaleString();
             }
@@ -107,76 +182,215 @@
         }
 
         // --- Firestore Operations ---
-
-        // Display Notes
-        function displayNotes() {
-            notesRef.orderBy('createdAt', 'desc').onSnapshot(querySnapshot => {
+        function displayTopics() {
+            // Listen for topics (posts without a parentId)
+            forumRef.where('parentId', '==', null).orderBy('lastReplyAt', 'desc').onSnapshot(querySnapshot => {
                 loadingMessage.style.display = 'none';
                 if (querySnapshot.empty) {
-                    notesContainer.innerHTML = '<p class="text-center text-muted">No notes yet. Be the first to add one!</p>';
+                    topicsContainer.innerHTML = '<div class="list-group-item">No topics yet. Be the first to create one!</div>';
                     return;
                 }
 
-                let notesHtml = '';
+                let topicsHtml = '';
                 querySnapshot.forEach(doc => {
-                    const note = doc.data();
-                    notesHtml += `
-                        <div class="card note-card">
-                            <div class="card-body">
-                                <p class="card-text note-content">${note.content || ''}</p>
-                                <div class="note-meta">
-                                    <strong>By:</strong> ${note.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(note.createdAt)}
-                                </div>
+                    const topic = doc.data();
+                    topicsHtml += `
+                        <a href="#" class="list-group-item list-group-item-action topic-row" data-id="${doc.id}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1 topic-title">${topic.title}</h5>
+                                <small class="text-muted">${topic.replyCount || 0} replies</small>
                             </div>
-                        </div>
+                            <p class="mb-1 text-muted small">
+                                Started by ${topic.authorName || 'Unknown'}
+                            </p>
+                            <small class="text-muted">Last activity: ${formatTimestamp(topic.lastReplyAt)}</small>
+                        </a>
                     `;
                 });
-                notesContainer.innerHTML = notesHtml;
+                topicsContainer.innerHTML = topicsHtml;
             }, error => {
-                console.error("Error fetching notes: ", error);
-                notesContainer.innerHTML = `<div class="alert alert-danger">Error loading notes: ${error.message}</div>`;
+                console.error("Error fetching topics: ", error);
+                topicsContainer.innerHTML = `<div class="alert alert-danger m-3">Error loading topics: ${error.message}</div>`;
             });
         }
 
-        // Add Note
-        async function addNoteSubmit(event) {
+        function displaySingleTopic(topicId) {
+            currentTopicId = topicId;
+            // Fetch the main topic post first
+            forumRef.doc(topicId).get().then(doc => {
+                if (!doc.exists) {
+                    console.error("Topic not found");
+                    return;
+                }
+                const topicData = doc.data();
+                topicTitleHeader.textContent = topicData.title;
+                updateBreadcrumb(topicData.title);
+
+                let originalPostHtml = `
+                    <div class="card topic-card">
+                        <div class="card-body">
+                            <p class="card-text post-content">${topicData.content}</p>
+                            <div class="post-meta">
+                                <strong>By:</strong> ${topicData.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(topicData.createdAt)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Now listen for replies
+                forumRef.where('parentId', '==', topicId).orderBy('createdAt', 'asc').onSnapshot(querySnapshot => {
+                    let repliesHtml = '';
+                    querySnapshot.forEach(replyDoc => {
+                        const reply = replyDoc.data();
+                        repliesHtml += `
+                            <div class="card reply-card">
+                                <div class="card-body">
+                                    <p class="card-text post-content">${reply.content}</p>
+                                    <div class="post-meta">
+                                        <strong>By:</strong> ${reply.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(reply.createdAt)}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    postsContainer.innerHTML = originalPostHtml + repliesHtml;
+                });
+
+            }).catch(error => {
+                console.error("Error getting topic:", error);
+                postsContainer.innerHTML = `<div class="alert alert-danger">Could not load topic.</div>`;
+            });
+        }
+
+        // --- UI Navigation ---
+        function showTopicsView() {
+            topicsView.classList.remove('hidden');
+            singleTopicView.classList.add('hidden');
+            currentTopicId = null;
+            updateBreadcrumb(); // Reset breadcrumb
+        }
+
+        function showSingleTopicView(topicId) {
+            topicsView.classList.add('hidden');
+            singleTopicView.classList.remove('hidden');
+            displaySingleTopic(topicId);
+        }
+
+        function updateBreadcrumb(topicTitle = null) {
+            // Remove old active breadcrumb if it exists
+            const oldActive = breadcrumbNav.querySelector('.breadcrumb-item.active');
+            if (oldActive) oldActive.remove();
+
+            if (topicTitle) {
+                const newActive = document.createElement('li');
+                newActive.className = 'breadcrumb-item active';
+                newActive.setAttribute('aria-current', 'page');
+                newActive.textContent = topicTitle;
+                breadcrumbNav.appendChild(newActive);
+            }
+        }
+
+        // --- Form Submissions ---
+        async function addTopicSubmit(event) {
             event.preventDefault();
             const user = window.netlifyIdentity.currentUser();
-
             if (!user) {
-                alert("You must be logged in to add a note.");
+                alert("You must be logged in to create a topic.");
                 return;
             }
 
-            const content = noteContentInput.value.trim();
-            if (!content) {
-                alert("Note content cannot be empty.");
+            const title = document.getElementById('topic-title').value.trim();
+            const content = document.getElementById('topic-content').value.trim();
+            if (!title || !content) {
+                alert("Title and message cannot be empty.");
                 return;
             }
 
             try {
-                await notesRef.add({
+                const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
+                await forumRef.add({
+                    title: title,
                     content: content,
                     authorName: user.user_metadata?.full_name || user.email,
                     authorId: user.id,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    createdAt: serverTimestamp,
+                    lastReplyAt: serverTimestamp, // Initially the same as createdAt
+                    replyCount: 0,
+                    parentId: null // Explicitly null for topics
                 });
-                addNoteForm.reset();
+                addTopicForm.reset();
+                newTopicModal.hide();
             } catch (error) {
-                console.error("Error adding note: ", error);
-                alert(`Failed to add note: ${error.message}`);
+                console.error("Error adding topic: ", error);
+                alert(`Failed to add topic: ${error.message}`);
+            }
+        }
+
+        async function addReplySubmit(event) {
+            event.preventDefault();
+            const user = window.netlifyIdentity.currentUser();
+            if (!user || !currentTopicId) {
+                alert("You must be logged in and viewing a topic to reply.");
+                return;
+            }
+
+            const content = document.getElementById('reply-content').value.trim();
+            if (!content) return;
+
+            const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
+            const batch = db.batch();
+
+            // 1. Add the new reply
+            const newReplyRef = forumRef.doc(); // Create a ref with a new ID
+            batch.set(newReplyRef, {
+                content: content,
+                authorName: user.user_metadata?.full_name || user.email,
+                authorId: user.id,
+                createdAt: serverTimestamp,
+                parentId: currentTopicId
+            });
+
+            // 2. Update the parent topic's metadata
+            const topicRef = forumRef.doc(currentTopicId);
+            batch.update(topicRef, {
+                lastReplyAt: serverTimestamp,
+                replyCount: firebase.firestore.FieldValue.increment(1)
+            });
+
+            try {
+                await batch.commit();
+                addReplyForm.reset();
+            } catch (error) {
+                console.error("Error adding reply: ", error);
+                alert(`Failed to post reply: ${error.message}`);
             }
         }
 
         // --- Event Listeners ---
-        addNoteForm.addEventListener('submit', addNoteSubmit);
+        addTopicForm.addEventListener('submit', addTopicSubmit);
+        addReplyForm.addEventListener('submit', addReplySubmit);
+
+        topicsContainer.addEventListener('click', (e) => {
+            const topicRow = e.target.closest('.topic-row');
+            if (topicRow) {
+                e.preventDefault();
+                const topicId = topicRow.dataset.id;
+                showSingleTopicView(topicId);
+            }
+        });
+
+        breadcrumbHome.addEventListener('click', (e) => {
+            e.preventDefault();
+            showTopicsView();
+        });
 
         // Initialize Netlify Identity and load notes
         window.netlifyIdentity.on('init', user => {
             if (user) {
-                displayNotes();
+                showTopicsView(); // Start at the topics list
+                displayTopics();
             } else {
-                notesContainer.innerHTML = '<div class="alert alert-warning">You must be logged in to view the forum. Please log in through the main portal.</div>';
+                document.body.innerHTML = '<div class="container vh-100 d-flex justify-content-center align-items-center"><div class="alert alert-warning">You must be logged in to view the forum. Please log in through the main portal.</div></div>';
             }
         });
         window.netlifyIdentity.init();
