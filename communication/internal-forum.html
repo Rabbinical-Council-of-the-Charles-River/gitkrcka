@@ -290,16 +290,26 @@
 
         // --- Firestore Operations ---
         function displayForumTopics() {
+            const currentUser = window.netlifyIdentity.currentUser();
+            const isAdmin = currentUser?.app_metadata?.roles?.includes('admin');
+
             forumRef.where('type', '==', 'topic').orderBy('createdAt', 'desc').onSnapshot(querySnapshot => {
                 loadingTopicsMessage.style.display = 'none';
                 if (querySnapshot.empty) {
                     topicsContainer.innerHTML = '<div class="list-group-item">No forum topics found. Admins can create them.</div>';
                     return;
                 }
-
+        
                 let topicsHtml = '';
                 querySnapshot.forEach(doc => {
                     const topic = doc.data();
+                    const deleteButtonHtml = isAdmin ? `
+                        <div class="ms-auto ps-3">
+                            <button class="btn btn-sm btn-outline-danger js-delete-topic" data-id="${doc.id}" title="Delete Topic">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    ` : '';
                     topicsHtml += `
                         <div class="list-group-item list-group-item-action clickable-row js-view-topic" data-id="${doc.id}" data-title="${topic.title}">
                             <div class="d-flex w-100 justify-content-between">
@@ -307,7 +317,10 @@
                                 <small class="text-muted">${topic.postCount || 0} posts</small>
                             </div>
                             <p class="mb-1 text-muted small">${topic.description || ''}</p>
-                            <small class="text-muted">Created by ${topic.authorName || 'Unknown'}</small>
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted">Created by ${topic.authorName || 'Unknown'}</small>
+                                ${deleteButtonHtml}
+                            </div>
                         </div>
                     `;
                 });
@@ -671,6 +684,46 @@
             }
         }
 
+        async function deleteTopic(topicId) {
+            if (!confirm("Are you sure you want to delete this entire topic and all its posts and comments? This action cannot be undone.")) return;
+
+            console.log(`Starting deletion for topic: ${topicId}`);
+            const batch = db.batch();
+
+            try {
+                // 1. Find all posts in the topic
+                const postsSnapshot = await forumRef.where('type', '==', 'post').where('parentId', '==', topicId).get();
+                const postIds = postsSnapshot.docs.map(d => d.id);
+
+                // 2. For each post, find and delete all comments
+                for (const postId of postIds) {
+                    const commentsSnapshot = await forumRef.where('type', '==', 'comment').where('parentId', '==', postId).get();
+                    commentsSnapshot.forEach(commentDoc => {
+                        console.log(`  - Queuing comment for deletion: ${commentDoc.id}`);
+                        batch.delete(commentDoc.ref);
+                    });
+                }
+
+                // 3. Delete all posts
+                postsSnapshot.forEach(postDoc => {
+                    console.log(` - Queuing post for deletion: ${postDoc.id}`);
+                    batch.delete(postDoc.ref);
+                });
+
+                // 4. Delete the topic itself
+                console.log(`Queuing topic for deletion: ${topicId}`);
+                batch.delete(forumRef.doc(topicId));
+
+                // 5. Commit the batch
+                await batch.commit();
+                console.log("Topic and all associated content deleted successfully.");
+                // The onSnapshot listener will automatically refresh the view.
+            } catch (error) {
+                console.error("Error performing cascading delete:", error);
+                alert("Failed to delete topic: " + error.message);
+            }
+        }
+
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
             const editorOptions = {
@@ -695,7 +748,7 @@
 
         // View navigation listeners
         document.body.addEventListener('click', (e) => {
-            const topicRow = e.target.closest('.js-view-topic');
+            const topicRow = e.target.closest('.js-view-topic'); // This is the main clickable area
             if (topicRow) {
                 e.preventDefault();
                 showTopicPostsView(topicRow.dataset.id, topicRow.dataset.title);
@@ -718,6 +771,13 @@
             } else if (deleteBtn) {
                 e.preventDefault();
                 deletePost(deleteBtn.dataset.id, deleteBtn.dataset.type);
+            }
+
+            const deleteTopicBtn = e.target.closest('.js-delete-topic');
+            if (deleteTopicBtn) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent the click from triggering the view change
+                deleteTopic(deleteTopicBtn.dataset.id);
             }
 
             // This needs to be specific to avoid capturing all breadcrumb clicks
