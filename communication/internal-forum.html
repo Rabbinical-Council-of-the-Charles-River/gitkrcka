@@ -151,6 +151,10 @@
                             <label for="topic-description" class="form-label">Description</label>
                             <textarea class="form-control" id="topic-description" rows="3" placeholder="A brief description of this topic."></textarea>
                         </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="topic-is-public">
+                            <label class="form-check-label" for="topic-is-public">Make this topic publicly accessible</label>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -347,7 +351,7 @@
 
 
         function displaySinglePost(postId, postTitle) {
-            currentPostId = postId;
+            currentPostId = postId; // Set the current post ID
             const currentUser = window.netlifyIdentity.currentUser();
             const isAdmin = currentUser?.app_metadata?.roles?.includes('admin');
             // Fetch the main topic post first
@@ -356,22 +360,22 @@
                     console.error("Post not found");
                     return;
                 }
-                const topicData = doc.data();
-                postTitleHeader.textContent = topicData.title;
-                updateBreadcrumb(currentTopic.title, topicData.title);
+                const postData = doc.data();
+                postTitleHeader.textContent = postData.title;
+                updateBreadcrumb(currentTopic.title, postData.title);
 
                 let originalPostHtml = `
-                    <div class="card post-card" data-id="${doc.id}" data-author-id="${topicData.authorId}">
+                    <div class="card post-card" data-id="${doc.id}" data-author-id="${postData.authorId}">
                         <div class="card-body post-content-container">
-                            <p class="card-text post-content">${topicData.content}</p>
+                            <p class="card-text post-content">${postData.content}</p>
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <div class="post-meta">
-                                    <strong>By:</strong> ${topicData.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(topicData.createdAt)}
+                                    <strong>By:</strong> ${postData.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(postData.createdAt)}
                                 </div>
                                 <div class="post-actions">
-                                    ${ (isAdmin || currentUser?.id === topicData.authorId) ? `
+                                    ${ (isAdmin || (currentUser && currentUser.id === postData.authorId)) ? `
                                         <a href="#" class="text-primary me-2 js-edit-post" data-id="${doc.id}" data-type="post">Edit</a>
-                                        <a href="#" class="text-danger js-delete-post" data-id="${doc.id}">Delete</a>
+                                        <a href="#" class="text-danger js-delete-post" data-id="${doc.id}" data-type="post">Delete</a>
                                     ` : '' }
                                 </div>
                             </div>
@@ -380,7 +384,7 @@
                 `;
 
                 // Now listen for comments
-                forumRef.where('type', '==', 'comment').where('parentId', '==', postId).orderBy('createdAt', 'asc').onSnapshot(querySnapshot => {
+                forumRef.where('type', '==', 'comment').where('parentId', '==', postId).orderBy('createdAt', 'asc').onSnapshot(querySnapshot => { // Listen for comments
                     let repliesHtml = '';
                     querySnapshot.forEach(replyDoc => {
                         const reply = replyDoc.data();
@@ -393,7 +397,7 @@
                                             <strong>By:</strong> ${reply.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(reply.createdAt)}
                                         </div>
                                         <div class="post-actions">
-                                            ${ (isAdmin || currentUser?.id === reply.authorId) ? `
+                                            ${ (isAdmin || (currentUser && currentUser.id === reply.authorId)) ? `
                                                 <a href="#" class="text-primary me-2 js-edit-post" data-id="${replyDoc.id}" data-type="comment">Edit</a>
                                                 <a href="#" class="text-danger js-delete-post" data-id="${replyDoc.id}" data-type="comment">Delete</a>
                                             ` : '' }
@@ -484,12 +488,14 @@
 
             const title = document.getElementById('topic-title').value.trim();
             const description = document.getElementById('topic-description').value.trim();
+            const isPublic = document.getElementById('topic-is-public').checked;
             if (!title) { alert("Topic title is required."); return; }
 
             try {
                 await forumRef.add({
                     type: 'topic',
                     title: title,
+                    isPublic: isPublic,
                     description: description,
                     authorName: user.user_metadata?.full_name || user.email,
                     authorId: user.id,
@@ -507,11 +513,23 @@
         async function addPostSubmit(event) {
             event.preventDefault();
             const user = window.netlifyIdentity.currentUser();
-            if (!user || !currentTopic.id) { alert("You must be viewing a topic to create a post."); return; }
+            if (!currentTopic.id) { alert("Cannot create a post without a selected topic."); return; }
+
+            let authorName = 'Guest';
+            let authorId = 'anonymous';
+
+            if (user) {
+                authorName = user.user_metadata?.full_name || user.email;
+                authorId = user.id;
+            } else {
+                const guestName = prompt("Please enter your name to post:", "Guest");
+                if (!guestName) return; // User cancelled prompt
+                authorName = guestName;
+            }
 
             const title = document.getElementById('post-title').value.trim();
             const content = postEditor.root.innerHTML;
-            if (!title || postEditor.getLength() <= 1) { alert("Title and content are required."); return; }
+            if (!title || postEditor.getLength() <= 1) { alert("Title and content are required."); return; } // Check for content
 
             const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
             const batch = db.batch();
@@ -521,8 +539,8 @@
                 parentId: currentTopic.id, // Link to the topic
                 title: title,
                 content: content,
-                authorName: user.user_metadata?.full_name || user.email,
-                authorId: user.id,
+                authorName: authorName,
+                authorId: authorId,
                 createdAt: serverTimestamp,
                 lastReplyAt: serverTimestamp,
                 commentCount: 0
@@ -537,14 +555,22 @@
         async function addCommentSubmit(event) {
             event.preventDefault();
             const user = window.netlifyIdentity.currentUser();
-            if (!user || !currentPostId) {
-                alert("You must be viewing a post to comment.");
-                return;
+            if (!currentPostId) { alert("You must be viewing a post to comment."); return; }
+
+            let authorName = 'Guest';
+            let authorId = 'anonymous';
+
+            if (user) {
+                authorName = user.user_metadata?.full_name || user.email;
+                authorId = user.id;
+            } else {
+                const guestName = prompt("Please enter your name to comment:", "Guest");
+                if (!guestName) return; // User cancelled prompt
+                authorName = guestName;
             }
 
-            // Get content from Quill editor
             const content = commentEditor.root.innerHTML;
-            if (commentEditor.getLength() <= 1) { // Don't submit empty comments
+            if (commentEditor.getLength() <= 1) {
                 return;
             }
 
@@ -556,8 +582,8 @@
             batch.set(newReplyRef, {
                 content: content,
                 type: 'comment',
-                authorName: user.user_metadata?.full_name || user.email,
-                authorId: user.id,
+                authorName: authorName,
+                authorId: authorId,
                 createdAt: serverTimestamp,
                 parentId: currentPostId
             });
@@ -572,7 +598,7 @@
             try {
                 await batch.commit();
                 commentEditor.setContents([{ insert: '\n' }]); // Clear editor
-            } catch (error) {
+            } catch (error) { // Catch and log any error
                 console.error("Error adding reply: ", error);
                 alert(`Failed to post reply: ${error.message}`);
             }
@@ -591,7 +617,7 @@
             const titleWrapper = document.getElementById('edit-title-wrapper');
 
             // Check if it's a top-level post (a "topic") or a reply
-            if (type === 'post') {
+            if (type === 'post') { // Only show title for posts
                 titleWrapper.style.display = 'block';
                 document.getElementById('edit-post-title').value = postData.title;
             } else {
@@ -638,7 +664,7 @@
             try {
                 await forumRef.doc(postId).delete();
                 // If we deleted the main topic, go back to the home view.
-                if (type === 'post' && postId === currentPostId) showTopicPostsView(currentTopic.id, currentTopic.title);
+                if (type === 'post' && postId === currentPostId) showTopicPostsView(currentTopic.id, currentTopic.title); // Go back to post list
             } catch (error) {
                 console.error("Error deleting post:", error);
                 alert("Failed to delete post: " + error.message);
@@ -722,10 +748,43 @@
                 showForumTopicsView(); // Start at the topics list
                 displayForumTopics();
             } else {
-                document.body.innerHTML = '<div class="container vh-100 d-flex justify-content-center align-items-center"><div class="alert alert-warning">You must be logged in to view the forum. Please log in through the main portal.</div></div>';
+                // PUBLIC VIEW: User is not logged in
+                // Hide admin-only buttons
+                createTopicBtn.classList.add('hidden');
+                // Show the public topics
+                showForumTopicsView();
+                // Modify the query to only show public topics
+                displayPublicForumTopics();
             }
         });
         window.netlifyIdentity.init();
+
+        function displayPublicForumTopics() {
+            forumRef.where('type', '==', 'topic').where('isPublic', '==', true).orderBy('createdAt', 'desc').onSnapshot(querySnapshot => {
+                loadingTopicsMessage.style.display = 'none';
+                if (querySnapshot.empty) {
+                    topicsContainer.innerHTML = '<div class="list-group-item">There are no public topics available at this time.</div>';
+                    return;
+                }
+                let topicsHtml = '';
+                querySnapshot.forEach(doc => {
+                    const topic = doc.data();
+                    topicsHtml += `
+                        <div class="list-group-item list-group-item-action clickable-row js-view-topic" data-id="${doc.id}" data-title="${topic.title}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1 item-title">${topic.title}</h5>
+                                <small class="text-muted">${topic.postCount || 0} posts</small>
+                            </div>
+                            <p class="mb-1 text-muted small">${topic.description || ''}</p>
+                        </div>
+                    `;
+                });
+                topicsContainer.innerHTML = topicsHtml;
+            }, error => {
+                console.error("Error fetching public topics: ", error);
+                topicsContainer.innerHTML = `<div class="alert alert-danger m-3">Error loading public forum topics.</div>`;
+            });
+        }
 
     </script>
 </body>
