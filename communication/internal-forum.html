@@ -68,9 +68,9 @@
                 <!-- Topics List View -->
                 <div id="topics-view">
                     <div class="d-flex justify-content-end mb-3">
-                        <button id="create-topic-btn" class="btn btn-primary hidden" data-bs-toggle="modal" data-bs-target="#newTopicModal">
+                        <a id="create-topic-btn" href="create-post.html" class="btn btn-primary hidden">
                             <i class="bi bi-plus-circle"></i> Create New Topic
-                        </button>
+                        </a>
                     </div>
                     <div class="card">
                         <div class="card-header fw-bold">Topics</div>
@@ -104,34 +104,6 @@
                     </div>
                 </div>
 
-            </div>
-        </div>
-    </div>
-
-    <!-- New Topic Modal -->
-    <div class="modal fade" id="newTopicModal" tabindex="-1" aria-labelledby="newTopicModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form id="add-topic-form">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="newTopicModalLabel">Create a New Topic</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="topic-title" class="form-label">Topic Title</label>
-                            <input type="text" class="form-control" id="topic-title" required placeholder="Enter a descriptive title">
-                        </div>
-                        <div class="mb-3">
-                            <label for="topic-content" class="form-label">Your Message</label>
-                            <div id="topic-content-editor"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Topic</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
@@ -174,14 +146,9 @@
         const createTopicBtn = document.getElementById('create-topic-btn');
 
         // Forms
-        const addTopicForm = document.getElementById('add-topic-form');
         const addReplyForm = document.getElementById('add-reply-form');
 
-        // Modals
-        const newTopicModal = new bootstrap.Modal(document.getElementById('newTopicModal'));
-
         // --- Quill Editors ---
-        let topicEditor;
         let replyEditor;
 
         // --- State ---
@@ -242,7 +209,7 @@
 
                 let originalPostHtml = `
                     <div class="card topic-card">
-                        <div class="card-body post-content-container">
+                        <div class="card-body">
                             <p class="card-text post-content">${topicData.content}</p>
                             <div class="post-meta">
                                 <strong>By:</strong> ${topicData.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(topicData.createdAt)}
@@ -258,7 +225,7 @@
                         const reply = replyDoc.data();
                         repliesHtml += `
                             <div class="card reply-card">
-                                <div class="card-body post-content-container">
+                                <div class="card-body">
                                     <p class="card-text post-content">${reply.content}</p>
                                     <div class="post-meta">
                                         <strong>By:</strong> ${reply.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(reply.createdAt)}
@@ -271,9 +238,8 @@
 
                     // IMPORTANT: Render HTML content from Quill
                     // In a production environment, you MUST sanitize this HTML to prevent XSS attacks.
-                    // Example using a library like DOMPurify: post.innerHTML = DOMPurify.sanitize(htmlContent);
-                    postsContainer.querySelectorAll('.post-content-container').forEach(container => {
-                        container.querySelector('.post-content').innerHTML = container.querySelector('.post-content').textContent;
+                    postsContainer.querySelectorAll('.post-content').forEach(postEl => {
+                        postEl.innerHTML = postEl.textContent;
                     });
                 }); // End of onSnapshot for replies
 
@@ -312,44 +278,6 @@
         }
 
         // --- Form Submissions ---
-        async function addTopicSubmit(event) {
-            event.preventDefault();
-            const user = window.netlifyIdentity.currentUser();
-            if (!user) {
-                alert("You must be logged in to create a topic.");
-                return;
-            }
-
-            const title = document.getElementById('topic-title').value.trim();
-            // Get content from Quill editor
-            const content = topicEditor.root.innerHTML;
-
-            if (!title || topicEditor.getLength() <= 1) { // getLength() is 1 for an empty editor
-                alert("Title and message cannot be empty.");
-                return;
-            }
-
-            try {
-                const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
-                await forumRef.add({
-                    title: title,
-                    content: content,
-                    authorName: user.user_metadata?.full_name || user.email,
-                    authorId: user.id,
-                    createdAt: serverTimestamp,
-                    lastReplyAt: serverTimestamp, // Initially the same as createdAt
-                    replyCount: 0,
-                    parentId: null // Explicitly null for topics
-                });
-                addTopicForm.reset();
-                topicEditor.setContents([{ insert: '\n' }]); // Clear editor
-                newTopicModal.hide(); // This will trigger the hidden.bs.modal event
-            } catch (error) {
-                console.error("Error adding topic: ", error);
-                alert(`Failed to add topic: ${error.message}`);
-            }
-        }
-
         async function addReplySubmit(event) {
             event.preventDefault();
             const user = window.netlifyIdentity.currentUser();
@@ -404,18 +332,15 @@
                         [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                         ['link']
                     ]
-                }
+                },
+                placeholder: 'Write your reply...'
             };
-            topicEditor = new Quill('#topic-content-editor', editorOptions);
             replyEditor = new Quill('#reply-content-editor', editorOptions);
         });
-        addTopicForm.addEventListener('submit', addTopicSubmit);
         addReplyForm.addEventListener('submit', addReplySubmit);
 
         topicsContainer.addEventListener('click', (e) => {
-            const topicRow = e.target.closest('.topic-row');
-            if (topicRow) {
-                e.preventDefault();
+            const topicRow = e.target.closest('.topic-row');            if (topicRow) {                e.preventDefault();
                 const topicId = topicRow.dataset.id;
                 showSingleTopicView(topicId);
             }
