@@ -209,7 +209,7 @@
 
                 let originalPostHtml = `
                     <div class="card topic-card">
-                        <div class="card-body">
+                        <div class="card-body post-content-container">
                             <p class="card-text post-content">${topicData.content}</p>
                             <div class="post-meta">
                                 <strong>By:</strong> ${topicData.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(topicData.createdAt)}
@@ -225,7 +225,7 @@
                         const reply = replyDoc.data();
                         repliesHtml += `
                             <div class="card reply-card">
-                                <div class="card-body">
+                                <div class="card-body post-content-container">
                                     <p class="card-text post-content">${reply.content}</p>
                                     <div class="post-meta">
                                         <strong>By:</strong> ${reply.authorName || 'Unknown'} | <strong>On:</strong> ${formatTimestamp(reply.createdAt)}
@@ -238,8 +238,10 @@
 
                     // IMPORTANT: Render HTML content from Quill
                     // In a production environment, you MUST sanitize this HTML to prevent XSS attacks.
-                    postsContainer.querySelectorAll('.post-content').forEach(postEl => {
-                        postEl.innerHTML = postEl.textContent;
+                    postsContainer.querySelectorAll('.post-content-container').forEach(container => {
+                        const contentHolder = container.querySelector('.post-content');
+                        const rawHtml = contentHolder.textContent;
+                        contentHolder.innerHTML = rawHtml;
                     });
                 }); // End of onSnapshot for replies
 
