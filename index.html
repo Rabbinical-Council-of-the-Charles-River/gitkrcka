@@ -10,7 +10,7 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --navbar-h: 56px; /* default; will sync with actual navbar height via JS */
+            --navbar-h: 56px; /* default; will be overwritten by JS with actual px value */
         }
         html, body {
             height: 100%;
@@ -18,17 +18,16 @@
         body {
             overflow: hidden; /* Keep layout tight like Bootstrap dashboard example */
         }
-        /* Layout similar to Bootstrap dashboard example */
         .navbar-brand {
             padding-top: .75rem;
             padding-bottom: .75rem;
             margin-right: 1rem;
-            background-color: transparent; /* remove dark pill behind brand */
-            box-shadow: none; /* remove inset border */
+            background-color: transparent;
+            box-shadow: none;
         }
         .main-content {
             position: fixed;
-            top: var(--navbar-h); /* navbar height (dynamic) */
+            top: var(--navbar-h);
             left: 0;
             right: 0;
             bottom: 0;
@@ -36,7 +35,7 @@
             background: #fff;
         }
 
-        /* Sidebar and main content layout for large screens */
+        /* Large-screen sidebar */
         @media (min-width: 992px) {
             .sidebar {
                 position: fixed;
@@ -49,62 +48,44 @@
                 padding: 1rem 0 0;
                 background-color: #f8f9fa;
 
-                /* Make the sidebar itself scrollable when its content is taller than the viewport */
+                /* keep CSS fallback in place; JS sets a pixel height too */
+                height: calc(100vh - var(--navbar-h));
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
-                height: calc(100vh - var(--navbar-h)); /* ensure exact height */
+                overscroll-behavior: contain; /* prevent scroll chaining */
+                touch-action: pan-y;
+                -webkit-transform: translateZ(0); /* force compositing layer for smoother scroll */
             }
-            .main-content {
-                left: var(--sidebar-width);
-            }
+            .main-content { left: var(--sidebar-width); }
         }
 
-        /* Ensure the offcanvas body (used on smaller screens) is constrained and scrollable */
+        /* Offcanvas / small screens: limit and make scrollable */
         .offcanvas-body {
             max-height: calc(100vh - var(--navbar-h));
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
         }
 
-        /* Make the inner padding wrapper not prevent scroll (keeps padding but lets .sidebar handle overflow) */
-        .sidebar > .offcanvas-body > .p-3 {
-            padding-bottom: 1rem;
-        }
+        /* keep wrapper padding but don't disrupt scrolling */
+        .sidebar > .offcanvas-body > .p-3 { padding-bottom: 1rem; }
 
         /* Feature sections */
         .feature-section { display: none; height: 100%; }
         .feature-section.active { display: block; }
-        .feature-frame {
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
+        .feature-frame { width: 100%; height: 100%; border: 0; }
 
-        /* Scrollable content container within main area */
-        .section-container {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        .section-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #e9ecef;
-            background-color: #f8f9fa;
-        }
-        .section-body {
-            flex: 1 1 auto;
-            overflow: auto;
-        }
+        /* main content scrollable area */
+        .section-container { height: 100%; display:flex; flex-direction:column; }
+        .section-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e9ecef; background-color: #f8f9fa; }
+        .section-body { flex: 1 1 auto; overflow: auto; }
 
-        /* Utility */
         .hidden { display: none !important; }
         .nav-link { cursor: pointer; }
         .nav-group-title {
-            font-size: .75rem;
-            letter-spacing: .05em;
-            text-transform: uppercase;
-            color: #6c757d;
-            padding: .5rem 1rem .25rem;
+            font-size: .75rem; letter-spacing: .05em; text-transform: uppercase;
+            color: #6c757d; padding: .5rem 1rem .25rem;
         }
     </style>
 </head>
@@ -180,12 +161,47 @@
     </aside>
 
     <main class="main-content">
-        <!-- ... feature sections unchanged ... -->
+        <!-- (feature sections unchanged for brevity in this preview; keep all sections from your original file) -->
+        <section id="home" class="feature-section active">
+            <div class="section-container">
+                <div class="section-header d-flex align-items-center">
+                    <h6 class="m-0"><i class="bi bi-house-door me-2"></i>Overview</h6>
+                </div>
+                <div class="section-body p-3">
+                    <div class="alert alert-info mb-3">
+                        Select a feature from the left menu. The page will load here inside the dashboard.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card h-100"><div class="card-body">
+                                <h5 class="card-title">Public Resources</h5>
+                                <ul class="mb-0">
+                                    <li>Apply for Certification</li>
+                                    <li>View Establishments</li>
+                                    <li>Kashrus Alerts</li>
+                                    <li>Make Payment</li>
+                                </ul>
+                            </div></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100"><div class="card-body">
+                                <h5 class="card-title">Staff Areas</h5>
+                                <p class="mb-2">Login to see Admin or Mashgiach options based on your role.</p>
+                                <ul class="mb-0">
+                                    <li>Admin: Products, Establishments, Alerts, Logs, Communicator, CRM, Payroll, Jobs</li>
+                                    <li>Mashgiach: Logs, My Payroll, Jobs</li>
+                                </ul>
+                            </div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- keep the rest of your sections exactly as before -->
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script>
-        // --- Role & Identity Helpers (based on root index.html logic) ---
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const adminNavWrapper = document.getElementById('admin-nav-wrapper');
@@ -195,20 +211,40 @@
 
         let netlifyUser = null;
 
-        // Keep CSS navbar height variable in sync to avoid header cutoff
-        function syncNavbarHeight() {
+        // Sync navbar height and apply explicit pixel heights to sidebar and offcanvas body
+        function syncNavbarHeightAndSidebar() {
             const nav = document.querySelector('.navbar');
-            if (nav) {
-                const h = nav.offsetHeight || 56;
-                document.documentElement.style.setProperty('--navbar-h', h + 'px');
+            if (!nav) return;
+            const h = nav.offsetHeight || 56;
+            // set CSS variable as px string so calc() works
+            document.documentElement.style.setProperty('--navbar-h', h + 'px');
+
+            // Apply exact pixel height to sidebar and offcanvas-body as a fallback for devices that mis-evaluate calc()
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.style.height = `calc(100vh - ${h}px)`;
+                sidebar.style.overflowY = 'auto';
+                sidebar.style.WebkitOverflowScrolling = 'touch';
+                sidebar.style.overscrollBehavior = 'contain';
+                sidebar.style.touchAction = 'pan-y';
+                sidebar.style.transform = 'translateZ(0)';
+            }
+
+            const offcanvasBody = document.querySelector('.offcanvas-body');
+            if (offcanvasBody) {
+                offcanvasBody.style.maxHeight = `calc(100vh - ${h}px)`;
+                offcanvasBody.style.overflowY = 'auto';
+                offcanvasBody.style.WebkitOverflowScrolling = 'touch';
+                offcanvasBody.style.overscrollBehavior = 'contain';
+                offcanvasBody.style.touchAction = 'pan-y';
             }
         }
-        // Run immediately so CSS calc() uses the correct value right away
-        syncNavbarHeight();
-        // Also run on load and resize to keep it accurate
-        window.addEventListener('load', syncNavbarHeight);
-        window.addEventListener('resize', syncNavbarHeight);
-        document.addEventListener('DOMContentLoaded', syncNavbarHeight);
+
+        // Run early and on load/resize
+        syncNavbarHeightAndSidebar();
+        window.addEventListener('load', syncNavbarHeightAndSidebar);
+        window.addEventListener('resize', syncNavbarHeightAndSidebar);
+        document.addEventListener('DOMContentLoaded', syncNavbarHeightAndSidebar);
 
         function getUserRoles(user) {
             return user && user.app_metadata && Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles : [];
@@ -229,23 +265,18 @@
                 loginBtn.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
 
-                // Hide all role-based navs initially
                 adminNavWrapper.classList.add('hidden');
                 mashgiachNavWrapper.classList.add('hidden');
                 clientNavWrapper.classList.add('hidden');
 
-                // Show the correct nav based on role priority (Admin > Mashgiach > Client)
                 if (isAdmin) {
                     adminNavWrapper.classList.remove('hidden');
                 } else if (isMashgiach) {
                     mashgiachNavWrapper.classList.remove('hidden');
                 } else if (isClient) {
                     clientNavWrapper.classList.remove('hidden');
-                } else {
-                    // No specific role, show nothing extra
                 }
             } else {
-                // Logged out
                 loginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
                 adminNavWrapper.classList.add('hidden');
@@ -259,37 +290,48 @@
 
         function showSection(id) {
             sections.forEach(sec => sec.classList.toggle('active', sec.id === id));
-            // Update active link styling
             document.querySelectorAll('.sidebar .nav-link').forEach(link => {
                 link.classList.toggle('active', link.getAttribute('data-section') === id);
             });
-            // Update hash for deep-linking
             if (id) {
                 history.replaceState(null, '', '#' + id);
             }
         }
 
+        // Attach nav click handlers and ensure offcanvas instance hide is robust
         function setupNavClicks(scope) {
+            scope.querySelectorAll('.nav-link[data-section]').forEach(link => {
+                // remove previous handlers (if any) to avoid duplicates
+                link.replaceWith(link.cloneNode(true));
+            });
             scope.querySelectorAll('.nav-link[data-section]').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const id = link.getAttribute('data-section');
                     showSection(id);
-                    // Close the offcanvas on click for mobile
-                    if (sidebarOffcanvas && window.innerWidth < 992) {
-                        const offcanvas = bootstrap.Offcanvas.getInstance(sidebarOffcanvas);
-                        if (offcanvas) {
-                            offcanvas.hide();
+
+                    // Always attempt to hide the offcanvas using a reliable API
+                    if (sidebarOffcanvas) {
+                        try {
+                            const offcanvasInstance = bootstrap.Offcanvas.getOrCreateInstance(sidebarOffcanvas);
+                            // hide only on small screens (Bootstrap breakpoint)
+                            if (window.innerWidth < 992 && offcanvasInstance) {
+                                offcanvasInstance.hide();
+                            }
+                        } catch (err) {
+                            // fallback: if anything goes wrong, try to close via data-bs attributes
+                            const button = document.querySelector('[data-bs-dismiss="offcanvas"]');
+                            if (button) button.click();
                         }
                     }
                 });
             });
         }
 
-        // Initialize nav clicks
+        // init
         setupNavClicks(document);
 
-        // Deep-link support: if URL has #section, show it; else default to home
+        // deep-link support
         window.addEventListener('DOMContentLoaded', () => {
             const hash = location.hash ? location.hash.substring(1) : '';
             if (hash && document.getElementById(hash)) {
@@ -299,7 +341,7 @@
             }
         });
 
-        // --- Identity Events ---
+        // Identity events
         loginBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.open());
         logoutBtn.addEventListener('click', () => netlifyIdentity && netlifyIdentity.logout());
 
@@ -307,7 +349,6 @@
             netlifyIdentity.on('init', (user) => updateRoleUI(user));
             netlifyIdentity.on('login', (user) => {
                 updateRoleUI(user);
-                // Reload once so embedded pages recognize the session
                 try {
                     if (!sessionStorage.getItem('reloadedAfterLogin')) {
                         sessionStorage.setItem('reloadedAfterLogin', '1');
