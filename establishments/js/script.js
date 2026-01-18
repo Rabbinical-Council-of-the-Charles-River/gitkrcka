@@ -103,6 +103,7 @@ $(document).ready(function() {
             location: $('#establishment-location').val().trim(),
             kosherStatus: getSelectedKosherStatusesFromForm('add'),
             certificateUrl: $('#establishment-certificate').val().trim(), // This is the external link
+            supervisionNotes: $('#establishment-supervision-notes').val().trim(),
             validFrom: $('#establishment-valid-from').val(),
             validTo: $('#establishment-valid-to').val(),
             active: $('#establishment-active').is(':checked') // Add active status
@@ -129,6 +130,7 @@ $(document).ready(function() {
                 $('#edit-establishment-location').val(data.location || '');
                 populateKosherStatusCheckboxes('edit', data.kosherStatus);
                 $('#edit-establishment-certificate').val(data.certificateUrl || '');
+                $('#edit-establishment-supervision-notes').val(data.supervisionNotes || '');
                 $('#edit-establishment-valid-from').val(data.validFrom || '');
                 $('#edit-establishment-valid-to').val(data.validTo || '');
                 // Set the active checkbox
@@ -163,6 +165,7 @@ $(document).ready(function() {
             location: $('#edit-establishment-location').val().trim(),
             kosherStatus: getSelectedKosherStatusesFromForm('edit'),
             certificateUrl: $('#edit-establishment-certificate').val().trim(),
+            supervisionNotes: $('#edit-establishment-supervision-notes').val().trim(),
             validFrom: $('#edit-establishment-valid-from').val(),
             validTo: $('#edit-establishment-valid-to').val(),
             active: $('#edit-establishment-active').is(':checked') // Update active status

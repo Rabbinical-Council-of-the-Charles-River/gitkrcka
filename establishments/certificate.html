@@ -206,6 +206,10 @@
                 Certification does NOT include Passover (unless otherwise specified)<br>
                 Delivered items certified Kosher only if Kosher tape / seal is intact
             </div>
+            <div id="supervision-notes-section" class="notes" style="display: none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px; font-weight: bold;">
+                <span id="supervision-notes-title" style="display: block; margin-bottom: 5px;">Important Notes:</span>
+                <span id="supervision-notes"></span>
+            </div>
             <div class="signature">
                 <div class="signature-name">Reb Chardle</div>
                 <div>Kashrus Administrator</div>
@@ -436,6 +440,8 @@
             const kosherClassificationEl = document.getElementById('kosherClassification');
             const validityDatesEl = document.getElementById('validity-dates');
             const certificateDateEl = document.getElementById('certificateDate');
+            const supervisionNotesEl = document.getElementById('supervision-notes');
+            const supervisionNotesSectionEl = document.getElementById('supervision-notes-section');
             let pdfFileName = 'kosher_certificate'; // Default PDF filename
 
             // Set the current date
@@ -468,6 +474,13 @@
                             } else {
                                 validityDatesEl.textContent = 'N/A';
                             }
+                            
+                            // Display supervision notes if available
+                            if (establishment.supervisionNotes && establishment.supervisionNotes.trim() !== '') {
+                                supervisionNotesEl.textContent = establishment.supervisionNotes;
+                                supervisionNotesSectionEl.style.display = 'block';
+                            }
+                            
                             if (typeof status === 'string' && status.trim() !== '') { // This handles old data format
                                 kosherClassificationEl.innerHTML = status;
                             }
