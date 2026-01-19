@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mashgiach Schedule</title>
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Choices.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .text-right {
+            text-align: right !important;
+        }
+        .table-wrapper {
+            background: #fff;
+            padding: 20px 25px;
+            margin: 30px auto;
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.05);
+            max-width: 1200px;
+        }
+        .table-title {
+            background: #435d7d;
+            color: #fff;
+            padding: 16px 30px;
+            margin: -20px -25px 10px;
+            border-radius: 3px 3px 0 0;
+        }
+        .table-title h2 {
+            margin: 5px 0 0;
+            font-size: 24px;
+        }
+        .table-title .btn {
+            float: right;
+            height: 34px;
+            font-size: 14px;
+        }
+        .info-icon {
+            font-size: 1rem;
+            vertical-align: middle;
+            margin-left: 4px;
+            cursor: help;
+            color: #6c757d;
+        }
+        .admin-only-func { display: none; }
+        .calendar-grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            margin-top: 20px;
+        }
+        .schedule-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            transition: box-shadow 0.3s;
+        }
+        .schedule-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .schedule-card .badge {
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .status-assigned { background-color: #0d6efd; }
+        .status-completed { background-color: #198754; }
+        .status-no-log { background-color: #ffc107; color: black; }
+        table.table tr th,
+        table.table tr td {
+            border-color: #e9e9e9;
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        table.table td a {
+            font-weight: bold;
+            color: #566787;
+            display: inline-block;
+            text-decoration: none;
+            outline: none !important;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        table.table td i {
+            opacity: 0.9;
+            font-size: 22px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Section -->
+    <div id="login-section">
+        <div class="container"
+            style="max-width: 400px; margin: 50px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+            <h1 class="text-center">Login Required</h1>
+            <div id="message" class="message"></div>
+            <div class="d-grid gap-2">
+                <button id="netlify-login-button" class="btn btn-primary btn-lg">
+                    Login with Netlify Identity
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduling Content -->
+    <div id="schedule-content" class="hidden">
+        <div class="container-fluid">
+            <div class="table-wrapper">
+                <div class="table-title">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h2>Mashgiach <b>Schedule</b></h2>
+                        </div>
+                        <div class="col-sm-6 text-right">
+                            <a href="index.html" class="btn btn-info" title="Back to Logs">
+                                <i class="material-icons">&#xE5C4;</i> <span>View Logs</span>
+                            </a>
+                            <a href="#" class="btn btn-success admin-only-func" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                                <i class="material-icons">&#xE147;</i> <span>Add Schedule</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View Toggle -->
+                <div class="mt-3 mb-3">
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="view-mode" id="view-table" value="table" checked>
+                        <label class="btn btn-outline-primary" for="view-table">Table View</label>
+                        <input type="radio" class="btn-check" name="view-mode" id="view-card" value="card">
+                        <label class="btn btn-outline-primary" for="view-card">Card View</label>
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <div id="table-view" class="table-responsive mt-3">
+                    <table id="schedule-table" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mashgiach</th>
+                                <th>Establishment</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Schedule entries populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Card View -->
+                <div id="card-view" class="calendar-grid" style="display: none;">
+                    <!-- Schedule cards populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Schedule Modal -->
+        <div id="addScheduleModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="addScheduleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="add-schedule-form">
+                        <div class="modal-header">
+                            <h4 class="modal-title" id="addScheduleModalLabel">Add New Schedule</h4>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="schedule-mashgiach" class="form-label">Mashgiach</label>
+                                <select id="schedule-mashgiach" class="form-control" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule-establishment" class="form-label">Establishment</label>
+                                <select id="schedule-establishment" class="form-control" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule-date" class="form-label">Date</label>
+                                <input type="date" id="schedule-date" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule-start-time" class="form-label">Start Time</label>
+                                <input type="time" id="schedule-start-time" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule-end-time" class="form-label">End Time</label>
+                                <input type="time" id="schedule-end-time" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule-notes" class="form-label">Notes (Optional)</label>
+                                <textarea id="schedule-notes" class="form-control"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-success" value="Add Schedule">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Schedule Modal -->
+        <div id="editScheduleModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="editScheduleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="edit-schedule-form">
+                        <div class="modal-header">
+                            <h4 class="modal-title" id="editScheduleModalLabel">Edit Schedule</h4>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="edit-schedule-mashgiach" class="form-label">Mashgiach</label>
+                                <select id="edit-schedule-mashgiach" class="form-control" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-establishment" class="form-label">Establishment</label>
+                                <select id="edit-schedule-establishment" class="form-control" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-date" class="form-label">Date</label>
+                                <input type="date" id="edit-schedule-date" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-start-time" class="form-label">Start Time</label>
+                                <input type="time" id="edit-schedule-start-time" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-end-time" class="form-label">End Time</label>
+                                <input type="time" id="edit-schedule-end-time" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-notes" class="form-label">Notes (Optional)</label>
+                                <textarea id="edit-schedule-notes" class="form-control"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-schedule-status" class="form-label">Status</label>
+                                <select id="edit-schedule-status" class="form-control" required>
+                                    <option value="assigned">Assigned</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-info" value="Save Changes">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Schedule Modal -->
+        <div id="deleteScheduleModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="deleteScheduleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="delete-schedule-form">
+                        <div class="modal-header">
+                            <h4 class="modal-title" id="deleteScheduleModalLabel">Delete Schedule</h4>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete this schedule?</p>
+                            <p class="text-warning"><small>This action cannot be undone.</small></p>
+                        </div>
+                        <div class="modal-footer">
+                            <input type="button" class="btn btn-secondary" data-bs-dismiss="modal" value="Cancel">
+                            <input type="submit" class="btn btn-danger" value="Delete">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Netlify Identity Widget -->
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <!-- Choices.js JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <!-- Scheduling Script -->
+    <script src="js/scheduling.js"></script>
+
+</body>
+
+</html>

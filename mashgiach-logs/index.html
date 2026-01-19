@@ -138,6 +138,9 @@
                         </div>
                         <div class="col-sm-6 text-right">
                              <!-- MODIFIED: Added admin-only-func class -->
+                            <a href="scheduling.html" class="btn btn-info admin-only-func">
+                                <i class="material-icons">&#xE878;</i> <span>Manage Schedule</span>
+                            </a>
                             <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLogModal">
                                 <i class="material-icons">&#xE147;</i> <span>Add New Log</span>
                             </a>
@@ -838,8 +841,64 @@
             });
         }
 
+        // --- Schedule Integration ---
+        // Check if user came from scheduling page with pre-filled data
+        function initializeWithScheduleData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('schedule') === 'true') {
+                const scheduleData = sessionStorage.getItem('scheduleForLog');
+                if (scheduleData) {
+                    const schedule = JSON.parse(scheduleData);
+                    // Pre-fill the venue
+                    if (establishmentChoices) {
+                        establishmentChoices.setChoiceByValue(schedule.establishmentName);
+                    }
+                    // Pre-fill time as description or show modal with schedule info
+                    document.getElementById('log-description').value = `Scheduled: ${schedule.startTime} - ${schedule.endTime}${schedule.notes ? '\n' + schedule.notes : ''}`;
+                    
+                    // Calculate duration and pre-fill time spent
+                    const durationMinutes = calculateScheduleDuration(schedule.startTime, schedule.endTime);
+                    document.getElementById('log-time-spent').value = durationMinutes;
+                    
+                    // Clear the session data
+                    sessionStorage.removeItem('scheduleForLog');
+                    
+                    // Open the add log modal
+                    const addModalEl = document.getElementById('addLogModal');
+                    const modal = bootstrap.Modal.getOrCreateInstance(addModalEl);
+                    modal.show();
+                    
+                    // Remove the schedule query param from URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        }
+
+        function calculateScheduleDuration(startTime, endTime) {
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            const startTotalMin = startHour * 60 + startMin;
+            const endTotalMin = endHour * 60 + endMin;
+            return Math.max(0, endTotalMin - startTotalMin);
+        }
+
         // --- Initial Load ---
         // Handled by Netlify Identity 'init' event
+        
+        // Initialize with schedule data after authentication
+        netlifyIdentity.on('init', user => {
+            updateAccessUI(user);
+            if (user) {
+                // Delay slightly to ensure DOM is ready
+                setTimeout(() => initializeWithScheduleData(), 500);
+            }
+        });
+
+        netlifyIdentity.on('login', user => {
+            updateAccessUI(user);
+            netlifyIdentity.close();
+            setTimeout(() => initializeWithScheduleData(), 500);
+        });
 
     </script>
 
