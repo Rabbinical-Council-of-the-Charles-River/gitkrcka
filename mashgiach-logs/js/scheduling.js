@@ -106,14 +106,21 @@ function calculateDurationMinutes(startTime, endTime) {
 
 async function loadMashgichimAndEstablishments() {
     try {
-        // Load mashgichim (users with mashgiach role)
-        const usersSnapshot = await db.collection('users').get();
-        mashgichim = usersSnapshot.docs
-            .map(doc => ({
-                id: doc.id,
-                name: doc.data().full_name || doc.data().email || doc.id
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name));
+        // Load mashgichim from existing logs
+        const logsSnapshot = await mashgiachLogsRef.get();
+        const mashgiachMap = new Map();
+        
+        logsSnapshot.docs.forEach(doc => {
+            const log = doc.data();
+            if (log.mashgiachId && log.mashgiachName) {
+                mashgiachMap.set(log.mashgiachId, log.mashgiachName);
+            }
+        });
+        
+        mashgichim = Array.from(mashgiachMap.entries()).map(([id, name]) => ({
+            id: id,
+            name: name
+        })).sort((a, b) => a.name.localeCompare(b.name));
 
         // Load establishments
         const estSnapshot = await establishmentsRef.orderBy('name').get();
