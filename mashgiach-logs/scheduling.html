@@ -119,6 +119,16 @@
             opacity: 0.9;
             font-size: 22px;
         }
+        .badge {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        .badge-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
     </style>
 </head>
 
@@ -150,7 +160,7 @@
                             <a href="index.html" class="btn btn-info" title="Back to Logs">
                                 <i class="material-icons">&#xE5C4;</i> <span>View Logs</span>
                             </a>
-                            <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                            <a href="#" id="add-schedule-btn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
                                 <i class="material-icons">&#xE147;</i> <span>Add Schedule</span>
                             </a>
                         </div>
@@ -164,6 +174,8 @@
                         <label class="btn btn-outline-primary" for="view-table">Table View</label>
                         <input type="radio" class="btn-check" name="view-mode" id="view-card" value="card">
                         <label class="btn btn-outline-primary" for="view-card">Card View</label>
+                        <input type="radio" class="btn-check" name="view-mode" id="view-calendar" value="calendar">
+                        <label class="btn btn-outline-primary" for="view-calendar">Calendar View</label>
                     </div>
                 </div>
 
@@ -189,6 +201,18 @@
                 <!-- Card View -->
                 <div id="card-view" class="calendar-grid" style="display: none;">
                     <!-- Schedule cards populated here -->
+                </div>
+
+                <!-- Calendar View -->
+                <div id="calendar-view" style="display: none;">
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <button class="btn btn-sm btn-outline-secondary" id="prev-month"><i class="bi bi-chevron-left"></i></button>
+                        <h5 id="calendar-month" class="m-0"></h5>
+                        <button class="btn btn-sm btn-outline-secondary" id="next-month"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                    <div id="calendar-grid" class="table-responsive">
+                        <!-- Calendar populated here -->
+                    </div>
                 </div>
             </div>
         </div>

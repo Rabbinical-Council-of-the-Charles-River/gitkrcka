@@ -28,11 +28,13 @@ const scheduleTable = document.getElementById('schedule-table');
 const scheduleTableBody = document.querySelector('#schedule-table tbody');
 const cardView = document.getElementById('card-view');
 const tableView = document.getElementById('table-view');
+const calendarView = document.getElementById('calendar-view');
 const viewModeRadios = document.querySelectorAll('input[name="view-mode"]');
 
 const addScheduleForm = document.getElementById('add-schedule-form');
 const editScheduleForm = document.getElementById('edit-schedule-form');
 const deleteScheduleForm = document.getElementById('delete-schedule-form');
+const addScheduleBtn = document.getElementById('add-schedule-btn');
 
 const scheduleMashgiachSelect = document.getElementById('schedule-mashgiach');
 const scheduleEstablishmentSelect = document.getElementById('schedule-establishment');
@@ -53,6 +55,8 @@ let currentUser = null;
 let currentUserIsAdmin = false;
 let mashgichim = [];
 let establishments = [];
+let allSchedules = []; // Store all schedules for calendar view
+let currentCalendarDate = new Date(); // Track current month for calendar
 
 let mashgiachChoices;
 let establishmentChoices;
@@ -225,8 +229,13 @@ async function displaySchedules() {
 
         // Clear both views
         scheduleTableBody.innerHTML = '';
-        cardView.innerHTML = '';
-
+        cardView.innerHTML = '';        
+        // Store all schedules for calendar view
+        allSchedules = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            data.id = doc.id;
+            return data;
+        });
         if (querySnapshot.empty) {
             const emptyMsg = `<tr><td colspan="6">No schedules found${!currentUserIsAdmin ? ' for you' : ''}.</td></tr>`;
             scheduleTableBody.innerHTML = emptyMsg;
@@ -300,6 +309,9 @@ async function displaySchedules() {
             `;
             cardView.innerHTML += cardHtml;
         }
+        
+        // Generate calendar view
+        generateCalendarView();
 
     } catch (error) {
         console.error('Error fetching schedules:', error);
@@ -510,12 +522,25 @@ function updateAccessUI(user) {
         adminElements.forEach(el => {
             el.style.setProperty('display', currentUserIsAdmin ? '' : 'none', currentUserIsAdmin ? 'important' : '');
         });
+        
+        // Control Add Schedule button
+        if (addScheduleBtn) {
+            if (currentUserIsAdmin) {
+                addScheduleBtn.style.display = '';
+            } else {
+                addScheduleBtn.style.display = 'none';
+            }
+        }
     } else {
         loginSection.classList.remove('hidden');
         scheduleContent.classList.add('hidden');
 
         const adminElements = document.querySelectorAll('.admin-only-func');
         adminElements.forEach(el => { el.style.display = 'none'; });
+        
+        if (addScheduleBtn) {
+            addScheduleBtn.style.display = 'none';
+        }
 
         if (user) {
             showMessage('error', 'Access Denied. Required roles: admin or mashgiach.');
@@ -525,7 +550,78 @@ function updateAccessUI(user) {
     }
 }
 
-// --- Event Listeners ---
+async function generateCalendarView() {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    // Update month display
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    document.getElementById('calendar-month').textContent = `${monthNames[month]} ${year}`;
+    
+    // Get first day of month and number of days
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Create mashgiach name map
+    const mashgiachMap = {};
+    mashgichim.forEach(m => {
+        mashgiachMap[m.id] = m.name;
+    });
+    
+    // Get schedules for this month
+    const schedulesByDate = {};
+    allSchedules.forEach(schedule => {
+        const scheduleDate = new Date(schedule.date);
+        if (scheduleDate.getFullYear() === year && scheduleDate.getMonth() === month) {
+            const day = scheduleDate.getDate();
+            if (!schedulesByDate[day]) schedulesByDate[day] = [];
+            schedulesByDate[day].push(schedule);
+        }
+    });
+    
+    // Build calendar HTML
+    let calendarHTML = '<table class="table table-bordered table-sm"><thead><tr>';
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayNames.forEach(day => {
+        calendarHTML += `<th class="text-center" style="width: 14.28%;">${day}</th>`;
+    });
+    calendarHTML += '</tr></thead><tbody><tr>';
+    
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+        calendarHTML += '<td style="background-color: #f8f9fa;"></td>';
+    }
+    
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+        if ((firstDay + day - 1) % 7 === 0 && day > 1) {
+            calendarHTML += '</tr><tr>';
+        }
+        
+        const schedules = schedulesByDate[day] || [];
+        const dayContent = schedules.map(s => 
+            `<small class="badge badge-primary" style="display: block; margin: 2px 0; font-size: 0.75rem;">${mashgiachMap[s.mashgiachId] || 'Unknown'} @ ${s.establishmentName}</small>`
+        ).join('');
+        
+        calendarHTML += `<td style="height: 80px; vertical-align: top; overflow-y: auto; font-size: 0.9rem;">
+            <strong>${day}</strong>
+            <div style="margin-top: 4px;">${dayContent}</div>
+        </td>`;
+    }
+    
+    // Empty cells after last day
+    const totalCells = firstDay + daysInMonth;
+    const remainingCells = 42 - totalCells; // 6 rows * 7 days
+    for (let i = 0; i < remainingCells; i++) {
+        calendarHTML += '<td style="background-color: #f8f9fa;"></td>';
+    }
+    
+    calendarHTML += '</tr></tbody></table>';
+    document.getElementById('calendar-grid').innerHTML = calendarHTML;
+}
+
+        // --- Event Listeners ---
 
 if (netlifyLoginButton) {
     netlifyLoginButton.addEventListener('click', () => {
@@ -550,9 +646,15 @@ viewModeRadios.forEach(radio => {
         if (e.target.value === 'table') {
             tableView.style.display = '';
             cardView.style.display = 'none';
-        } else {
+            calendarView.style.display = 'none';
+        } else if (e.target.value === 'card') {
             tableView.style.display = 'none';
             cardView.style.display = '';
+            calendarView.style.display = 'none';
+        } else if (e.target.value === 'calendar') {
+            tableView.style.display = 'none';
+            cardView.style.display = 'none';
+            calendarView.style.display = '';
         }
     });
 });
@@ -611,6 +713,17 @@ if (addModalEl) {
         if (establishmentChoices) establishmentChoices.setChoiceByValue('');
     });
 }
+
+// Calendar navigation
+document.getElementById('prev-month')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    generateCalendarView();
+});
+
+document.getElementById('next-month')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    generateCalendarView();
+});
 
 const editModalEl = document.getElementById('editScheduleModal');
 if (editModalEl) {
