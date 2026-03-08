@@ -269,6 +269,11 @@
 
         menuItems.forEach(item => {
             item.addEventListener('click', () => {
+                // If the item is a dropdown toggle, let the other handler manage it and do nothing here.
+                if (item.closest('.dropdown')) {
+                    return;
+                }
+
                 // Remove active class from all menu items
                 menuItems.forEach(otherItem => {
                     otherItem.classList.remove('active-menu-item');
@@ -294,10 +299,6 @@
                 dropdowns.forEach(dropdown => {
                     dropdown.classList.remove('active');
                 });
-                dropdownContents.forEach(dc => {
-                    dc.style.display = 'none';
-                });
-
             });
         });
 
